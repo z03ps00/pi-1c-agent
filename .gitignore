@@ -1,0 +1,40 @@
+# ============================================================
+# Pi 1C agent profile (PI_CODING_AGENT_DIR) — repository rules
+# Secrets, machine state and runtimes are NEVER committed.
+# ============================================================
+
+# --- Secrets / credentials (local only) ---
+auth.json
+trust.json
+.dev.env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# --- Runtime runtimes / binaries (installed per machine) ---
+node/
+npm/
+bin/
+
+# --- Caches & generated state ---
+mcp-cache.json
+cursor-sdk-model-list.json
+
+# --- Bootstrap state with absolute machine paths (regenerated) ---
+1c/
+
+# --- Third-party upstream snapshot (public clone) ---
+# git clone https://github.com/comol/ai_rules_1c.git pi-1c-agent-upstream
+pi-1c-agent-upstream/
+
+# --- Misc ---
+.pi/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
