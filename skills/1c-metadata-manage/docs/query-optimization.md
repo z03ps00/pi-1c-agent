@@ -1,6 +1,6 @@
 # 1C Query Optimization Skill (Advanced Patterns)
 
-For project-wide query work — load the router `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/query-design.md` first. Authoritative hard rules (formatting, aliases, parameters, no queries in loops) — `dev-standards-architecture.md §3 → "Queries"`. Anti-patterns with examples (query in loop, subquery in SELECT, virtual table filter in WHERE, missing `ПЕРВЫЕ N`) — `anti-patterns` rule.
+For project-wide query work — load the router `$PI_CODING_AGENT_DIR/rules-1c/rules/query-design.md` first. Authoritative hard rules (formatting, aliases, parameters, no queries in loops) — `dev-standards-architecture.md §3 → "Queries"`. Anti-patterns with examples (query in loop, subquery in SELECT, virtual table filter in WHERE, missing `ПЕРВЫЕ N`) — `anti-patterns` rule.
 
 ## When to Use
 

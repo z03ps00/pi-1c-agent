@@ -7,7 +7,7 @@ description: Retrieve documentation and indexed project knowledge from a connect
 
 ## Purpose
 
-Use OpenViking for source material, documentation, procedures and reports (including the handoff document), not for short behavioural facts/decisions/preferences — those go to Cognee (skill `shared-memory`). Both are permitted write targets per the global memory rule (`knowledge_remember` / `memory_remember`).
+Use OpenViking for source material, documentation, procedures and reports (including the handoff document), not for short behavioural facts/decisions/preferences — those go to Cognee (skill `shared-memory`). Both are permitted write targets per the global memory rule (OpenViking `remember` / Cognee `remember`). Host: `127.0.0.1:1933` when using the shipped stack.
 
 Typical content:
 - documentation;
@@ -37,4 +37,4 @@ Question: "What did the last session hand off?" -> OpenViking (handoff/report do
 
 Question: "What does the code currently do?" -> project files/runtime evidence.
 
-If OpenViking is unavailable, do not fabricate indexed knowledge.
+If OpenViking is not in `mcp.json` or not connected, note that once and do not fabricate indexed knowledge. Continue with project files.

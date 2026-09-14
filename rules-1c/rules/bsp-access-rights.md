@@ -7,7 +7,7 @@ alwaysApply: false
 
 Applies to БСП / SSL 3.x configurations (ЗУП 3.1, БП 3.x, ERP 2.x, УТ 11.x): creating and updating `Справочник.ПрофилиГруппДоступа` from a code console or an update handler, assigning profiles to users, and checking rights, roles and RLS access.
 
-> **Scope.** This file owns the *programmatic* side of access rights. Role **design** — which rights a role grants, RLS templates, role composition — lives in `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/role-manage.md`. Privileged-mode discipline in reports — `dcs-design.md §6`.
+> **Scope.** This file owns the *programmatic* side of access rights. Role **design** — which rights a role grants, RLS templates, role composition — lives in `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/role-manage.md`. Privileged-mode discipline in reports — `dcs-design.md §6`.
 
 <!-- help-mcp-router -->
 
@@ -20,11 +20,11 @@ standards(name="bsp-access-rights")     # this standard, entire - the normal cal
 standards(query="<what you need>")  # only when unsure which rule governs
 ```
 
-`standards` is the tool for this collection. `docsearch` / `docinfo` serve the platform documentation and cannot reach it, and **no tool of this server takes a `corpus` argument**. Name resolution, paging, budget, and what to do when the server is not exposed - **`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/help-corpus-retrieval.md`**.
+`standards` is the tool for this collection. `docsearch` / `docinfo` serve the platform documentation and cannot reach it, and **no tool of this server takes a `corpus` argument**. Name resolution, paging, budget, and what to do when the server is not exposed - **`$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md`**.
 
 **Retrieve before you apply.** Every section below is a heading with no body: acting on a section title without the text behind it is inventing the rule, not following it. Fetch the rule once by name rather than a query per section.
 
-Pinned source, readable directly: <https://github.com/comol/ai_rules_1c/blob/410951e74fd3e6b7a763cf49757935b9a34d3f31/C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/bsp-access-rights.md>
+Pinned source, readable directly: <https://github.com/comol/ai_rules_1c/blob/410951e74fd3e6b7a763cf49757935b9a34d3f31/$PI_CODING_AGENT_DIR/rules-1c/rules/bsp-access-rights.md>
 
 ## Sections
 

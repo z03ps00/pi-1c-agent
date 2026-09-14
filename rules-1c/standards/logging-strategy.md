@@ -126,7 +126,7 @@ Rules:
 - **Large blobs / attachments**. Log the metadata (size, content type, storage id), not the bytes.
 - **The whole `ТаблицаЗначений`**. Log a summary (`КоличествоСтрок`, key columns), not the whole table.
 
-`memory.md` is the canonical place to record project-specific PII classifications that affect logging — see `AGENTS.md → Project memory`.
+`memory.md` is the canonical place to record project-specific PII classifications that affect logging — see `rules-1c/AGENTS-UPSTREAM.md` → Project memory.
 
 ## 7. Rotation and retention
 

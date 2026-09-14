@@ -1,0 +1,35 @@
+services:
+  openviking:
+    labels:
+      com.mcp.agent-memory.profile: routerai
+
+  cognee:
+    labels:
+      com.mcp.agent-memory.profile: routerai
+    environment:
+      TRANSPORT_MODE: http
+      HTTP_PORT: "8000"
+      BIND_ADDRESS: 0.0.0.0
+      LLM_PROVIDER: openai
+      # LiteLLM needs the OpenAI provider prefix for an OpenAI-compatible endpoint.
+      # hosted_vllm forwards RouterAI reasoning_effort instead of rejecting it.
+      LLM_MODEL: "hosted_vllm/${ROUTERAI_MODEL:-qwen/qwen3.5-9b}"
+      LLM_ENDPOINT: ${ROUTERAI_ENDPOINT:-https://routerai.ru/api/v1}
+      LLM_API_KEY: "${ROUTERAI_API_KEY:?ROUTERAI_API_KEY is required for the routerai profile}"
+      # RouterAI Qwen reasoning can consume the completion budget without JSON.
+      LLM_ARGS: '{"reasoning_effort":"none"}'
+      EMBEDDING_PROVIDER: openai
+      EMBEDDING_MODEL: hosted_vllm/${ROUTERAI_EMBEDDING_MODEL:-qwen/qwen3-embedding-8b}
+      EMBEDDING_ENDPOINT: ${ROUTERAI_ENDPOINT:-https://routerai.ru/api/v1}
+      EMBEDDING_API_KEY: "${ROUTERAI_API_KEY:?ROUTERAI_API_KEY is required for the routerai profile}"
+      EMBEDDING_DIMENSIONS: "${EMBEDDING_DIMENSIONS:-1024}"
+      SYSTEM_ROOT_DIRECTORY: /cognee-storage/system
+      DATA_ROOT_DIRECTORY: /cognee-storage/data
+      DB_PROVIDER: sqlite
+      VECTOR_DB_PROVIDER: lancedb
+      GRAPH_DATABASE_PROVIDER: ladybug
+      ENABLE_BACKEND_ACCESS_CONTROL: "false"
+      REQUIRE_AUTHENTICATION: "false"
+      COGNEE_SKIP_CONNECTION_TEST: "true"
+      MCP_ALLOWED_HOSTS: 127.0.0.1:*,localhost:*,pi-1c-memory-cognee:*,cognee:*
+      MCP_CORS_ALLOW_ORIGINS: "*"

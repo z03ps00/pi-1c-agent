@@ -13,7 +13,7 @@ Choose the minimum set of context sources needed for a task.
 
 Use **current project files** when the answer depends on current code, configuration, branch state, file contents, runtime state, or generated artifacts.
 
-Use **Cognee/shared-memory** when the task refers to or may depend on:
+Use **Cognee/shared-memory** (`memory` on `127.0.0.1:8001`, dataset `main_dataset`) when the task refers to or may depend on:
 - previous decisions;
 - prior fixes or errors;
 - preferences or stable workflow choices;

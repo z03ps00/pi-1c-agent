@@ -23,7 +23,7 @@ Runs **every time** Step 4 of `/deploy-and-test`, `1c-tester`, or any ad-hoc web
    > - **да** — установлю и продолжу тесты  
    > - **нет** — продолжу на встроенном browser MCP (дороже по токенам)
 
-4. **On «да» / yes / «установи»** — execute `/install-agent-browser` (`C:/DevopsMoments/pi-agents/config-1c/prompts/install-agent-browser.md`) fully, then continue UI tests with `agent-browser` (after client restart if MCP tools are still missing — tell the user once and pause until they confirm restart, or fall back only if they refuse to restart and explicitly allow the built-in browser).
+4. **On «да» / yes / «установи»** — execute `/install-agent-browser` (`$PI_CODING_AGENT_DIR/prompts/install-agent-browser.md`) fully, then continue UI tests with `agent-browser` (after client restart if MCP tools are still missing — tell the user once and pause until they confirm restart, or fall back only if they refuse to restart and explicitly allow the built-in browser).
 5. **On «нет» / no / decline** — continue with the built-in browser MCP; state in one line that `agent-browser` was declined and token cost will be higher. Do not ask again in the same session unless the user starts a new UI-test request.
 6. **Autonomous / batch / no operator** (cannot ask) — do **not** auto-install. Log one line: `agent-browser missing — using built-in browser MCP (no operator to confirm /install-agent-browser)` and continue. Never invent a screenshotter/OCR stack.
 

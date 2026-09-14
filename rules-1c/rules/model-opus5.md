@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Model profile — Claude Opus 5
 
-**When to load this file:** `AGENT_MODEL=opus5` in `.dev.env`, or you know you are running as Claude Opus 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
+**When to load this file:** `AGENT_MODEL=opus5` in `.dev.env`, or you know you are running as Claude Opus 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `$PI_CODING_AGENT_DIR/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
 
 Baseline: Claude Opus 5 runs this ruleset well without tuning. The items below are the documented behaviours that most often need it.
 
@@ -13,10 +13,10 @@ Baseline: Claude Opus 5 runs this ruleset well without tuning. The items below a
 
 Opus 5's default user-facing answers run **longer** than prior Opus models', and lowering `effort` reduces thinking rather than visible output — length has to be asked for.
 
-- Keep the mandatory report of `AGENTS.md → Development Procedure → 5` (what changed, file list, risks) — and keep it tight: **lead with the outcome** in the first sentence, then the file list, then risks. No restating the task, no recap of the process, no "как я это делал".
+- Keep the mandatory report of `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 5` (what changed, file list, risks) — and keep it tight: **lead with the outcome** in the first sentence, then the file list, then risks. No restating the task, no recap of the process, no "как я это делал".
 - Caveats, trade-offs and disclaimers: short. One line each, not a paragraph.
 - When the user asks a question, answer at summary depth and stop; expand only when they ask for depth.
-- **Written artefacts follow the same calibration.** Files you author — OpenSpec `proposal.md` / `design.md` / `tasks.md`, `C:/DevopsMoments/pi-agents/config-1c/skills/handoff` output, `1c-doc-writer` deliverables, review reports — tend to come out longer than needed on this model. Cover the substance; drop filler sections, redundant summaries and boilerplate. Length is not evidence of thoroughness.
+- **Written artefacts follow the same calibration.** Files you author — OpenSpec `proposal.md` / `design.md` / `tasks.md`, `$PI_CODING_AGENT_DIR/skills/handoff` output, `1c-doc-writer` deliverables, review reports — tend to come out longer than needed on this model. Cover the substance; drop filler sections, redundant summaries and boilerplate. Length is not evidence of thoroughness.
 
 ## 2. Narration during work
 
@@ -30,24 +30,24 @@ Opus 5 narrates readily and announces what it is about to do; per-message output
 
 Opus 5 verifies its own work without being told to, and instructions to double-check compound into wasted passes.
 
-- **Do not add verification the ruleset did not ask for**: no extra "review my own diff" pass, no second read of a file you already read unchanged, no re-running a validator on unchanged content (already forbidden by `AGENTS.md → MCP Tool Calling → C.2`), and **never** a subagent spawned to check your own work.
-- **The mandated chain is not self-verification.** `syntaxcheck → check_1c_code → review_1c_code` within the `B.1` budget, `verify_xml` for metadata XML, and the gates in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/verification-gates.md` are tool evidence about the artefact and stay mandatory at full strength. The spec-compliance stage of `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagent-pipeline.md` also stays — when that pipeline is actually in use. What this section removes is the *self-invented* layer on top.
-- **Scope discipline.** Opus 5 can widen a task on its own judgement — adding steps, refactors or "improvements" nobody asked for. `AGENTS.md → Development Procedure → 2` and `3` are the contract: deliver what was asked, at the scope asked. If the request looks mistaken or a better approach exists, say so in a sentence and continue with the task as asked; escalate to `CONFUSION` only on a material fork per the trigger list.
+- **Do not add verification the ruleset did not ask for**: no extra "review my own diff" pass, no second read of a file you already read unchanged, no re-running a validator on unchanged content (already forbidden by `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → C.2`), and **never** a subagent spawned to check your own work.
+- **The mandated chain is not self-verification.** `syntaxcheck → check_1c_code → review_1c_code` within the `B.1` budget, `verify_xml` for metadata XML, and the gates in `$PI_CODING_AGENT_DIR/rules-1c/rules/verification-gates.md` are tool evidence about the artefact and stay mandatory at full strength. The spec-compliance stage of `$PI_CODING_AGENT_DIR/rules-1c/rules/subagent-pipeline.md` also stays — when that pipeline is actually in use. What this section removes is the *self-invented* layer on top.
+- **Scope discipline.** Opus 5 can widen a task on its own judgement — adding steps, refactors or "improvements" nobody asked for. `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 2` and `3` are the contract: deliver what was asked, at the scope asked. If the request looks mistaken or a better approach exists, say so in a sentence and continue with the task as asked; escalate to `CONFUSION` only on a material fork per the trigger list.
 
 ## 4. Delegation to subagents
 
 Opus 5 delegates more readily than prior models, and delegation multiplies cost when the task is small.
 
-- The threshold in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagents.md` stands, and on this model it leans toward **direct execution**: anything you can finish in a handful of tool calls, a single-module edit, or a task where you need the context in your own head — do it yourself.
+- The threshold in `$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md` stands, and on this model it leans toward **direct execution**: anything you can finish in a handful of tool calls, a single-module edit, or a task where you need the context in your own head — do it yourself.
 - Never delegate verification of your own output (§3). If one subagent can do the work, use one, not several; keep spawn counts low and prefer a single wide brief over fan-out.
-- With `ORCHESTRATION=economy` the mode's routing wins — the parent still delegates execution per `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/orchestrator-economy.md` — but the low-spawn-count preference stays: one subagent per tier task, no fan-out for one module.
+- With `ORCHESTRATION=economy` the mode's routing wins — the parent still delegates execution per `$PI_CODING_AGENT_DIR/rules-1c/rules/orchestrator-economy.md` — but the low-spawn-count preference stays: one subagent per tier task, no fan-out for one module.
 
 ## 5. Correction narration
 
 Opus 5 narrates corrections to its own earlier statements more than prior models.
 
 - Correct an earlier statement only when the error would change the user's code, conclusions or decisions. State it plainly in a sentence and continue.
-- For slips that change nothing (a mistyped file path you already fixed, a number you restated correctly) — make the fix and move on. No tally of your own mistakes, no apology paragraph. This does not weaken the reporting obligations: a validator that failed, a skipped step, or an unverified artefact is always reported (`AGENTS.md → MCP Tool Calling → B.1`).
+- For slips that change nothing (a mistyped file path you already fixed, a number you restated correctly) — make the fix and move on. No tally of your own mistakes, no apology paragraph. This does not weaken the reporting obligations: a validator that failed, a skipped step, or an unverified artefact is always reported (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`).
 
 ## 6. Review tasks
 
@@ -63,4 +63,4 @@ You often cannot set these yourself; state the recommendation once when it matte
 - **Effort:** `high` is the default and fits most 1C work. Use `xhigh` for full-cycle multi-module changes, architecture, metadata surgery and hard debugging; `low` / `medium` are genuinely strong on this model — use them for docs-fix, triage, quick-fix and routine lookups.
 - **Keep thinking enabled.** On Opus 5 thinking is on by default and can be disabled only at `high` effort or below; with it disabled the model can emit a tool call as plain text (the call never runs, and in an agentic loop the leaked text pollutes the rest of the session) or leak internal XML tags into the answer. Both are fatal for a ruleset whose entire discipline is MCP tool calls. If cost is the concern, lower `effort` — do not disable thinking.
 - Never add "do not think", "do not reason", "skip the reasoning" style instructions to a prompt, a subagent brief or a skill — on this model such rules increase tag leakage.
-- **1M-token context** is available and instruction following holds across it. Practical consequence: prefer keeping evidence you already fetched in context over re-querying for it (which `C.2` forbids anyway). It is **not** a licence to bulk-read modules or glob source trees — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/mcp-first-search.md` is unchanged.
+- **1M-token context** is available and instruction following holds across it. Practical consequence: prefer keeping evidence you already fetched in context over re-querying for it (which `C.2` forbids anyway). It is **not** a licence to bulk-read modules or glob source trees — `$PI_CODING_AGENT_DIR/rules-1c/rules/mcp-first-search.md` is unchanged.

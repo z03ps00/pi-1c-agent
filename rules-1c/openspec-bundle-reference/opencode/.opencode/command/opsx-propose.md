@@ -18,7 +18,7 @@ The propose phase is where every clarifiable architectural decision **must** be 
 - **Ask the user now, do not defer to apply.** The upstream OpenSpec default "prefer making reasonable decisions to keep momentum" is **overridden** for this project. If a decision is architecturally meaningful and ambiguous (placement / provider / data scope / settings storage / key handling / transactional boundaries / error-handling pattern / logging strategy / library / БСП subsystem / platform-version target / public common-module signatures), ask the user **here**, not at apply time.
 - **Do not ask the user about facts an MCP call could close.** Names, attributes, tabular sections, БСП subsystem availability, platform-API signatures — resolve via `recall` / `resolve_qualified_name` / `search_metadata` / `ssl_search` / `docinfo` before reaching for `AskUserQuestion`.
 - **Pin defaults the user is unlikely to care about with a one-line rationale in `design.md` and move on.** Do not ask about cache-eviction policy, private helper names, internal module splits when no NFR or convention exists.
-- **The full rule lives in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md → Propose-phase clarification discipline`. Load it before authoring any non-trivial proposal.**
+- **The full rule lives in `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md → Propose-phase clarification discipline`. Load it before authoring any non-trivial proposal.**
 
 Forbidden in finalized artifacts (each is a propose-phase defect of the same severity as a missing `Context sources` block):
 
@@ -130,7 +130,7 @@ After completing all artifacts, summarize:
 **Guardrails**
 - Create ALL artifacts needed for implementation (as defined by schema's `apply.requires`)
 - Always read dependency artifacts before creating a new one
-- **Ask the user about every ambiguous architectural / scope / naming / placement / storage / library / БСП / transactional decision during this phase — do NOT defer to apply.** "Prefer making reasonable decisions to keep momentum" is **not** the rule for this project; the rule is in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md → Propose-phase clarification discipline`.
+- **Ask the user about every ambiguous architectural / scope / naming / placement / storage / library / БСП / transactional decision during this phase — do NOT defer to apply.** "Prefer making reasonable decisions to keep momentum" is **not** the rule for this project; the rule is in `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md → Propose-phase clarification discipline`.
 - Resolve facts the project already knows (`recall`) or that an MCP call can close (`resolve_qualified_name`, `search_metadata`, `ssl_search`, `docinfo`) **before** reaching for `AskUserQuestion`.
 - **The pre-finalization clarification gate (step 5) is non-negotiable.** Declaring "Ready for implementation" with `TODO: clarify during apply` markers, vague requirement verbs ("appropriately", "if needed"), or `## Open Questions` items that the user could have answered now is a propose-phase defect.
 - If a change with that name already exists, ask if user wants to continue it or create a new one

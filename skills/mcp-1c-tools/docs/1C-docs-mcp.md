@@ -8,7 +8,7 @@ Four kinds of content behind **four** tools. They are not interchangeable, and t
 |---|---|---|
 | **docsearch** | Platform **syntax reference** + platform **prose** (guides, glossary, query-language book), hybrid vector + BM25 | Find built-in functions by description, look up platform features when the exact name is unknown |
 | **docinfo** | The same two, by exact name | Documentation for a known name (`"ТаблицаЗначений"`, `"Массив.Найти"`, `"Запрос"`) |
-| **standards** | The project's **development standards** (`1c-standards` collection) — the routed rules of `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/` | Retrieve a routed standard before writing or reviewing code — canon: `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/help-corpus-retrieval.md` |
+| **standards** | The project's **development standards** (`1c-standards` collection) — the routed rules of `$PI_CODING_AGENT_DIR/rules-1c/rules/` | Retrieve a routed standard before writing or reviewing code — canon: `$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md` |
 | **formatspec** | 1C **file-format specifications** — on-disk XML of forms, roles, DCS schemas, spreadsheet documents, extensions | Authoring or debugging metadata XML by hand; next to `metadata-xml-workarounds.md` and the `1c-metadata-manage` skill |
 
 ## Parameters

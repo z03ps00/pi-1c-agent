@@ -25,10 +25,10 @@ Capture only verified or explicitly unresolved information:
 Before the final response for a substantial task:
 
 1. Build the redacted completion summary from the template.
-2. Search Cognee, OpenViking, and local pending records by the idempotency key.
-3. Write the short durable result to Cognee and the detailed handoff to OpenViking when relevant.
-4. If either write is unavailable or fails, save a redacted pending record and report `UNCONFIRMED`/`UNVERIFIED`.
-5. Put an explicit `Memory:` status in the final response.
+2. If Cognee/OpenViking are opted in, search them and local pending records by the idempotency key. If they are off, skip remote search.
+3. Write the short durable result to Cognee and the detailed handoff to OpenViking **only when those servers are opted in and connected**.
+4. If they are off, skip memory writes. If a write is unavailable or fails, save a redacted pending record and report `UNCONFIRMED`/`UNVERIFIED` — that is not a task failure.
+5. Put an explicit `Memory:` status in the final response (`not in use` when MCP is off).
 
 A durable file/configuration change is always substantial. Only routine Q&A, trivial reads, failed attempts without reusable lessons, and transient output may be marked `not required`.
 

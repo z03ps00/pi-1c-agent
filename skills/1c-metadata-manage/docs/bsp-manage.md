@@ -411,6 +411,6 @@ No script files were brought into `tools/` — the operations are pure module-te
 
 ## SDD Integration
 
-When registering processors with BSP as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When registering processors with BSP as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Document BSP registration details and command placement in spec deltas under `openspec/changes/<change-id>/specs/`.

@@ -1,0 +1,36 @@
+{
+  "_comment": "Example merge of our OpenViking (knowledge :1933) + Cognee (memory :8001, main_dataset) + 1C bundle (ports 8002–8008). Not the default. Install via /install-memory-mcp. Vanessa is a separate extra — mcp.optional/vanessa.json. Toolkit HTTP and Humanizer are not MCP servers.",
+  "settings": {
+    "scriptMode": false,
+    "hostConfigDiscovery": "off",
+    "requestTimeoutMs": 120000,
+    "notifyOnStartupConnect": false,
+    "mcpFooterStatus": "compact"
+  },
+  "mcpServers": {
+    "knowledge": {
+      "url": "${KNOWLEDGE_MCP_URL}",
+      "headers": {
+        "Authorization": "${KNOWLEDGE_MCP_AUTHORIZATION}"
+      },
+      "auth": false,
+      "lifecycle": "keep-alive",
+      "requestTimeoutMs": 120000,
+      "httpTransport": "streamable-http"
+    },
+    "memory": {
+      "url": "${MEMORY_MCP_URL}",
+      "auth": false,
+      "lifecycle": "keep-alive",
+      "requestTimeoutMs": 120000,
+      "httpTransport": "streamable-http"
+    },
+    "1c-syntax-checker-mcp": {
+      "url": "http://127.0.0.1:8002/mcp",
+      "auth": false,
+      "lifecycle": "keep-alive",
+      "requestTimeoutMs": 120000,
+      "httpTransport": "streamable-http"
+    }
+  }
+}

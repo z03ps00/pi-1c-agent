@@ -15,7 +15,7 @@ The `VERIFICATION_DEPTH` parameter in `.dev.env` (`dev-standards-env.md → "Pro
 
 | Level | Gates 1–3 behaviour |
 |---|---|
-| `full` | Run `syntaxcheck → check_1c_code → review_1c_code`. One clean pass on the latest state is required; after a blocking fix, allow up to 3 calls total per validator (`AGENTS.md → MCP Tool Calling → B.1`). |
+| `full` | Run `syntaxcheck → check_1c_code → review_1c_code`. One clean pass on the latest state is required; after a blocking fix, allow up to 3 calls total per validator (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`). |
 | `standard` (default) | Run all three validators. Normally one clean pass each; after a blocking fix, allow exactly one mandatory confirmation (2 calls total), with no open-ended retry loop. |
 | `lite` | For a **low-risk** edit (quick-fix-eligible per Triage details below): Gate 1 (`syntaxcheck`) stays mandatory on every touched module; Gates 2–3 (`check_1c_code`, `review_1c_code`) are **skipped** unless the user explicitly asks for them. For any change that hits a **promotion trigger** (see Triage details) the full `full`-level chain runs regardless of the setting. |
 
@@ -30,7 +30,7 @@ When in doubt about whether a change is low-risk — treat it as promotion-trigg
 
 ## Triage details — quick-fix eligibility and promotion triggers
 
-Referenced from `AGENTS.md → Development Procedure → Triage`. Path definitions live there; this section owns the detailed metadata criteria.
+Referenced from `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → Triage`. Path definitions live there; this section owns the detailed metadata criteria.
 
 **Isolated metadata addition (allowed as quick-fix).** A metadata change qualifies as quick-fix **only** when **all** of the following hold:
 

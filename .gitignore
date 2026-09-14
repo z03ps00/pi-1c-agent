@@ -10,6 +10,10 @@ trust.json
 .env
 .env.*
 !.env.example
+mcp.optional/memory-stack/.env
+mcp.optional/memory-stack/data/
+mcp.optional/memory-stack/secrets/*.env
+!mcp.optional/memory-stack/secrets/*.env.example
 *.pem
 *.key
 id_rsa
@@ -31,10 +35,22 @@ cursor-sdk-model-list.json
 # git clone https://github.com/comol/ai_rules_1c.git pi-1c-agent-upstream
 pi-1c-agent-upstream/
 
+# --- Pi session/bootstrap state ---
+.pi/**
+!.pi/prompts/
+!.pi/prompts/opsx-*.md
+!.pi/skills/
+!.pi/skills/openspec-*/
+!.pi/skills/openspec-*/**
+
 # --- Misc ---
-.pi/
 *.log
 *.tmp
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# --- Profile test runner artifacts (mkdtemp uses os.tmpdir; local fallbacks) ---
+tests/.tmp/
+tests/.artifacts/
+

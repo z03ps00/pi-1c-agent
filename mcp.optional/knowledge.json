@@ -1,0 +1,31 @@
+{
+  "knowledge": {
+    "url": "${KNOWLEDGE_MCP_URL}",
+    "headers": {
+      "Authorization": "${KNOWLEDGE_MCP_AUTHORIZATION}"
+    },
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http",
+    "includeTools": [
+      "find",
+      "search",
+      "read",
+      "list",
+      "tree",
+      "remember",
+      "list_watches",
+      "grep",
+      "glob",
+      "health"
+    ],
+    "excludeTools": [
+      "write",
+      "edit",
+      "add_resource",
+      "forget",
+      "cancel_watch"
+    ]
+  }
+}

@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Model profile — Claude Sonnet 5
 
-**When to load this file:** `AGENT_MODEL=sonnet5` in `.dev.env`, or you know you are running as Claude Sonnet 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
+**When to load this file:** `AGENT_MODEL=sonnet5` in `.dev.env`, or you know you are running as Claude Sonnet 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `$PI_CODING_AGENT_DIR/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
 
 Baseline: Sonnet 5 runs this ruleset well without tuning, and is more agentic than Sonnet 4.6 by default. The items below are the documented behaviours that most often need it.
 
@@ -14,9 +14,9 @@ Baseline: Sonnet 5 runs this ruleset well without tuning, and is more agentic th
 Sonnet 5 reads instructions literally and does **not** silently generalise one item to another or infer a request that was not made. That is precision, not laziness, and it changes how you write briefs.
 
 - When a task spans several objects, state the scope for **each**: "перепроверь все три модуля из списка, не только первый", "примени маркеры изменения ко всем правкам типового кода в этом файле". A brief that names one example and expects the pattern to spread will get exactly the one example.
-- The same when briefing subagents (`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagents.md → Bounded sidecar task templates`): enumerate the files / objects / checks in scope, and say explicitly what is out of scope.
-- Apply the same literalism to this ruleset when you read it: when a rule says "load X before Y", load X. Do not treat a mandated step as a suggestion because the task feels small — triage (`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/verification-policy.md`) is what decides size, not intuition.
-- Ambiguity handling is unchanged: material fork → `CONFUSION`; low-risk ambiguity → state the assumption in one line and proceed (`AGENTS.md → Development Procedure → 1`).
+- The same when briefing subagents (`$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md → Bounded sidecar task templates`): enumerate the files / objects / checks in scope, and say explicitly what is out of scope.
+- Apply the same literalism to this ruleset when you read it: when a rule says "load X before Y", load X. Do not treat a mandated step as a suggestion because the task feels small — triage (`$PI_CODING_AGENT_DIR/rules-1c/rules/verification-policy.md`) is what decides size, not intuition.
+- Ambiguity handling is unchanged: material fork → `CONFUSION`; low-risk ambiguity → state the assumption in one line and proceed (`rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 1`).
 
 ## 2. Effort calibration (client-side setting)
 
@@ -27,7 +27,7 @@ Sonnet 5 reads instructions literally and does **not** silently generalise one i
 
 ## 3. Keep adaptive thinking on
 
-Adaptive thinking is on by default on Sonnet 5 (a change from Sonnet 4.6). **With thinking disabled the model reaches for tools noticeably less** — which directly breaks the MCP-first discipline this ruleset is built on (`AGENTS.md → MCP Tool Calling`, `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/mcp-first-search.md`).
+Adaptive thinking is on by default on Sonnet 5 (a change from Sonnet 4.6). **With thinking disabled the model reaches for tools noticeably less** — which directly breaks the MCP-first discipline this ruleset is built on (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling`, `$PI_CODING_AGENT_DIR/rules-1c/rules/mcp-first-search.md`).
 
 - Keep thinking on. If cost is the concern, lower `effort` instead of turning thinking off.
 - If thinking is off for reasons outside your control, compensate explicitly: name the required MCP calls in the plan before you start, and treat every skipped call as a defect to report rather than an economy.
@@ -45,12 +45,12 @@ Sonnet 5 honours a stated severity bar more faithfully than earlier models: "onl
 
 - When you review BSL yourself or brief `1c-code-reviewer` / `1c-arch-reviewer`: ask for every finding, with severity and confidence attached, and filter in your own report. Never write "only critical", "be conservative" or "не мелочись" in the brief.
 - If you do want a single-pass self-filter, define the bar concretely ("сообщай всё, что может привести к неверному поведению, ошибке проведения или неверному результату; опускай только чисто стилевые придирки") instead of a qualitative word like "important".
-- Gate semantics are unchanged: `critical` / `error` from `check_1c_code` / `review_1c_code` block per `AGENTS.md → MCP Tool Calling → B.1`.
+- Gate semantics are unchanged: `critical` / `error` from `check_1c_code` / `review_1c_code` block per `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`.
 
 ## 6. Token budget and context
 
 Sonnet 5 tracks its remaining context window (context awareness), and its tokenizer emits roughly 30% more tokens than Sonnet 4.6 for the same text.
 
-- **Do not wrap up work early because context feels tight.** Finish the task; when the window genuinely runs short, save state first — `C:/DevopsMoments/pi-agents/config-1c/skills/handoff` for a session handoff, `remember` for facts worth keeping (`AGENTS.md → Project memory`) — then continue or hand off cleanly.
-- Spend the budget on evidence that matters: keep MCP queries narrow (`detail_level="L0"`, `names_only`, `project_name` / category filters per `AGENTS.md → MCP Tool Calling → C.3`) instead of pulling whole modules "to be safe". This is the same rule as always; on this model the cost of ignoring it is higher.
-- In `ORCHESTRATION=economy`, the offloading of reading to subagents (`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/orchestrator-economy.md`) is a good fit with this constraint — but delegation criteria are unchanged.
+- **Do not wrap up work early because context feels tight.** Finish the task; when the window genuinely runs short, save state first — `$PI_CODING_AGENT_DIR/skills/handoff` for a session handoff, `remember` for facts worth keeping (`rules-1c/AGENTS-UPSTREAM.md` → Project memory) — then continue or hand off cleanly.
+- Spend the budget on evidence that matters: keep MCP queries narrow (`detail_level="L0"`, `names_only`, `project_name` / category filters per `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → C.3`) instead of pulling whole modules "to be safe". This is the same rule as always; on this model the cost of ignoring it is higher.
+- In `ORCHESTRATION=economy`, the offloading of reading to subagents (`$PI_CODING_AGENT_DIR/rules-1c/rules/orchestrator-economy.md`) is a good fit with this constraint — but delegation criteria are unchanged.

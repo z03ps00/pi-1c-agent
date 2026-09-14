@@ -1,0 +1,18 @@
+{
+  "memory": {
+    "url": "${MEMORY_MCP_URL}",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http",
+    "includeTools": [
+      "remember",
+      "recall",
+      "search_tools"
+    ],
+    "excludeTools": [
+      "forget",
+      "call_tool"
+    ]
+  }
+}

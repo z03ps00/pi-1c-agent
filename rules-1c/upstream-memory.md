@@ -3,7 +3,7 @@
 This file is the working project memory for AI agents.
 
 Eligibility, routing between this file and `1c-templates-mcp` (`remember` / `recall`),
-fallback when the MCP server is unavailable — see `AGENTS.md → Project memory`.
+fallback when the MCP server is unavailable — see `rules-1c/AGENTS-UPSTREAM.md` → Project memory.
 There are no permanent entries yet.
 
 Entry format (one entry = one self-contained rule). Use English for narrative,

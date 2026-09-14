@@ -1,0 +1,37 @@
+{
+  "1c-syntax-checker-mcp": {
+    "url": "http://127.0.0.1:8002/mcp",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http"
+  },
+  "1c-docs-mcp": {
+    "url": "http://127.0.0.1:8003/mcp",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http"
+  },
+  "1c-templates-mcp": {
+    "url": "http://127.0.0.1:8004/mcp",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http"
+  },
+  "1c-code-checker-mcp": {
+    "url": "http://127.0.0.1:8007/mcp",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http"
+  },
+  "1c-ssl-mcp": {
+    "url": "http://127.0.0.1:8008/mcp",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http"
+  }
+}

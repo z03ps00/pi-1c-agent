@@ -1,0 +1,11 @@
+{
+  "name": "pi-1c-agent-profile",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run-all.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

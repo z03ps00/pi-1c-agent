@@ -21,7 +21,7 @@ Ask-policy (canon — `dev-standards-env.md`): only `INFOBASE_PATH` and `PLATFOR
 
 ## Steps
 
-**Step 1.** Compose the list of objects to export in `repoobjects.txt` (one full metadata-object name per line, e.g. `Справочник.Контрагенты`). Build the list via `metadatasearch` or `search_metadata` (see `C:/DevopsMoments/pi-agents/config-1c/skills/mcp-1c-tools/SKILL.md`). Write the file as UTF-8; blank lines are ignored.
+**Step 1.** Compose the list of objects to export in `repoobjects.txt` (one full metadata-object name per line, e.g. `Справочник.Контрагенты`). Build the list via `metadatasearch` or `search_metadata` (see `$PI_CODING_AGENT_DIR/skills/mcp-1c-tools/SKILL.md`). Write the file as UTF-8; blank lines are ignored.
 
 ### Minimal closure — expand the list from evidence, not from guessing
 
@@ -77,4 +77,4 @@ Drop unset optional flags (`--user`, `--password`, `--extension`). `--recursive`
 
 When exporting from the main configuration (not from an extension) — drop the `-Extension {EXTENSION_NAME}` argument.
 
-**Step 3.** Inspect the result before starting any edits: the process exit code, the number in `{RESULT_PATH}` (`0` = success), and `{LOG_PATH}`. All three must agree — and in the log, classify the platform's success phrases (`Ошибок не обнаружено`, `Предупреждений: 0`) before its error stems, or a clean export reads as a failure. Canon — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/designer-batch-checks.md → The verdict is three signals, not the exit code`. Delete a stale `{RESULT_PATH}` before the run; an old file reads as this run's verdict.
+**Step 3.** Inspect the result before starting any edits: the process exit code, the number in `{RESULT_PATH}` (`0` = success), and `{LOG_PATH}`. All three must agree — and in the log, classify the platform's success phrases (`Ошибок не обнаружено`, `Предупреждений: 0`) before its error stems, or a clean export reads as a failure. Canon — `$PI_CODING_AGENT_DIR/rules-1c/rules/designer-batch-checks.md → The verdict is three signals, not the exit code`. Delete a stale `{RESULT_PATH}` before the run; an old file reads as this run's verdict.

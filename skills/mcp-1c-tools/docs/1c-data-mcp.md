@@ -2,7 +2,7 @@
 
 Execution of BSL code, queries and event-log inspection **inside the project's live infobase** via the HTTP service `hs/mcp` published on that infobase (tools from [comol/mcp_designer_tools](https://github.com/comol/mcp_designer_tools), loaded into the *Конструктор MCP серверов для 1С* on the IB side).
 
-> Load this file only if the `1c-data-mcp` server is actually available in the current session (its tools are visible in the agent tool schema). Mere presence in `mcp-servers.json` or in `.cursor/mcp.json` does not count as availability — the HTTP endpoint `{INFOBASE_PUBLISH_URL}/hs/mcp` must respond and must be reachable **without** authentication. Setup and troubleshooting — `C:/DevopsMoments/pi-agents/config-1c/prompts/checkmcp.md` (section about `1c-data-mcp`).
+> Load this file only if the `1c-data-mcp` server is actually available in the current session (its tools are visible in the agent tool schema). Mere presence in `mcp-servers.json` or in `.cursor/mcp.json` does not count as availability — the HTTP endpoint `{INFOBASE_PUBLISH_URL}/hs/mcp` must respond and must be reachable **without** authentication. Setup and troubleshooting — `$PI_CODING_AGENT_DIR/prompts/checkmcp.md` (section about `1c-data-mcp`).
 
 ## Tool catalog
 
@@ -45,4 +45,4 @@ The implementation runs `Выполнить(bslcode)` inside a procedure where t
 
 ## Availability check
 
-If the server is offline (web publication down, `mcp` HTTP service not published, or publication requires Basic auth and the MCP client gets `401`/`403`), the tools simply do not appear in the agent's tool schema. Do **not** synthesize their behaviour from memory and do **not** invent fake "execution" output — fall back to the verification path that does not need the live IB (static MCP analyzers + reading code in the dump + asking the user to run the snippet in the Configurator). Setup / fix steps — `C:/DevopsMoments/pi-agents/config-1c/prompts/checkmcp.md`.
+If the server is offline (web publication down, `mcp` HTTP service not published, or publication requires Basic auth and the MCP client gets `401`/`403`), the tools simply do not appear in the agent's tool schema. Do **not** synthesize their behaviour from memory and do **not** invent fake "execution" output — fall back to the verification path that does not need the live IB (static MCP analyzers + reading code in the dump + asking the user to run the snippet in the Configurator). Setup / fix steps — `$PI_CODING_AGENT_DIR/prompts/checkmcp.md`.

@@ -14,10 +14,10 @@ This file is the **router** for query work. Load it first, then load only the co
 | Task | Load |
 |---|---|
 | Project hard rules (formatting, `КАК`, parameters, no queries in loops, intermediate result variable, virtual-table filters) | `dev-standards-architecture.md §3 → "Queries"` |
-| Write a new query from scratch (skeleton, virtual tables, temp tables, joins, totals) | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/query-writing.md` |
-| Tune an existing query (joins vs subqueries, temp-table indexing, index alignment, composite-type deref, DCS specifics) | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/query-optimization.md` — **mandatory for any «оптимизируй запрос» task**; walk its *Mandatory Optimization Checklist* item by item |
+| Write a new query from scratch (skeleton, virtual tables, temp tables, joins, totals) | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/query-writing.md` |
+| Tune an existing query (joins vs subqueries, temp-table indexing, index alignment, composite-type deref, DCS specifics) | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/query-optimization.md` — **mandatory for any «оптимизируй запрос» task**; walk its *Mandatory Optimization Checklist* item by item |
 | Anti-patterns and severity (query in loop, correlated subquery, VT filter in WHERE, missing `ПЕРВЫЕ N`, unindexed temp table, redundant `РАЗЛИЧНЫЕ`, batch + temp table) | `anti-patterns.md` (§1, §3a, §4, §5, §5a, §7b, Optimized Patterns → Batch Query with Temp Table) |
-| Query inside a DCS / SKD report | `dcs-design.md` + `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/query-optimization.md` (DCS section) |
+| Query inside a DCS / SKD report | `dcs-design.md` + `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/query-optimization.md` (DCS section) |
 | Query against a register being designed / restructured | `registers-design.md` first, then this router |
 
 Each companion is self-contained — load only the ones that match the task. Do not preload the whole set "to be safe".

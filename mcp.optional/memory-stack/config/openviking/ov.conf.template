@@ -1,0 +1,41 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 1933,
+    "auth_mode": "api_key",
+    "root_api_key": "__OPENVIKING_ROOT_API_KEY__",
+    "cors_origins": [
+      "http://127.0.0.1:1933",
+      "http://localhost:1933"
+    ]
+  },
+  "storage": {
+    "workspace": "/app/.openviking/data",
+    "agfs": {
+      "backend": "local"
+    },
+    "vectordb": {
+      "backend": "local"
+    }
+  },
+  "embedding": {
+    "dense": {
+      "api_base": "__OPENVIKING_EMBEDDING_API_BASE__",
+      "api_key": "__OPENVIKING_EMBEDDING_API_KEY__",
+      "provider": "openai",
+      "dimension": 1024,
+      "model": "__OPENVIKING_EMBEDDING_MODEL__",
+      "encoding_format": __OPENVIKING_EMBEDDING_ENCODING_FORMAT__
+    }
+  },
+  "vlm": {
+    "api_base": "__OPENVIKING_VLM_API_BASE__",
+    "api_key": "__OPENVIKING_VLM_API_KEY__",
+    "provider": "__OPENVIKING_VLM_PROVIDER__",
+    "model": "__OPENVIKING_VLM_MODEL__",
+    "max_retries": 2,
+    "extra_request_body": {
+      "think": false
+    }
+  }
+}

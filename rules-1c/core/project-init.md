@@ -20,9 +20,21 @@ Written state:
 - `.pi/1c/init-state.json` — non-secret initialization state;
 - optional standard source scaffold under the selected layout root: `cf/`, `cfe/`, `epf/`, `erf/`;
 - optional Configuration Knowledge fingerprint when explicitly enabled;
-- optional OpenSpec CLI + native Pi artifacts (`openspec/`, `.pi/skills/openspec-*`, `.pi/prompts/opsx-*.md`) when explicitly enabled.
+- optional OpenSpec CLI + native Pi artifacts (`openspec/`, `.pi/skills/openspec-*`, `.pi/prompts/opsx-*.md`) when explicitly enabled;
+- optional Vanessa project dirs (`tests/features/` and companions) and/or `VANESSA_MCP_URL` when Vanessa extra is Yes;
+- optional `tools/mcp-toolkit/` and KD port keys when KD extra is not none;
+- optional Humanizer RU auto-use flag in `.pi/1c/project.yaml` when Humanizer extra is Yes.
 
 **Selected extras are installed on Apply, not deferred.** A Yes on OpenSpec (or Knowledge, or scaffold) materializes that dependency during Apply. Do not leave the user with a flag and a follow-up command. `/1c-openspec-setup` remains a repair/retry path if Apply's install failed.
+
+Lab extras (Vanessa, Конвертация данных, Humanizer RU) are **not** `ai_rules_1c`. `/init` must ask them; silence is not Yes. Apply writes only project data:
+
+- Vanessa=yes → `tests/features/` (and companion `tests/fixtures/`, `tests/reports/`, `tests/screenshots/`); `VANESSA_MCP_URL` only if supplied. No skill copy. No EPF/CFE unless binaries were confirmed in this run. Vanessa MCP fragment only after an explicit URL (`/install-vanessa-mcp`).
+- KD ≠ none → `tools/mcp-toolkit/` plus missing `MCP_TOOLKIT_PORT` / `KD2_PORT` / `KD31_PORT` from `$PI_CODING_AGENT_DIR/dev.env.lab-extras.example`. No skill copy. No `MCP_Toolkit.epf` download unless confirmed. Toolkit is never an MCP server.
+- Humanizer=yes → auto-use preference in `.pi/1c/project.yaml` only. No skill copy. No Python linter unless asked.
+- Vanessa=no / KD=none / Humanizer=no → do not create those dirs, keys, or auto-use flag.
+
+Do **not** add extra keys to the pinned `ai_rules_1c` `.dev.env.example`. Declined extras can be enabled later (settings / extras re-ask / first-use consent) without a full re-init. Skills remain in `$PI_CODING_AGENT_DIR/skills/`. Explicit «очеловечь» still loads profile `humanizer-ru` after decline.
 
 ## Install scope: agent global, project data only
 

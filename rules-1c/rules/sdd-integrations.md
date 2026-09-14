@@ -21,7 +21,7 @@ Read those files before writing or editing OpenSpec artifacts.
 
 ## MCP discipline for OpenSpec authoring
 
-OpenSpec artifacts (`proposal.md`, `design.md`, `tasks.md`, delta and current specs) are Markdown, but they make **factual claims about the 1C system** — metadata names, attributes, tabular sections, public API signatures, БСП subsystems, platform-version behaviour, project conventions. Every such claim must be grounded in MCP evidence, not memory or guessing. This is the **spec-authoring path** from `AGENTS.md → Development Procedure → Triage`.
+OpenSpec artifacts (`proposal.md`, `design.md`, `tasks.md`, delta and current specs) are Markdown, but they make **factual claims about the 1C system** — metadata names, attributes, tabular sections, public API signatures, БСП subsystems, platform-version behaviour, project conventions. Every such claim must be grounded in MCP evidence, not memory or guessing. This is the **spec-authoring path** from `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → Triage`.
 
 ### Spec size triage
 
@@ -35,7 +35,7 @@ When in doubt — quick-spec wins until the second novel architectural decision 
 
 ### Mandatory pre-author checks
 
-Run **before** writing the artifact, under `AGENTS.md → MCP Tool Calling → C` (no duplication, no blind chaining, no defensive calls). **The presumption is in favour of skipping** — include a check only when it materially closes a gap that affects a concrete `### Requirement:`. Per `AGENTS.md → A.3`, the `Context sources` block briefly notes (one short sentence) any check that was normally relevant for the change class but deliberately skipped; out-of-class checks need no mention.
+Run **before** writing the artifact, under `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → C` (no duplication, no blind chaining, no defensive calls). **The presumption is in favour of skipping** — include a check only when it materially closes a gap that affects a concrete `### Requirement:`. Per `AGENTS.md → A.3`, the `Context sources` block briefly notes (one short sentence) any check that was normally relevant for the change class but deliberately skipped; out-of-class checks need no mention.
 
 1. **Project memory — `recall`** (`1c-templates-mcp`) — when the change keywords overlap anything already touched in the project: existing object names, known subsystems, recurring error messages, prior decisions on the same domain. Greenfield topics: optional; a short "`recall` skipped: greenfield topic" note is enough.
 2. **Metadata facts — narrowest query first.** Single attribute / column existence and type — `resolve_qualified_name "Документ.<Name>.Реквизит.<Attr>"` or `search_metadata {"operation": "get_attribute_type", ...}` (by far the most common case). Lists of attributes / tabular parts / dimensions / resources / forms — `search_metadata` JSON templates (`list_attributes`, `object_structure`, `list_enum_values`, …): deterministic, much smaller payload than a dossier. Multi-facet passport — `get_object_dossier` with a `sections` filter; the all-sections default is a last resort. On empty / non-actionable results — fallback chain per `AGENTS.md → A.4`. Never invent attribute names from analogous documents or from memory.
@@ -88,7 +88,7 @@ The hierarchy is non-negotiable: a question that **could** have been asked in pr
 
 The upstream OpenSpec default "prefer making reasonable decisions to keep momentum" is **overridden** for this project:
 
-- **Architecturally meaningful and ambiguous — ask the user now.** Meaningful = the choice changes `design.md → ## Architecture decisions`, the shape of a delta requirement, a public export signature, placement (main configuration vs extension), secrets / settings storage, transactional boundaries, error-handling pattern, logging strategy, the БСП subsystem, or the platform-version target. Ask via the `CONFUSION` format from `AGENTS.md → Development Procedure → 1. Think Before Coding` — options with trade-offs, no prose paraphrase.
+- **Architecturally meaningful and ambiguous — ask the user now.** Meaningful = the choice changes `design.md → ## Architecture decisions`, the shape of a delta requirement, a public export signature, placement (main configuration vs extension), secrets / settings storage, transactional boundaries, error-handling pattern, logging strategy, the БСП subsystem, or the platform-version target. Ask via the `CONFUSION` format from `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 1. Think Before Coding` — options with trade-offs, no prose paraphrase.
 - **A default the user is unlikely to care about — pin it in `design.md` with a one-line rationale and proceed** (cache policy without an NFR, a private helper name, an internal module split).
 - **Depends on a 1C fact — make the MCP call, do not ask.** The user is not a substitute for `resolve_qualified_name` / `search_metadata` / `ssl_search` / `recall`.
 
@@ -206,7 +206,7 @@ Each subagent owns specific OpenSpec artifacts. Use this table to decide where a
 
 ## Phase → subagent mapping
 
-Subagent **selection** is owned elsewhere — do not duplicate it here: the catalog in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagents.md` and the stage-by-stage choice lists in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagent-pipeline.md`. The default `propose → apply → archive` workflow maps onto those stages directly; artifact ownership is fixed by the table above. OpenSpec-specific additions:
+Subagent **selection** is owned elsewhere — do not duplicate it here: the catalog in `$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md` and the stage-by-stage choice lists in `$PI_CODING_AGENT_DIR/rules-1c/rules/subagent-pipeline.md`. The default `propose → apply → archive` workflow maps onto those stages directly; artifact ownership is fixed by the table above. OpenSpec-specific additions:
 
 - **Verification phase** — `1c-tester` runs UI tests only when `UI_TESTING` allows it (canon — `dev-standards-env.md`); `1c-code-reviewer` — only on an explicit user request.
 - **Documentation & archive phase** — `1c-doc-writer` derives user docs from `specs/`; then `/opsx:archive` merges deltas into `specs/` and moves the change to `changes/archive/`.

@@ -15,6 +15,7 @@ Use this skill when the user says:
 - "handoff", "compact session", "/handoff"
 - "save context for continuation", "brief the next session"
 - equivalent Russian phrases such as "сделай handoff", "передай контекст", "сохрани контекст для продолжения"
+- **session rotation** (`/session-rotate`, Pi-only): when the extension asks for a rotation handoff, write the same format to the same `handoffs/` location. Rotation reuses this skill; it does not invent a second summary format.
 
 ## Argument
 
@@ -91,3 +92,4 @@ Which gates from `verification-checklist.md` passed / failed / were skipped. Lat
 - Handoff **does not replace** an OpenSpec proposal. If the task requires a proposal and it does not exist yet, additionally suggest `/opsx:propose` and reference the future ID from the handoff.
 - Handoff **does not duplicate** `memory.md` and `recall` notes. Memory and handoff are different channels (see `AGENTS.md → Project memory`).
 - Handoff is written in normal grammar, not caveman style, so the next agent can read it without ambiguity.
+- Opt-in `/session-rotate` (Pi only, default off) writes a rotation handoff with this same format and directory, then starts a fresh session that continues from the file. Manual `/handoff` is unchanged.

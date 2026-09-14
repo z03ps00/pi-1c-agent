@@ -14,7 +14,7 @@ Two carriers are checked:
 - After **merging branches** that both added metadata objects.
 - Before loading a dump into an infobase, when the previous load failed with an identity / type-collision diagnostic.
 
-Slash command: `/check-uuid` (source: `C:/DevopsMoments/pi-agents/config-1c/prompts/check-uuid.md`).
+Slash command: `/check-uuid` (source: `$PI_CODING_AGENT_DIR/prompts/check-uuid.md`).
 
 ## Usage
 

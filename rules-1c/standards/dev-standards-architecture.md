@@ -145,7 +145,7 @@ Visual form editing in extensions — **minimize**. Changes — programmatically
 - On server — `ТекущаяДатаСеанса()` instead of `ТекущаяДата()`. See `platform-solutions.md §6 → "Time on the server"`.
 
 ### Queries
-- Verify metadata attributes (existence, names, types) **before** writing a query — see `AGENTS.md → MCP Tool Calling` (rule #3 «verify before writing»; metadata-first via `get_object_dossier` / `metadatasearch`).
+- Verify metadata attributes (existence, names, types) **before** writing a query — see `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling` (rule #3 «verify before writing»; metadata-first via `get_object_dossier` / `metadatasearch`).
 - Look for existing query examples before writing complex queries (`templatesearch`, `search_code`).
 - Query text formatting — on a new line at the same indentation level as the variable declaration:
 

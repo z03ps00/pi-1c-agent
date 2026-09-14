@@ -9,23 +9,23 @@ alwaysApply: false
 
 ## Delegation principle
 
-13 specialized subagents are available in the project. Source prompt files live in `C:/DevopsMoments/pi-agents/config-1c/agents/1c-` and use short file names without the `1c-` prefix:
+13 specialized subagents are available in the project. Source prompt files live in `$PI_CODING_AGENT_DIR/agents/1c-` and use short file names without the `1c-` prefix:
 
 | Subagent id | Source prompt file |
 |---|---|
-| `1c-explorer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-explorer.md` |
-| `1c-analytic` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-analytic.md` |
-| `1c-planner` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-planner.md` |
-| `1c-architect` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-architect.md` |
-| `1c-arch-reviewer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-arch-reviewer.md` |
-| `1c-developer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-developer.md` |
-| `1c-metadata-manager` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-metadata-manager.md` |
-| `1c-refactoring` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-refactoring.md` |
-| `1c-performance-optimizer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-performance-optimizer.md` |
-| `1c-error-fixer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-error-fixer.md` |
-| `1c-tester` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-tester.md` |
-| `1c-code-reviewer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-code-reviewer.md` |
-| `1c-doc-writer` | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-doc-writer.md` |
+| `1c-explorer` | `$PI_CODING_AGENT_DIR/agents/1c-explorer.md` |
+| `1c-analytic` | `$PI_CODING_AGENT_DIR/agents/1c-analytic.md` |
+| `1c-planner` | `$PI_CODING_AGENT_DIR/agents/1c-planner.md` |
+| `1c-architect` | `$PI_CODING_AGENT_DIR/agents/1c-architect.md` |
+| `1c-arch-reviewer` | `$PI_CODING_AGENT_DIR/agents/1c-arch-reviewer.md` |
+| `1c-developer` | `$PI_CODING_AGENT_DIR/agents/1c-developer.md` |
+| `1c-metadata-manager` | `$PI_CODING_AGENT_DIR/agents/1c-metadata-manager.md` |
+| `1c-refactoring` | `$PI_CODING_AGENT_DIR/agents/1c-refactoring.md` |
+| `1c-performance-optimizer` | `$PI_CODING_AGENT_DIR/agents/1c-performance-optimizer.md` |
+| `1c-error-fixer` | `$PI_CODING_AGENT_DIR/agents/1c-error-fixer.md` |
+| `1c-tester` | `$PI_CODING_AGENT_DIR/agents/1c-tester.md` |
+| `1c-code-reviewer` | `$PI_CODING_AGENT_DIR/agents/1c-code-reviewer.md` |
+| `1c-doc-writer` | `$PI_CODING_AGENT_DIR/agents/1c-doc-writer.md` |
 
 **Delegate when:**
 
@@ -35,17 +35,17 @@ alwaysApply: false
 
 **Do not delegate** when the task is a trivial single-file edit, or a medium full-cycle task that fits the parent's context comfortably — execute it directly (the standard path: the 5-step Development Procedure from `AGENTS.md` plus the closing gate). The pipeline in `subagent-pipeline.md` applies only when delegation is chosen here.
 
-**Model profile.** The active-model profile (`AGENT_MODEL` in `.dev.env` — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/model-adaptation.md`) may tune **how eagerly** you delegate within these criteria: some models delegate too readily and their profile biases toward direct execution and low spawn counts, others sustain parallel subagents well and their profile encourages independent parallel tracks. The criteria above, the per-subagent "when NOT to call" column, the built-in-explorer ban, and every common obligation stay unchanged — a profile never adds a subagent the rules forbid, and never removes one they require. In particular, no profile authorises a subagent spawned to double-check your own work.
+**Model profile.** The active-model profile (`AGENT_MODEL` in `.dev.env` — `$PI_CODING_AGENT_DIR/rules-1c/rules/model-adaptation.md`) may tune **how eagerly** you delegate within these criteria: some models delegate too readily and their profile biases toward direct execution and low spawn counts, others sustain parallel subagents well and their profile encourages independent parallel tracks. The criteria above, the per-subagent "when NOT to call" column, the built-in-explorer ban, and every common obligation stay unchanged — a profile never adds a subagent the rules forbid, and never removes one they require. In particular, no profile authorises a subagent spawned to double-check your own work.
 
-**Economy mode.** When `.dev.env` has `ORCHESTRATION=economy` (toggled by `/economymode`; empty / missing = `standard`), load `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/orchestrator-economy.md`: delegation of execution becomes the default — the parent keeps decisions, specs, and verification, subagents do the reading and writing. Check the key when loading this file for a non-trivial task. The mode only widens delegation; every constraint of this file stays intact, and model selection still resolves from `SUBAGENT_MODEL_*` per tier.
+**Economy mode.** When `.dev.env` has `ORCHESTRATION=economy` (toggled by `/economymode`; empty / missing = `standard`), load `$PI_CODING_AGENT_DIR/rules-1c/rules/orchestrator-economy.md`: delegation of execution becomes the default — the parent keeps decisions, specs, and verification, subagents do the reading and writing. Check the key when loading this file for a non-trivial task. The mode only widens delegation; every constraint of this file stays intact, and model selection still resolves from `SUBAGENT_MODEL_*` per tier.
 
 ## Host-tool built-in explorers (hard ban)
 
-Cursor (and some other hosts) ship a **built-in** Explore helper — e.g. Cursor Task `subagent_type: "explore"` — with a fixed, non-overridable system prompt. That helper is **not** this project's explorer. It does not run the MCP-first fallback chain, does not prefer 1C graph / code-metadata tools, and does not return the structured report from `C:/DevopsMoments/pi-agents/config-1c/agents/1c-explorer.md`.
+Cursor (and some other hosts) ship a **built-in** Explore helper — e.g. Cursor Task `subagent_type: "explore"` — with a fixed, non-overridable system prompt. That helper is **not** this project's explorer. It does not run the MCP-first fallback chain, does not prefer 1C graph / code-metadata tools, and does not return the structured report from `$PI_CODING_AGENT_DIR/agents/1c-explorer.md`.
 
 **Hard rule for the parent:**
 
-1. For any delegated read-only exploration that matches the `1c-explorer` row in the catalog below — launch **`1c-explorer`** (source: `C:/DevopsMoments/pi-agents/config-1c/agents/1c-explorer.md`; installed custom agent under the active tool, e.g. `.cursor/agents/explorer.md`, `.claude/agents/explorer.md`, …).
+1. For any delegated read-only exploration that matches the `1c-explorer` row in the catalog below — launch **`1c-explorer`** (source: `$PI_CODING_AGENT_DIR/agents/1c-explorer.md`; installed custom agent under the active tool, e.g. `.cursor/agents/explorer.md`, `.claude/agents/explorer.md`, …).
 2. **Do not** launch the host's built-in Explore / `explore` / generic codebase scout for that work. Prefer an explicit custom-agent invocation (`/1c-explorer …`, or the host's "use the 1c-explorer subagent" / Task launch by custom agent name) over a built-in `explore` type.
 3. If the session's Task / subagent API only exposes built-in types and **cannot** start the installed `1c-explorer` — **do not** silently substitute built-in Explore. Either (a) run the exploration on the parent with MCP-first search, or (b) tell the user that `1c-explorer` is not launchable in this session. Falling back to built-in Explore is a defect.
 4. `AGENTS.md` / project rules steer the **parent**; they do not rewrite the built-in Explore prompt — so "putting explore instructions in rules" is not a substitute for calling `1c-explorer`.
@@ -58,29 +58,29 @@ Every subagent inherits these obligations from `AGENTS.md` even when its own pro
 
 ### CONFUSION format
 
-Canon — `AGENTS.md → Development Procedure → 1. Think Before Coding` (triggers, format, low-risk assumption rule). Material fork = data integrity, transactions / posting, metadata shape, public contracts, security / RLS, anything hard to reverse, a conflict with existing code / БСП / `РежимСовместимости`, or an under-specified material edge case.
+Canon — `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 1. Think Before Coding` (triggers, format, low-risk assumption rule). Material fork = data integrity, transactions / posting, metadata shape, public contracts, security / RLS, anything hard to reverse, a conflict with existing code / БСП / `РежимСовместимости`, or an under-specified material edge case.
 
 **Subagent-specific:** never resolve a material fork by silently picking one interpretation, returning a partial result, or paraphrasing the question into free-form prose — raise the block and stop. Low-risk ambiguity: state the assumption in one line and proceed.
 
 ### MCP-first search
 
-Canon — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/mcp-first-search.md` (chain: graph → code-metadata → `grep=true` retry → native tools; bounded priority, not a ban).
+Canon — `$PI_CODING_AGENT_DIR/rules-1c/rules/mcp-first-search.md` (chain: graph → code-metadata → `grep=true` retry → native tools; bounded priority, not a ban).
 
 **Subagent-specific:** the chain binds subagents exactly as it binds the parent; when you fall back to a native discovery tool, state in the report which MCP attempts were tried and why they missed.
 
 ### Metadata mutations via the skill (mutating agents)
 
-Canon — `AGENTS.md → Skills and Subagents`; exceptions only per `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/SKILL.md → Hard rule`.
+Canon — `rules-1c/AGENTS-UPSTREAM.md` → Skills and Subagents; exceptions only per `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/SKILL.md → Hard rule`.
 
 **Subagent-specific:** the gate binds **every** mutating subagent, not only `1c-metadata-manager`. A `1c-developer` / `1c-error-fixer` / `1c-refactoring` task that turns out to require a form or metadata change either drives it through the skill itself or reports it back to the parent for delegation — it does not hand-edit the XML. Name the path used in the report (`Metadata tooling: …`).
 
-In EDT projects (`.dev.env` `USE_EDT=true`) the binding extends to the source format: before a delegated metadata change, the subagent establishes whether the tree is a Designer XML dump or an EDT (`src/**/*.mdo`) workspace and routes accordingly — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/edt-workflow.md`. Hand-editing `*.mdo` / `*.form` is a defect with no exception, and the EDT path is named in the report (`EDT tooling: …`).
+In EDT projects (`.dev.env` `USE_EDT=true`) the binding extends to the source format: before a delegated metadata change, the subagent establishes whether the tree is a Designer XML dump or an EDT (`src/**/*.mdo`) workspace and routes accordingly — `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md`. Hand-editing `*.mdo` / `*.form` is a defect with no exception, and the EDT path is named in the report (`EDT tooling: …`).
 
-On repository-bound projects (`.dev.env` `REPOSITORY_PATH` set) the same binding extends to the repository discipline: objects are locked via the `1c-repository-manage` skill before mutation and the lock/commit trail is reported (`Repository tooling: …`); unbind is forbidden while bound — canon `AGENTS.md → Skills and Subagents` and that skill's `docs/repo-sdlc.md`.
+On repository-bound projects (`.dev.env` `REPOSITORY_PATH` set) the same binding extends to the repository discipline: objects are locked via the `1c-repository-manage` skill before mutation and the lock/commit trail is reported (`Repository tooling: …`); unbind is forbidden while bound — canon `rules-1c/AGENTS-UPSTREAM.md` → Skills and Subagents and that skill's `docs/repo-sdlc.md`.
 
 ### Verification checklist (mutating agents)
 
-Canon — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/verification-checklist.md` (ordered hard gates: `syntaxcheck` → `check_1c_code` → `review_1c_code` → impact analysis → metadata XML validation, as applicable).
+Canon — `$PI_CODING_AGENT_DIR/rules-1c/rules/verification-checklist.md` (ordered hard gates: `syntaxcheck` → `check_1c_code` → `review_1c_code` → impact analysis → metadata XML validation, as applicable).
 
 **Subagent-specific:** for every mutated artifact, report each applicable validator's result and run count **after the final edit** — the parent reuses that evidence instead of repeating validators on unchanged content. Read-only agents (`1c-explorer`, `1c-analytic`, `1c-arch-reviewer`, `1c-code-reviewer`, `1c-doc-writer` when not writing project sources) skip the mutating gates and the metadata-skill gate but still follow CONFUSION and MCP-first search.
 
@@ -95,7 +95,7 @@ Each agent prompt ends with a short **Common obligations** pointer to this secti
 | **1c-planner** | A multi-step implementation or refactoring plan is needed before coding | Task is small enough that the plan is 1–2 lines |
 | **1c-architect** | Designing the architecture of a sizable modification (new subsystem, integration, multi-module change) | Single-procedure or single-module change |
 | **1c-arch-reviewer** | User asks to review or validate an architectural decision before implementation | No architectural design exists yet |
-| **1c-developer** | Bulk code writing or modification across multiple modules that would otherwise drain the parent's context | Small local edit (Quick-fix path — see `AGENTS.md → Development Procedure`) |
+| **1c-developer** | Bulk code writing or modification across multiple modules that would otherwise drain the parent's context | Small local edit (Quick-fix path — see `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure`) |
 | **1c-metadata-manager** | Creating, scaffolding, compiling, or multi-step / multi-domain metadata operations (objects, forms, reports, layouts, roles, extensions) | Single info lookup or single XML attribute fix — use a direct edit or the `1c-metadata-manage` skill |
 | **1c-refactoring** | Dead-code cleanup, consolidation, or deduplication across multiple modules | Refactor is local to one procedure |
 | **1c-performance-optimizer** | User reports slowness, or query / loop optimization is the explicit task | No performance concern was raised |

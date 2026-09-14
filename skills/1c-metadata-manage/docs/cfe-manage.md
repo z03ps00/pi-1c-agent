@@ -176,7 +176,7 @@ Exit code: 0 = OK, 1 = errors.
 
 All nine checks read **source**: XML shape, ClassIds, ChildObjects ordering, adopted-object markers. They are silent about the one failure mode that actually breaks a base — an interceptor whose target method no longer exists in the main configuration. `&Вместо ПриЗаписи` against a method the vendor renamed is perfectly valid XML and perfectly valid BSL; the platform rejects it only at apply time, and an `&После` in the same position may just stop firing with no error at all.
 
-Before loading an extension into any infobase, run the platform's own ladder — canon `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/designer-batch-checks.md`:
+Before loading an extension into any infobase, run the platform's own ladder — canon `$PI_CODING_AGENT_DIR/rules-1c/rules/designer-batch-checks.md`:
 
 ```
 /CheckModules -ThinClient -Server -ExternalConnection -Extension <Name>
@@ -190,7 +190,7 @@ For a `&ИзменениеИКонтроль`-heavy extension, `-Check` (section
 
 ### Backup and rollback before replacing an existing extension
 
-Loading over an existing extension is a replacement with no platform-side undo. Dump both forms first — `/DumpCfg -Extension <Name>` (editable) and `/DumpDBCfg -Extension <Name>` (database, what running sessions execute) — and recover with `/RollbackCfg -Extension <Name>` before the DB update, or by reloading the saved `.cfe` after it. **Never delete a pre-existing extension as a rollback**: deletion drops its own objects and every mapping along with your change. Details — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/designer-batch-checks.md → Extension apply and rollback`.
+Loading over an existing extension is a replacement with no platform-side undo. Dump both forms first — `/DumpCfg -Extension <Name>` (editable) and `/DumpDBCfg -Extension <Name>` (database, what running sessions execute) — and recover with `/RollbackCfg -Extension <Name>` before the DB update, or by reloading the saved `.cfe` after it. **Never delete a pre-existing extension as a rollback**: deletion drops its own objects and every mapping along with your change. Details — `$PI_CODING_AGENT_DIR/rules-1c/rules/designer-batch-checks.md → Extension apply and rollback`.
 
 ---
 
@@ -259,6 +259,6 @@ An extension is the **default answer** when a typical object on vendor support n
 
 ## SDD Integration
 
-When creating extensions as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating extensions as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Document borrowed objects, interceptors, and extension scope in spec deltas under `openspec/changes/`.

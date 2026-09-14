@@ -101,7 +101,7 @@ Both halves of each gate are the user's decision: never edit `REPOSITORY_ALLOW_F
 
 ## Failure handling — retry discipline
 
-Same iterative discipline as DB updates (`C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/db-manage.md → Update retry discipline`): read the log lines the script surfaced → classify → fix the cause → re-run. Typical classes:
+Same iterative discipline as DB updates (`$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/db-manage.md → Update retry discipline`): read the log lines the script surfaced → classify → fix the cause → re-run. Typical classes:
 
 | Log evidence | Cause | Action |
 |---|---|---|

@@ -109,7 +109,7 @@ These rules apply only to 1C code artifacts: modules, in-module comments, identi
 
 ## 7. Comments — OK / NOT OK Examples
 
-Goal: cut LLM noise and keep only useful comments. See also `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/coding-standards.md → "Comments"` for the headline rule (anchor from `AGENTS.md → Coding Standards`).
+Goal: cut LLM noise and keep only useful comments. See also `$PI_CODING_AGENT_DIR/rules-1c/rules/coding-standards.md → "Comments"` for the headline rule (anchor from `AGENTS.md → Coding Standards`).
 
 ### NOT OK — code paraphrase and noise
 
@@ -169,6 +169,6 @@ After any code change, perform a brief internal review. Scale it to the path:
 - **Quick-fix** — correctness and edge cases of the changed fragment; plus locks / transactions when the edit sits near transactional code. That is enough — do not run the full checklist on a 10-line fix.
 - **Full-cycle** — the full list: style, readability, correctness, edge cases, security, concurrency / locks / transactions, BSL-LS compliance.
 
-If issues are found, apply the validator budget from `AGENTS.md → MCP Tool Calling → B.1`: a blocking defect requires a clean confirming run on the changed state; non-blocking style noise does not start another AI-review loop. If the limit is exhausted without a clean pass after a blocking fix, do not declare the gate passed; report the artifact as unverified.
+If issues are found, apply the validator budget from `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`: a blocking defect requires a clean confirming run on the changed state; non-blocking style noise does not start another AI-review loop. If the limit is exhausted without a clean pass after a blocking fix, do not declare the gate passed; report the artifact as unverified.
 
 Always consider whether an external transaction already exists (e.g. an object-write transaction) before opening a new one. See `platform-solutions.md` for the canonical templates.

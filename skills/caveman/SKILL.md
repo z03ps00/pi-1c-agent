@@ -4,7 +4,7 @@ description: >
   Ultra-compressed communication mode. Cuts output tokens ~65% on chat prose
   (upstream-measured average; on agentic coding runs the effect is far smaller)
   by using a terse "caveman" style while keeping full technical accuracy. Active
-  by default for ALL tasks (`.dev.env` `CAVEMAN=on`, the default). `CAVEMAN=auto`
+  by default for development tasks (`.dev.env` `CAVEMAN=auto`, the shipped default). `CAVEMAN=auto`
   restricts it to development tasks and turns it off for analysis / documentation
   / review; `CAVEMAN=off` disables auto-activation entirely. Force-on with
   "caveman", "как пещерный", "use caveman", "be brief", "коротко", "меньше
@@ -22,7 +22,7 @@ Adapted from https://github.com/JuliusBrussee/caveman (MIT), tracked against ups
 
 ## Scope — where caveman applies
 
-Under the default **`CAVEMAN=on`**, caveman is active for **all** task types — development and analysis / documentation / review alike — subject only to the safety switches in *Auto-clarity* and the *Boundaries* below (code, error text, destructive / security / ordered blocks stay in normal grammar). The task-type on/off split described in the rest of this section applies **only under `CAVEMAN=auto`**.
+Under explicit **`CAVEMAN=on`**, caveman is active for **all** task types — development and analysis / documentation / review alike — subject only to the safety switches in *Auto-clarity* and the *Boundaries* below (code, error text, destructive / security / ordered blocks stay in normal grammar). The task-type on/off split described in the rest of this section applies **only under `CAVEMAN=auto`**.
 
 Under **`CAVEMAN=auto`**, caveman is the default style for **development tasks**, where the user is acting as a senior 1C engineer and wants signal not prose:
 
@@ -47,21 +47,21 @@ When in doubt (still under `CAVEMAN=auto`), look at the verbs in the request: **
 Two scopes for changing the state:
 
 - **Session-only** (this chat, no file change): "caveman please" forces on; "stop caveman" / "normal mode" / "обычный режим" forces off; `/caveman lite|full|ultra` switches the level. A forced session state overrides everything below and holds until the next force or session end. **Negation safety:** a negated mention ("не надо caveman", "без caveman", "I don't want caveman") means **off**, never on; a phrase that merely describes the style inside a question ("что делает caveman?") is not a trigger at all. Level commands tolerate case and trailing punctuation (`/caveman Ultra.`).
-- **Persistent** (project-wide, edits `.dev.env` `CAVEMAN`): the `/caveman on|off|auto` slash command (`C:/DevopsMoments/pi-agents/config-1c/prompts/caveman.md`).
+- **Persistent** (project-wide, edits `.dev.env` `CAVEMAN`): the `/caveman on|off|auto` slash command (`$PI_CODING_AGENT_DIR/prompts/caveman.md`).
 
 ## Configuration — `.dev.env` (`CAVEMAN`)
 
-Automatic activation is gated by the `CAVEMAN` parameter in `.dev.env` (canonical description — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/dev-standards-env.md → "CAVEMAN — caveman auto-activation"`; toggled by the `/caveman on|off|auto` slash command, `C:/DevopsMoments/pi-agents/config-1c/prompts/caveman.md`):
+Automatic activation is gated by the `CAVEMAN` parameter in `.dev.env` (canonical description — `$PI_CODING_AGENT_DIR/rules-1c/rules/dev-standards-env.md → "CAVEMAN — caveman auto-activation"`; toggled by the `/caveman on|off|auto` slash command, `$PI_CODING_AGENT_DIR/prompts/caveman.md`):
 
-- **`CAVEMAN=on`** (default / empty / invalid) — caveman is active for **all** tasks, development and analysis / documentation / review alike. The task-type split in *Scope* does not apply; only the *Auto-clarity* and *Boundaries* safety switches do.
+- **`CAVEMAN=on`** (explicit; empty / invalid = `auto`) — caveman is active for **all** tasks, development and analysis / documentation / review alike. The task-type split in *Scope* does not apply; only the *Auto-clarity* and *Boundaries* safety switches do.
 - **`CAVEMAN=auto`** — task-type auto-classification as described in *Scope*: on for development, off for analysis / documentation / review.
 - **`CAVEMAN=off`** — auto-activation is disabled: caveman never turns on by itself on any task. It stays off until the user issues an explicit in-session force command.
 
-**Precedence:** an explicit session force ("caveman please" / "stop caveman" / "normal mode", or a `/caveman lite|full|ultra` level switch) always wins → then the persistent `CAVEMAN` value (`on` → all tasks, `auto` → by task type, `off` → no auto-on). Read `.dev.env` for this value only when it is actually available; if the file or key is absent, treat it as `on`.
+**Precedence:** an explicit session force ("caveman please" / "stop caveman" / "normal mode", or a `/caveman lite|full|ultra` level switch) always wins → then the persistent `CAVEMAN` value (`on` → all tasks, `auto` → by task type, `off` → no auto-on). Read `.dev.env` for this value only when it is actually available; if the file or key is absent, treat it as `auto`.
 
 ## Persistence
 
-When active (by default under `CAVEMAN=on`, by task-type classification under `CAVEMAN=auto`, or by force), caveman is ACTIVE FOR EVERY SUBSEQUENT RESPONSE within the same task. No filler drift. Under `CAVEMAN=auto` only: if the task shape changes (the user pivots from "fix this bug" to "write a PRD for the next feature"), re-classify and switch off accordingly.
+When active (under `CAVEMAN=on`, by task-type classification under `CAVEMAN=auto`, or by force), caveman is ACTIVE FOR EVERY SUBSEQUENT RESPONSE within the same task. No filler drift. Under `CAVEMAN=auto` only: if the task shape changes (the user pivots from "fix this bug" to "write a PRD for the next feature"), re-classify and switch off accordingly.
 
 Default level when active: **full**. Switch with `/caveman lite`, `/caveman full`, or `/caveman ultra`. Level holds until session end or another switch.
 
@@ -94,7 +94,7 @@ Never:
 - drop a negation or a scope word (`не`, `нет`, `никогда`, `только`, `кроме`, `без`). A flipped meaning costs incomparably more than the token saved. Numbers, units, dates, version numbers — exact.
 - invent abbreviations. Established 1C / IT acronyms a senior reads instantly are fine (`БД`, `ИБ`, `ТЧ`, `ПКО`, `РС`, `РН`, `СКД`, `БСП`, `API`, `HTTP`); ad-hoc truncations (`конф`, `обр`, `рег`, `рекв`) are not — the decode cost is real and some are outright ambiguous (`рег` — регистр? регламентное задание?).
 - decorate. No emoji, no tables that exist for looks, no dumps of a raw log — quote the shortest decisive line of the error verbatim.
-- self-reference. Never name or announce the style ("включаю caveman", "me caveman think"), never tag the answer, never append a "Caveman:" recap to a normal answer. Exceptions — the user asks about the mode, or a rule requires naming it: the `/caveman` command confirmation and a model profile recommending a level (`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/model-fable5.md`).
+- self-reference. Never name or announce the style ("включаю caveman", "me caveman think"), never tag the answer, never append a "Caveman:" recap to a normal answer. Exceptions — the user asks about the mode, or a rule requires naming it: the `/caveman` command confirmation and a model profile recommending a level (`$PI_CODING_AGENT_DIR/rules-1c/rules/model-fable5.md`).
 
 **Tool calls — fire them directly.** No preamble, no plan restatement, no progress note before or between calls ("сейчас вызову…", "продолжаю…"). After a result — the next call or the answer, without announcing it. Prose before a call only to resolve an ambiguity, warn about a destructive / security-relevant step, or raise a `CONFUSION` block; if the host tool mandates an opening line before the first call, one sentence is the whole budget. This trims narration, not obligations: the plan with verification points, the `CONFUSION` block, and the delivery report required by `AGENTS.md` stay.
 
@@ -130,7 +130,7 @@ Even on a development task where caveman is on by default, switch to full normal
 
 Resume caveman after the unambiguous block is delivered.
 
-Under `CAVEMAN=auto`, if the entire task is analysis / documentation / review (see **Scope** above), caveman is off for the whole response, not just for the unambiguous block — this section does not apply. Under the default `CAVEMAN=on`, caveman stays on for such tasks too; only the safety switches in this section and *Boundaries* apply.
+Under `CAVEMAN=auto`, if the entire task is analysis / documentation / review (see **Scope** above), caveman is off for the whole response, not just for the unambiguous block — this section does not apply. Under explicit `CAVEMAN=on`, caveman stays on for such tasks too; only the safety switches in this section and *Boundaries* apply.
 
 ## Boundaries (always normal, never caveman)
 

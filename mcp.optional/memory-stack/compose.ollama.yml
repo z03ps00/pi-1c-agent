@@ -1,0 +1,48 @@
+services:
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: pi-1c-memory-ollama
+    restart: unless-stopped
+    ports:
+      - "${MEMORY_OLLAMA_HOST:-127.0.0.1}:${MEMORY_OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ${MEMORY_DATA_ROOT:-./data}/ollama:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    networks:
+      - memory-net
+
+  openviking:
+    labels:
+      com.mcp.agent-memory.profile: ollama
+    depends_on:
+      - ollama
+
+  cognee:
+    labels:
+      com.mcp.agent-memory.profile: ollama
+    depends_on:
+      - ollama
+    environment:
+      TRANSPORT_MODE: http
+      HTTP_PORT: "8000"
+      BIND_ADDRESS: 0.0.0.0
+      LLM_PROVIDER: ollama
+      LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3.5:9b}
+      LLM_ENDPOINT: ${OLLAMA_INTERNAL_URL:-http://ollama:11434}
+      LLM_API_KEY: ollama
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-bge-m3:latest}
+      EMBEDDING_ENDPOINT: ${OLLAMA_INTERNAL_URL:-http://ollama:11434}
+      EMBEDDING_API_KEY: ollama
+      EMBEDDING_DIMENSIONS: "${OLLAMA_EMBEDDING_DIMENSIONS:-1024}"
+      SYSTEM_ROOT_DIRECTORY: /cognee-storage/system
+      DATA_ROOT_DIRECTORY: /cognee-storage/data
+      DB_PROVIDER: sqlite
+      VECTOR_DB_PROVIDER: lancedb
+      GRAPH_DATABASE_PROVIDER: ladybug
+      ENABLE_BACKEND_ACCESS_CONTROL: "false"
+      REQUIRE_AUTHENTICATION: "false"
+      COGNEE_SKIP_CONNECTION_TEST: "true"
+      MCP_ALLOWED_HOSTS: 127.0.0.1:*,localhost:*,pi-1c-memory-cognee:*,cognee:*,ollama:*
+      MCP_CORS_ALLOW_ORIGINS: "*"

@@ -64,7 +64,7 @@ OpenSpec slash commands (`/opsx:propose`, `/opsx:apply`, `/opsx:archive`,
 `/opsx:explore`) and the matching SKILLs are placed automatically by the
 `1c-rules` installer for every active tool — **no `npm` and no OpenSpec CLI
 required at install time**. The installer ships a snapshot of `openspec init`
-output under `C:/DevopsMoments/pi-agents/config-1c/rules-1c/openspec-bundle-reference/<tool>/` and copies the per-tool files
+output under `$PI_CODING_AGENT_DIR/rules-1c/openspec-bundle-reference/<tool>/` and copies the per-tool files
 during phases 6c (`init` / `add`) and *OpenSpec artefacts (update)* (`update`).
 The OpenSpec CLI version of the bundled snapshot is recorded in
 `.ai-rules.json` under `integrations.openspec.artifactsBundleVersion`.
@@ -119,7 +119,7 @@ For deeper guidance see:
 
 The detailed agent-side rules for how to read and update this folder live in:
 
-- source repository: [`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md`](../C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md)
+- source repository: [`$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md`](../$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md)
 - installed project: the canonical rules directory referenced from `AGENTS.md`
 
 That file is loaded on demand whenever an SDD framework is detected in the project.

@@ -1,0 +1,5 @@
+# Portable memory stack — local-only files
+data/
+.env
+secrets/*.env
+!secrets/*.env.example

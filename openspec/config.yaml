@@ -1,0 +1,28 @@
+schema: spec-driven
+
+project:
+  name: 1c-pi-profile
+  description: Personal Pi 1C agent profile (PI_CODING_AGENT_DIR)
+
+context: |
+  This repository is the Pi 1C agent profile, not a 1C configuration dump.
+  Operational parameters for 1C infobases live in each project's .dev.env, never here.
+  1C metadata facts in OpenSpec artifacts need MCP confirmation (docs, SSL, live IB).
+  Follow rules-1c/core/openspec.md and rules-1c/rules/sdd-integrations.md.
+  Resolve the target container per rules-1c/core/extension-targeting.md; never invent a new CFE.
+  /opsx-propose and PLAN summaries start with 5-8 plain-language lines before artifacts.
+
+# Per-artifact rules (optional)
+# rules:
+#   proposal:
+#     - Keep proposals under 500 words
+#     - Always include a "Non-goals" section
+
+# Per-operation guidance (optional)
+# operations:
+#   apply:
+#     guidance:
+#       - Keep test summaries concise
+#   archive:
+#     guidance:
+#       - Summarize the archive outcome before finishing

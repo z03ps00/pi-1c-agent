@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Model profile — Claude Fable 5
 
-**When to load this file:** `AGENT_MODEL=fable5` in `.dev.env`, or you know you are running as Claude Fable 5 or Claude Mythos 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
+**When to load this file:** `AGENT_MODEL=fable5` in `.dev.env`, or you know you are running as Claude Fable 5 or Claude Mythos 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `$PI_CODING_AGENT_DIR/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
 
 Baseline: Fable 5 sustains long, autonomous, multi-step work and follows instructions strongly enough that short instructions beat enumerated checklists. Individual turns run longer than on prior models — that is expected, not a hang.
 
@@ -13,14 +13,14 @@ Baseline: Fable 5 sustains long, autonomous, multi-step work and follows instruc
 
 Fable 5 can overplan an ambiguous task and survey options it will not pursue.
 
-- Step 1 of `AGENTS.md → Development Procedure` stays: a plan before code. Keep it **short** — files / procedures to touch, risks, verification points. Not an options catalogue.
+- Step 1 of `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure` stays: a plan before code. Keep it **short** — files / procedures to touch, risks, verification points. Not an options catalogue.
 - Do not re-derive facts already established in this session, re-litigate a decision the user already made, or narrate alternatives you will not take. When weighing two approaches, give a recommendation, not an exhaustive comparison. (This applies to user-facing text, not to your thinking.)
 - The `CONFUSION` block is still mandatory on a **material** fork per the trigger list; low-risk ambiguity resolves as a one-line stated assumption. What this section removes is the third path — a long meditation on options.
 
 ## 2. Effort and over-tidying (client-side setting)
 
 - `high` is the default; `xhigh` for the most capability-sensitive work (architecture, cross-subsystem refactor, hard debugging); `medium` / `low` for routine work — lower effort on Fable 5 still performs strongly.
-- At higher effort the model gathers context and tidies beyond the task. `AGENTS.md → Development Procedure → 2` and `3` are the contract and need no expansion here: no unrequested refactors, no abstractions for one-time operations, no error handling for impossible scenarios, no compatibility shims when the code can just change. A bug fix does not need the surrounding code cleaned up.
+- At higher effort the model gathers context and tidies beyond the task. `rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 2` and `3` are the contract and need no expansion here: no unrequested refactors, no abstractions for one-time operations, no error handling for impossible scenarios, no compatibility shims when the code can just change. A bug fix does not need the surrounding code cleaned up.
 - Reduce effort when a task completes but takes longer than it deserves, or when the user wants a more interactive working style.
 
 ## 3. Short instructions, literal gates
@@ -29,15 +29,15 @@ Instruction following is strong enough that a brief statement steers behaviour b
 
 - Treat the **process** guidance of this ruleset as intent: apply the spirit of triage, planning and reporting without mechanically expanding every checklist into extra work or extra prose.
 - Treat the **gates** literally: the `1c-metadata-manage` and infobase-tooling gates, MCP-first search, the platform-capability check, `templatesearch` and `recall`, the validator chain and its budget, `verify_xml`, and the evidence one-liners. These are not stylistic scaffolding — they encode consequences the model cannot infer from the code in front of it.
-- When you brief a subagent, give intent plus constraints plus scope, and skip the micro-steps (`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagents.md → Bounded sidecar task templates`).
+- When you brief a subagent, give intent plus constraints plus scope, and skip the micro-steps (`$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md → Bounded sidecar task templates`).
 
 ## 4. Ground every progress claim in evidence
 
 On long autonomous runs, unaudited status reports are the main failure mode this model has to be steered away from.
 
 - Before reporting progress or delivery, **audit each claim against an actual tool result from this session**. "Проверено", "тесты прошли", "синтаксис чистый", "шаблон использован" require the corresponding output — `syntaxcheck` / `check_1c_code` / `review_1c_code` / `verify_xml` results, the `templatesearch` hit, the `recall` notes, the Designer log line.
-- Report outcomes faithfully: if a validator failed, say so and quote the finding; if a step was skipped, say which and why; when something is verified, state it plainly without hedging. Unverified is a status you report, not a gap you paper over (`AGENTS.md → MCP Tool Calling → B.1`).
-- This is the same obligation the ruleset already carries in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/verification-delivery.md`; on this model, state it in the answer explicitly rather than assuming it is visible.
+- Report outcomes faithfully: if a validator failed, say so and quote the finding; if a step was skipped, say which and why; when something is verified, state it plainly without hedging. Unverified is a status you report, not a gap you paper over (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`).
+- This is the same obligation the ruleset already carries in `$PI_CODING_AGENT_DIR/rules-1c/rules/verification-delivery.md`; on this model, state it in the answer explicitly rather than assuming it is visible.
 
 ## 5. Boundaries and checkpoints
 
@@ -54,15 +54,15 @@ Deep into a long session this model can end a turn with a statement of intent ("
 
 - Before ending a turn, read your last paragraph. If it is a plan, an analysis of what remains, a question you can answer yourself, or a promise ("сейчас…", "далее я…"), do that work now with tool calls.
 - End the turn only when the task is complete or you are blocked on input only the user can provide.
-- **Context budget is not a reason to stop.** Do not suggest a new session, offer to summarise, or trim your own work because the window feels tight — finish, and use `C:/DevopsMoments/pi-agents/config-1c/skills/handoff` / `remember` when a handoff is genuinely needed.
+- **Context budget is not a reason to stop.** Do not suggest a new session, offer to summarise, or trim your own work because the window feels tight — finish, and use `$PI_CODING_AGENT_DIR/skills/handoff` / `remember` when a handoff is genuinely needed.
 
 ## 7. Parallel subagents
 
 Fable 5 dispatches and sustains parallel subagents more dependably than prior models.
 
-- Delegation criteria stay in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagents.md`; within them, prefer **parallel independent tracks** (e.g. `1c-explorer` mapping usages while you read the target module) and keep working while they run instead of blocking on each return.
+- Delegation criteria stay in `$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md`; within them, prefer **parallel independent tracks** (e.g. `1c-explorer` mapping usages while you read the target module) and keep working while they run instead of blocking on each return.
 - Intervene when a subagent drifts off track or is missing context. A long-lived subagent that keeps its context across subtasks beats re-briefing a fresh one.
-- With `ORCHESTRATION=economy` this pairs naturally with `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/orchestrator-economy.md`; the parent still owns decisions, specs and verification.
+- With `ORCHESTRATION=economy` this pairs naturally with `$PI_CODING_AGENT_DIR/rules-1c/rules/orchestrator-economy.md`; the parent still owns decisions, specs and verification.
 
 ## 8. Never echo your own reasoning
 
@@ -76,7 +76,7 @@ Instructions that ask the model to reproduce, transcribe or explain its internal
 
 This model benefits more than most from a written memory layer.
 
-- Use the existing two layers actively (`AGENTS.md → Project memory`): `recall` before designing a solution, `remember` in the same turn as a correction or a standing condition, `memory.md` only for the four-criteria global rules. One self-contained fact per note; update an existing note rather than adding a near-duplicate; delete notes that turn out to be wrong.
+- Use the existing two layers actively (`rules-1c/AGENTS-UPSTREAM.md` → Project memory): `recall` before designing a solution, `remember` in the same turn as a correction or a standing condition, `memory.md` only for the four-criteria global rules. One self-contained fact per note; update an existing note rather than adding a near-duplicate; delete notes that turn out to be wrong.
 - Record confirmed approaches as well as corrections — a note that says "this pattern worked and why" is as valuable as one that says "do not do this".
 
 ## 10. Readable final answers

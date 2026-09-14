@@ -73,7 +73,7 @@ Used by `/loadfrom1cbase`, `/update1cbase`, `/getconfigfiles`, `/deploy-and-test
 
 #### `REPOSITORY_PATH` — configuration repository binding
 
-A non-empty `REPOSITORY_PATH` is the project's explicit statement "we work with a 1C configuration repository". It changes the SDLC: objects must be locked in the repository before mutation and committed after verification, `/update1cbase` requires locks on the loaded objects, and every repository operation runs through the `1c-repository-manage` skill (`C:/DevopsMoments/pi-agents/config-1c/skills/1c-repository-manage/SKILL.md` — hard gate per `AGENTS.md → Skills and Subagents`). Process canon — the skill's `docs/repo-sdlc.md`. **While the parameter is set, disconnecting the configuration from the repository is forbidden** (`/ConfigurationRepositoryUnbindCfg` and any equivalent) — canon `SKILL.md → Safety invariants`. When the parameter is empty, none of this applies and the agent must not raise the topic.
+A non-empty `REPOSITORY_PATH` is the project's explicit statement "we work with a 1C configuration repository". It changes the SDLC: objects must be locked in the repository before mutation and committed after verification, `/update1cbase` requires locks on the loaded objects, and every repository operation runs through the `1c-repository-manage` skill (`$PI_CODING_AGENT_DIR/skills/1c-repository-manage/SKILL.md` — hard gate per `rules-1c/AGENTS-UPSTREAM.md` → Skills and Subagents). Process canon — the skill's `docs/repo-sdlc.md`. **While the parameter is set, disconnecting the configuration from the repository is forbidden** (`/ConfigurationRepositoryUnbindCfg` and any equivalent) — canon `SKILL.md → Safety invariants`. When the parameter is empty, none of this applies and the agent must not raise the topic.
 
 #### `SUPPORT_GUARD` — editing a typical configuration on vendor support
 
@@ -85,7 +85,7 @@ Every mutating tool of the `1c-metadata-manage` skill checks whether the target 
 | `warn` | Warning to stderr, the edit proceeds — for projects that knowingly work off-support |
 | `off` | No check at all |
 
-The standard answer to a refusal is a change **in an extension** (`cfe-borrow` / `cfe-patch-method`); a deliberate support-state change is the skill's `support-edit` tool. Canon — `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/support-manage.md`.
+The standard answer to a refusal is a change **in an extension** (`cfe-borrow` / `cfe-patch-method`); a deliberate support-state change is the skill's `support-edit` tool. Canon — `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/support-manage.md`.
 
 #### `NEW_OBJECT_POSITION` — placement of a new object in `Configuration.xml`
 
@@ -125,14 +125,14 @@ Browser UI testing (via the `1c-tester` subagent and Step 4 of `/deploy-and-test
 
 | Value | Meaning |
 |---|---|
-| `true` | The project is developed in 1C:EDT. `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/edt-workflow.md` applies: source-format check before metadata actions, EDT-MCP routing, model↔disk synchronization, EDT validation, and the EDT deployment path. `/installtools` recommends EDT-MCP. |
+| `true` | The project is developed in 1C:EDT. `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md` applies: source-format check before metadata actions, EDT-MCP routing, model↔disk synchronization, EDT validation, and the EDT deployment path. `/installtools` recommends EDT-MCP. |
 | `false` | EDT is not part of the project workflow. `edt-workflow.md` does not apply, EDT-MCP is not recommended or preselected, and EDT is never proposed as a way to do a task. |
 
 Missing, empty or invalid values are `unknown`, not proof that EDT is absent. Only `/installtools`, `/install-edt-mcp`, or an explicit user statement that the project moved to EDT may ask and persist the choice; ordinary development tasks must not interrupt work to ask. An EDT installation found on the workstation, or a leftover `edt-mcp` entry in a client config, is evidence about the machine — not about the project.
 
 ### Subagent model parameters
 
-Consumed by the **installer** when rendering subagent files (source agents declare an abstract `modelTier: coding | analysis | light` instead of a concrete model — see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/subagents.md → Model-tier routing`). Not consulted at task time. On first install the installer offers a benchmark-based profile (`Balanced` / `Economy` / `Quality`, from <https://onec-llm-bench.lovable.app/>) that fills all three values; any of them may still be overridden or left empty.
+Consumed by the **installer** when rendering subagent files (source agents declare an abstract `modelTier: coding | analysis | light` instead of a concrete model — see `$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md → Model-tier routing`). Not consulted at task time. On first install the installer offers a benchmark-based profile (`Balanced` / `Economy` / `Quality`, from <https://onec-llm-bench.lovable.app/>) that fills all three values; any of them may still be overridden or left empty.
 
 | Parameter | Effect | Class | Behavior when empty |
 |---|---|---|---|
@@ -163,7 +163,7 @@ Controls how eagerly the parent agent delegates execution to subagents. It is **
 | Value | Meaning |
 |---|---|
 | `standard` (default / empty) | Regular delegation policy from `subagents.md`: delegate when the task is large enough to justify the overhead, execute directly otherwise. |
-| `economy` | Orchestrator economy mode (`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/orchestrator-economy.md`): the parent keeps decisions, specs, and verification; reading and writing are delegated to subagents per tier. Model selection is unaffected — models still come from `SUBAGENT_MODEL_*` by tier. |
+| `economy` | Orchestrator economy mode (`$PI_CODING_AGENT_DIR/rules-1c/rules/orchestrator-economy.md`): the parent keeps decisions, specs, and verification; reading and writing are delegated to subagents per tier. Model selection is unaffected — models still come from `SUBAGENT_MODEL_*` by tier. |
 
 ### Process-tuning parameters
 
@@ -171,10 +171,10 @@ Consumed by the triage and debugging rules at task time. Both are **Defaulted** 
 
 | Parameter | Effect | Class | Behavior when empty |
 |---|---|---|---|
-| `{QUICKFIX_MAX_LINES}` | Line budget of the quick-fix path (`AGENTS.md → Triage`): the maximum changed BSL lines for which a one-logical-change-in-one-module edit may stay quick-fix. Promotion triggers (`verification-policy.md → Triage details`) always win over the budget. | Defaulted | Empty / invalid = `40`. Raise for teams comfortable with larger direct edits; lower for stricter projects. |
+| `{QUICKFIX_MAX_LINES}` | Line budget of the quick-fix path (`rules-1c/AGENTS-UPSTREAM.md` → Triage): the maximum changed BSL lines for which a one-logical-change-in-one-module edit may stay quick-fix. Promotion triggers (`verification-policy.md → Triage details`) always win over the budget. | Defaulted | Empty / invalid = `40`. Raise for teams comfortable with larger direct edits; lower for stricter projects. |
 | `{DEBUG_FAST_PATH}` | Debugging fast-path mode (`systematic-debugging.md → Fast path`): `standard` \| `extended` \| `off`. Controls when a directly evidenced bug may skip the full 4-phase loop. | Defaulted | Empty / invalid = `standard` |
 | `{VERIFICATION_DEPTH}` | Static code-verification depth (`verification-policy.md → "Verification depth levels"`): `full` \| `standard` \| `lite`. Tunes the depth of Gates 1–3 for low-risk edits. Toggled by `/litemode`. | Defaulted | Empty / invalid = `standard` |
-| `{CAVEMAN}` | caveman communication-style auto-activation (`C:/DevopsMoments/pi-agents/config-1c/skills/caveman/SKILL.md`): `on` \| `auto` \| `off`. Controls whether the terse style turns on automatically and for which tasks. Does not affect the mandatory report structure or verification. | Defaulted | Empty / invalid = `on` |
+| `{CAVEMAN}` | caveman communication-style auto-activation (`$PI_CODING_AGENT_DIR/skills/caveman/SKILL.md`): `on` \| `auto` \| `off`. Controls whether the terse style turns on automatically and for which tasks. Does not affect the mandatory report structure or verification. | Defaulted | Empty / invalid = `auto` |
 | `{AGENT_MODEL}` | Active-model behaviour profile of the parent agent (`model-adaptation.md`): `opus5` \| `sonnet5` \| `fable5` \| `gpt56`. Tunes verbosity, narration, planning depth, delegation eagerness and self-invented extra passes; never weakens a hard gate. Toggled by `/rulesmodel`. Full description — `#### AGENT_MODEL` above. | Defaulted | Empty / unrecognised = no profile; the base model-neutral ruleset applies |
 
 #### `VERIFICATION_DEPTH` — static code-verification depth
@@ -183,7 +183,7 @@ Tunes **how deep** the validator chain (`syntaxcheck → check_1c_code → revie
 
 | Value | Meaning |
 |---|---|
-| `full` | All three validators; one clean pass on the latest state is required, with up to 3 calls total after blocking fixes (`AGENTS.md → MCP Tool Calling → B.1`). Always applied to promotion-trigger paths regardless of this setting. |
+| `full` | All three validators; one clean pass on the latest state is required, with up to 3 calls total after blocking fixes (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`). Always applied to promotion-trigger paths regardless of this setting. |
 | `standard` (default / empty) | All three validators; normally one clean pass, with exactly one mandatory confirmation after a blocking fix (2 calls total, no open-ended retry loop). |
 | `lite` | Low-risk edits: `syntaxcheck` stays mandatory, `check_1c_code` / `review_1c_code` run only for high-risk changes (promotion triggers) or on explicit request. |
 
@@ -191,15 +191,15 @@ Tunes **how deep** the validator chain (`syntaxcheck → check_1c_code → revie
 
 #### `CAVEMAN` — caveman auto-activation
 
-Controls **whether** the terse `caveman` communication style (`C:/DevopsMoments/pi-agents/config-1c/skills/caveman/SKILL.md`) turns on **automatically** and for **which** tasks. It is **Defaulted** — empty / invalid resolves to `on`, and the agent **must not** ask for the value. It affects only presentation: model selection, the five-step development procedure, verification depth, and the mandatory report structure are all unchanged.
+Controls **whether** the terse `caveman` communication style (`$PI_CODING_AGENT_DIR/skills/caveman/SKILL.md`) turns on **automatically** and for **which** tasks. It is **Defaulted** — empty / invalid resolves to `auto`, and the agent **must not** ask for the value. It affects only presentation: model selection, the five-step development procedure, verification depth, and the mandatory report structure are all unchanged.
 
 | Value | Meaning |
 |---|---|
-| `on` (default / empty) | `caveman` is active for **all** tasks — development and analysis / review / documentation alike. Only the skill's safety switches apply (code, error text, destructive / security / ordered blocks stay in normal grammar). |
-| `auto` | The skill auto-classifies by task type: on for development (writing / editing / refactoring code, debugging, deploy, shell), off for analysis / review / documentation. |
+| `on` | `caveman` is active for **all** tasks — development and analysis / review / documentation alike. Only the skill's safety switches apply (code, error text, destructive / security / ordered blocks stay in normal grammar). |
+| `auto` (shipped default / empty / invalid) | The skill auto-classifies by task type: on for development (writing / editing / refactoring code, debugging, deploy, shell), off for analysis / review / documentation. |
 | `off` | Automatic activation is disabled — `caveman` never turns on by itself on any task. It can still be enabled by an explicit in-session force ("caveman please"), which holds until session end. |
 
-**Precedence:** an explicit session force always wins over `CAVEMAN`; otherwise the `CAVEMAN` value applies (`on` → all tasks, `auto` → by task type, `off` → no auto-on). The persistent value is edited by the `/caveman on|auto|off` command (`C:/DevopsMoments/pi-agents/config-1c/prompts/caveman.md`); session-only force uses the phrases "caveman please" / "stop caveman" or a `/caveman lite|full|ultra` level switch.
+**Precedence:** an explicit session force always wins over `CAVEMAN`; otherwise the `CAVEMAN` value applies (`on` → all tasks, `auto` → by task type, `off` → no auto-on). The persistent value is edited by the `/caveman on|auto|off` command (`$PI_CODING_AGENT_DIR/prompts/caveman.md`); session-only force uses the phrases "caveman please" / "stop caveman" or a `/caveman lite|full|ultra` level switch.
 
 Task number `{TASK}` is **only required when modification comment markers are produced** — i.e. when the change touches **typical (standard) configuration code** and the templates `{COMMENT_OPEN}` / `{COMMENT_CLOSE}` reference `{TASK}`. For new objects with `{PREFIX}` (no per-method markers), review / analysis / documentation tasks, and any task where `COMPANY` / `DEVELOPER` are empty (markers skipped) — `{TASK}` is **not required**. Do not block on it.
 

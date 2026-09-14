@@ -6,9 +6,9 @@ category: development
 
 # DCS / СКД — Report Design Rules
 
-The 1C Data Composition System (СхемаКомпоновкиДанных, СКД) is the canonical engine for reports. The rules below cover design decisions that recur in code review and that the structural skill (`C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/skd-manage.md`) intentionally does not opine on.
+The 1C Data Composition System (СхемаКомпоновкиДанных, СКД) is the canonical engine for reports. The rules below cover design decisions that recur in code review and that the structural skill (`$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/skd-manage.md`) intentionally does not opine on.
 
-> **Scope.** This file owns *report design* rules. XML / schema mechanics for `.dcs` files live in the `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/skd-manage.md` skill (XML structure, datasets API, query parameters API). Anti-patterns of slow queries inside a DCS — `anti-patterns.md` and `dev-standards-architecture.md §3 → "Queries"`.
+> **Scope.** This file owns *report design* rules. XML / schema mechanics for `.dcs` files live in the `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/skd-manage.md` skill (XML structure, datasets API, query parameters API). Anti-patterns of slow queries inside a DCS — `anti-patterns.md` and `dev-standards-architecture.md §3 → "Queries"`.
 
 ## 1. Choosing the data-set type
 
@@ -127,7 +127,7 @@ Notes:
 
 | Concern | File |
 |---|---|
-| XML / schema mechanics for `.dcs` | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/skd-manage.md` (skill) |
+| XML / schema mechanics for `.dcs` | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/skd-manage.md` (skill) |
 | Query anti-patterns | `anti-patterns.md` |
 | Authoritative query rules | `dev-standards-architecture.md §3 → "Queries"` |
 | Long-running report execution | `platform-solutions.md §2 → "Long-running operations"` |

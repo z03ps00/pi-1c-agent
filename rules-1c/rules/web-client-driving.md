@@ -107,6 +107,6 @@ UI automation degenerates into retry loops faster than any other work in this ru
 |---|---|
 | Which browser / desktop driver to use, and the mandatory preflight | `ui-testing-tools.md` |
 | `UI_TESTING`, `INFOBASE_PUBLISH_URL` and the rest of the test parameters | `dev-standards-env.md` |
-| Test workflow, scenario template, report format | `C:/DevopsMoments/pi-agents/config-1c/agents/1c-tester.md` |
-| Deploy step that precedes UI testing | `C:/DevopsMoments/pi-agents/config-1c/prompts/deploy-and-test.md` |
-| Publishing the infobase for the web client | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/web-manage.md` |
+| Test workflow, scenario template, report format | `$PI_CODING_AGENT_DIR/agents/1c-tester.md` |
+| Deploy step that precedes UI testing | `$PI_CODING_AGENT_DIR/prompts/deploy-and-test.md` |
+| Publishing the infobase for the web client | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/web-manage.md` |

@@ -11,9 +11,9 @@
     "enabled": true
   },
   "packages": [
-    "C:/DevopsMoments/pi-agents/packages/pi-1c-agent",
+    "<path-to-pi-1c-agent>",
     "npm:pi-mcp-adapter@2.32.1",
-    "npm:pi-cursor-sdk@0.3.6"
+    "npm:pi-cursor-sdk"
   ],
   "hideThinkingBlock": false
 }

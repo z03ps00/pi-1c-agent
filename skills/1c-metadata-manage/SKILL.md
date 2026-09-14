@@ -13,9 +13,9 @@ Any **mutation** of metadata XML — `Configuration.xml`, object XML, `Form.xml`
 
 The same gate covers **infobase operations** (create / run, load / dump configuration, `/UpdateDBCfg`, web publication): use the `db-ops` / `web-ops` tools of this skill ([db-manage.md](docs/db-manage.md), [web-manage.md](docs/web-manage.md)) or the matching slash command (`/update1cbase`, `/loadfrom1cbase`, `/getconfigfiles`, `/deploy-and-test`) — never an ad-hoc `1cv8.exe` / `ibcmd` command line composed from memory. DB updates follow the iterative retry discipline (`db-manage.md → Update retry discipline`).
 
-**Repository-bound projects:** when `.dev.env` `REPOSITORY_PATH` is set, the configuration is bound to a 1C configuration repository (хранилище) — objects must be **locked in the repository before** this skill mutates them and committed after verification, and repository operations themselves go through the `1c-repository-manage` skill (`C:/DevopsMoments/pi-agents/config-1c/skills/1c-repository-manage/SKILL.md`, process — its `docs/repo-sdlc.md`). A "configuration object is read-only / locked" failure in a mutating or DB-update run on such a project routes there, not into a retry loop. **Never unbind** the configuration from the repository to proceed (`AGENTS.md` / that skill's Safety invariant 5).
+**Repository-bound projects:** when `.dev.env` `REPOSITORY_PATH` is set, the configuration is bound to a 1C configuration repository (хранилище) — objects must be **locked in the repository before** this skill mutates them and committed after verification, and repository operations themselves go through the `1c-repository-manage` skill (`$PI_CODING_AGENT_DIR/skills/1c-repository-manage/SKILL.md`, process — its `docs/repo-sdlc.md`). A "configuration object is read-only / locked" failure in a mutating or DB-update run on such a project routes there, not into a retry loop. **Never unbind** the configuration from the repository to proceed (`AGENTS.md` / that skill's Safety invariant 5).
 
-**EDT-format sources:** the tools of this skill address the **Designer XML dump** (`Configuration.xml`, object XML, `Form.xml`, MXL / SKD, `Role.xml`). A project developed in 1C:EDT (`.dev.env` `USE_EDT=true`) may instead keep its sources in **EDT format** — `.project`, `DT-INF/`, `src/**/*.mdo`, `Form.form` — which is outside this toolchain: never point these scripts at `src/`, and never hand-edit `*.mdo` / `*.form` as a workaround. Metadata mutations there go through EDT (EDT-MCP `create_metadata` / `modify_metadata` / `rename_metadata_object` / …, the EDT UI, or a confirmed export → XML → import round trip) per `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/edt-workflow.md`. When the working tree **is** a Designer XML dump, this skill applies unchanged whether or not the humans edit it in EDT.
+**EDT-format sources:** the tools of this skill address the **Designer XML dump** (`Configuration.xml`, object XML, `Form.xml`, MXL / SKD, `Role.xml`). A project developed in 1C:EDT (`.dev.env` `USE_EDT=true`) may instead keep its sources in **EDT format** — `.project`, `DT-INF/`, `src/**/*.mdo`, `Form.form` — which is outside this toolchain: never point these scripts at `src/`, and never hand-edit `*.mdo` / `*.form` as a workaround. Metadata mutations there go through EDT (EDT-MCP `create_metadata` / `modify_metadata` / `rename_metadata_object` / …, the EDT UI, or a confirmed export → XML → import round trip) per `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md`. When the working tree **is** a Designer XML dump, this skill applies unchanged whether or not the humans edit it in EDT.
 
 The only exceptions:
 
@@ -36,7 +36,7 @@ In every case the post-edit validation (`verify_xml` / skill validation scripts)
 PowerShell examples in this skill (`SKILL.md` and every `docs/*.md`) use the prefix `skills/1c-metadata-manage/tools/...`. That prefix is **relative to the active tool's skills directory**, not to the repository root:
 
 - After installation: the script lives under `<tool>/skills/1c-metadata-manage/tools/...` (e.g. `.cursor/skills/1c-metadata-manage/tools/...`, `.claude/skills/1c-metadata-manage/tools/...`, `.kilo/skills/1c-metadata-manage/tools/...`, `.ai-agent/skills/1c-metadata-manage/tools/...`). Active tools that load this skill resolve the prefix automatically.
-- In the `1c-rules` source repository (when editing the skill itself): the same script lives under `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/tools/...`. Prepend `content/` when running the example outside of an installed project.
+- In the `1c-rules` source repository (when editing the skill itself): the same script lives under `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/tools/...`. Prepend `content/` when running the example outside of an installed project.
 
 The same convention applies to `docs/*.md` references like `skills/1c-metadata-manage/tools/1c-skd-info/modes-reference.md`.
 
@@ -75,7 +75,7 @@ Use when the task is a **single lightweight query**: checking metadata info, a q
 
 ### Subagent delegation — complex / mutation tasks
 
-Delegate to the **`1c-metadata-manager`** subagent (defined in `C:/DevopsMoments/pi-agents/config-1c/agents/1c-metadata-manager.md`, or in the installed agents directory for the active tool) when **any** of the following is true:
+Delegate to the **`1c-metadata-manager`** subagent (defined in `$PI_CODING_AGENT_DIR/agents/1c-metadata-manager.md`, or in the installed agents directory for the active tool) when **any** of the following is true:
 
 - The task **creates, scaffolds, or compiles** metadata (objects, forms, SKD, MXL, roles, EPF, CF, CFE, databases)
 - The task **edits multiple files** or **spans multiple domains**
@@ -91,7 +91,7 @@ The subagent already knows how to read the skill docs, execute PowerShell script
 | Metadata objects — create, edit, analyze, remove, validate | catalog, document, register, enum, constant, module, attribute, tabular section | [meta-manage.md](docs/meta-manage.md) |
 | UUID integrity — duplicate identities in an XML dump | UUID, duplicate uuid, TypeId, ValueId, identity collision, load failure after generation | [uuid-check.md](docs/uuid-check.md) |
 | Managed forms — design, create, edit, analyze, validate | form, Form.xml, UI, elements, commands, events | [form-manage.md](docs/form-manage.md) |
-| Managed-form layout patterns — archetypes, naming conventions, advanced patterns | form patterns, archetype, layout, naming, ERP form, list form, document form, wizard | [form-patterns.md](docs/form-patterns.md) → canonical `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/form-patterns.md` |
+| Managed-form layout patterns — archetypes, naming conventions, advanced patterns | form patterns, archetype, layout, naming, ERP form, list form, document form, wizard | [form-patterns.md](docs/form-patterns.md) → canonical `$PI_CODING_AGENT_DIR/rules-1c/rules/form-patterns.md` |
 | Form-compile DSL reference — full JSON DSL spec for `1c-form-compile`, `--from-object` mode, presets | form DSL, form-compile, autoCmdBar, columnGroup, RadioButtonField, --from-object, form preset | [form-compile-dsl.md](docs/form-compile-dsl.md) |
 | Data Composition Schema (DCS/SKD) — create, edit, analyze, decompile, validate | report, DCS, SKD, data composition, data set, query, decompile | [skd-manage.md](docs/skd-manage.md) |
 | Spreadsheet documents (MXL) — create, decompile, analyze, validate | MXL, spreadsheet, template, print form, layout | [mxl-manage.md](docs/mxl-manage.md) |

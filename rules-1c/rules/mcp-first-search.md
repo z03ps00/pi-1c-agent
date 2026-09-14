@@ -9,7 +9,7 @@ For any 1C **project-source search** (code, metadata, usages, call chains, struc
 
 **What counts as search.** Any action whose goal is to *locate* code, metadata, or files you do not yet have an exact path or qualified name for — including "getting oriented" sweeps at the start of a task (globbing the source tree, listing directories, reading modules one after another to see what is there). All of it falls under the hard rule below. Reading a specific file **already located via MCP** — to edit it, or to see a found fragment in full context — is normal work, not search, and needs no justification.
 
-Applies to every subagent except `1c-explorer`, which already encodes the same rule in its own prompt. The canonical fallback chain owner is `C:/DevopsMoments/pi-agents/config-1c/skills/mcp-1c-tools/SKILL.md → Fallback chain → Project-source search before Grep / Glob / rg`. This file does not redefine it — it makes the rule salient inside subagent prompts that previously only had a soft pointer.
+Applies to every subagent except `1c-explorer`, which already encodes the same rule in its own prompt. The canonical fallback chain owner is `$PI_CODING_AGENT_DIR/skills/mcp-1c-tools/SKILL.md → Fallback chain → Project-source search before Grep / Glob / rg`. This file does not redefine it — it makes the rule salient inside subagent prompts that previously only had a soft pointer.
 
 ---
 
@@ -20,12 +20,12 @@ Applies to every subagent except `1c-explorer`, which already encodes the same r
    2. `1c-code-metadata-mcp` — `codesearch`, `metadatasearch`, `search_function`, `search_forms`, `get_module_structure`, `get_metadata_details`, `get_method_call_hierarchy`, `graph_dependencies`, `bsl_scope_members`, `inspect_form_layout`.
    3. `1c-code-metadata-mcp` with `grep=true` — substring retry inside the MCP index, **only** after step 2 returned not enough, and only on tools that expose the parameter (`codesearch`, `metadatasearch`, `search_function`, `helpsearch`, `search_forms`). Typical triggers: exact identifier, fragment of a query, metadata path, event-handler name, error text, literal string.
 2. **Only then `Grep` / `Glob` or another native discovery tool** — and only when you can state, in one or two sentences inside the response, **which MCP attempts were tried and why they did not return what was needed**. Silent fallback is a defect regardless of which native tool it lands on — `Grep`, a file-pattern search, or a chain of `Read` calls used as a manual scanner. **"Exhaust" is bounded:** one well-tuned call per applicable angle plus the documented reformulation / `grep=true` retry — not an open-ended loop. Once that missed (nothing found, irrelevant hits, non-actionable output), falling back to native tools is the **correct next move**, not a defect; burning further MCP calls just to satisfy this rule is blind chaining (`AGENTS.md → A.4`).
-3. **Tune the query before re-calling.** If the first MCP call returned nothing, do **not** immediately fall through to the next tool — reformulate: broaden / narrow the query, switch `search_type` (`fulltext` ↔ `semantic` ↔ `hybrid`), adjust `detail_level`, lower `exact`, raise `top_k`, drop or change `project_name` / category filters. Use the per-server parameter docs in `C:/DevopsMoments/pi-agents/config-1c/skills/mcp-1c-tools/docs/<server>.md`.
+3. **Tune the query before re-calling.** If the first MCP call returned nothing, do **not** immediately fall through to the next tool — reformulate: broaden / narrow the query, switch `search_type` (`fulltext` ↔ `semantic` ↔ `hybrid`), adjust `detail_level`, lower `exact`, raise `top_k`, drop or change `project_name` / category filters. Use the per-server parameter docs in `$PI_CODING_AGENT_DIR/skills/mcp-1c-tools/docs/<server>.md`.
 4. **No-change repeats are forbidden.** Do not re-run the same MCP call against the same unchanged state. A new call must change parameters substantively, or the project state must have changed (file edit, new generation, resumed session).
 
 External-knowledge servers (`1c-templates-mcp`, `1c-ssl-mcp`, `1C-docs-mcp`, `1c-code-check-mcp`, `1c-syntax-checker-mcp`, `1c-data-mcp`) have **no `Grep` / `rg` equivalent** — they are called only when their knowledge is needed, not as part of the fallback above.
 
-One of them also holds **this project's own routed standards**: the `1c-standards` collection of `1C-docs-mcp`, reached with the `standards` tool (never with `docsearch` / `docinfo`, which cannot see it). That is a *rule* lookup, not a project-source search — it is outside the chain above and has its own contract in `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/help-corpus-retrieval.md`. Reading a rule file on disk is likewise ordinary work, not search.
+One of them also holds **this project's own routed standards**: the `1c-standards` collection of `1C-docs-mcp`, reached with the `standards` tool (never with `docsearch` / `docinfo`, which cannot see it). That is a *rule* lookup, not a project-source search — it is outside the chain above and has its own contract in `$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md`. Reading a rule file on disk is likewise ordinary work, not search.
 
 ---
 
@@ -62,7 +62,7 @@ Full-file `Read` is **normal work** — no MCP attempt, no justification note �
 | Form layout | `inspect_form_layout(object_name)` | `search_forms` |
 | Canonical pattern / template | **`templatesearch` only** — task description verbatim; pre-flight `1c-templates-mcp.md → Query formulation (templatesearch only)` (`AGENTS.md → A.8`) (+ `ssl_search` for БСП) | — |
 | Platform API verification | `docinfo(name)` or `docsearch(query)` | `helpsearch` |
-| A routed project standard (`anti-patterns`, `dev-standards-architecture`, …) | `standards(name="<rule stem>")` — **not** `docsearch`; `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/help-corpus-retrieval.md` | `standards(query=…)` → `standards()` catalogue |
+| A routed project standard (`anti-patterns`, `dev-standards-architecture`, …) | `standards(name="<rule stem>")` — **not** `docsearch`; `$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md` | `standards(query=…)` → `standards()` catalogue |
 | On-disk XML shape of a form / role / DCS / MXL | `formatspec(name=…)` or `formatspec(query=…)` | `get_xsd_schema` |
 | Does the platform ship a mechanism for X (СЛАУ, crypto, data analysis, bus, bots, …)? | `docsearch(capability description)` → `docinfo` per found name (`AGENTS.md → A.7`) | `ssl_search` for a БСП-level solution |
 | ITS standards | `its_help(query)` → `fetch_its(id)` for **every** relevant doc | — |
@@ -73,7 +73,7 @@ Native discovery tools (`Grep`, `Glob` / file search, directory listing, bulk `R
 
 ## EDT workspaces
 
-In a project developed in 1C:EDT (`.dev.env` `USE_EDT=true`) the chain above is unchanged — the project-index servers stay the first pick. `edt-mcp`, when exposed, is an **additional** source for live-workspace questions (`get_project_errors`, `find_references`, `go_to_definition`, `read_module_source`), not a replacement for indexed search: its `search_in_code` is a literal / regex sweep that is **not** ru/en dialect aware, so it ranks with `Grep`, not with `search_code`. When the EDT model holds newer state than the files on disk, reconcile before trusting either side — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/edt-workflow.md → Model vs disk — the synchronization rule`.
+In a project developed in 1C:EDT (`.dev.env` `USE_EDT=true`) the chain above is unchanged — the project-index servers stay the first pick. `edt-mcp`, when exposed, is an **additional** source for live-workspace questions (`get_project_errors`, `find_references`, `go_to_definition`, `read_module_source`), not a replacement for indexed search: its `search_in_code` is a literal / regex sweep that is **not** ru/en dialect aware, so it ranks with `Grep`, not with `search_code`. When the EDT model holds newer state than the files on disk, reconcile before trusting either side — `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md → Model vs disk — the synchronization rule`.
 
 ---
 

@@ -147,6 +147,6 @@ The PowerShell scripts under `tools/1c-cf-manage/scripts/` were refreshed from [
 
 ## SDD Integration
 
-When creating a new configuration as part of a project, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating a new configuration as part of a project, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Create initial specs in `openspec/specs/` describing configuration purpose, compatibility, and scope.

@@ -13,7 +13,7 @@ Do not duplicate that sequence here.
 
 ## Rules specific to creating / modifying a form
 
-- **The `1c-metadata-manage` skill (form-manage section) is the mandatory execution path** for creating or structurally modifying `Form.xml` — hard gate per `AGENTS.md → Skills and Subagents`; the skill drives the toolchain (BOM, encoding, UID generation, ordering of `ChildObjects`). Hand-editing is allowed only within the narrow exceptions of `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/SKILL.md → Hard rule` (unambiguous one-line fix; skill not available — stated once).
+- **The `1c-metadata-manage` skill (form-manage section) is the mandatory execution path** for creating or structurally modifying `Form.xml` — hard gate per `rules-1c/AGENTS-UPSTREAM.md` → Skills and Subagents; the skill drives the toolchain (BOM, encoding, UID generation, ordering of `ChildObjects`). Hand-editing is allowed only within the narrow exceptions of `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/SKILL.md → Hard rule` (unambiguous one-line fix; skill not available — stated once).
 - **XSD validation is mandatory** after any XML edit — `verify_xml` against the schema returned by `get_xsd_schema(object_type="Форма")`. A form that parses in your editor is not a form that loads in Designer.
 - **Form-element naming.** Elements added to a typical form must carry the `{PREFIX}` prefix from `.dev.env`. Elements inside a newly created form (object already prefixed) do **not** repeat the prefix on every element — see `dev-standards-change-markers.md → "Metadata Naming"`.
 - **Common pitfalls** are catalogued in `metadata-xml-workarounds.md` — read it before hand-editing the XML.

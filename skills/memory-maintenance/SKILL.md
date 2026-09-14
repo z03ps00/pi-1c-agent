@@ -10,7 +10,7 @@ Use when memory retrieval reveals conflicts/duplicates, after a material decisio
 ## Rules
 
 1. Do not delete history merely because it is old.
-2. Only the permitted write tools exist (`memory_remember` / `knowledge_remember`; global memory rule). Corrections are made by writing a **new** record that explicitly supersedes the old one — never by update/delete/merge tools.
+2. Only the permitted write tools exist (Cognee `remember` / OpenViking `remember`; global memory rule). Corrections are made by writing a **new** record that explicitly supersedes the old one — never by update/delete/merge tools.
 3. Express the status **inside** the new record: `CURRENT: …` / `HISTORICAL: … superseded by <newer verified change>`. Do not claim a record was edited or deleted.
 4. Duplicates: write one consolidated record and list the superseded keys inside it; do not attempt to remove the originals.
 5. Preserve rationale for important architecture decisions.

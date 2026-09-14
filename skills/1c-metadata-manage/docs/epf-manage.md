@@ -333,6 +333,6 @@ The PowerShell script `tools/1c-epf-validate/scripts/epf-validate.ps1` was refre
 
 ## SDD Integration
 
-When creating external processors or reports as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating external processors or reports as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add spec deltas describing the processor/report purpose, parameters, and target objects in `openspec/changes/`.

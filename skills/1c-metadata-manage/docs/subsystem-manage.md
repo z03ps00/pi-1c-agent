@@ -153,6 +153,6 @@ The PowerShell scripts under `tools/1c-subsystem-manage/scripts/` were refreshed
 
 ## SDD Integration
 
-When creating or modifying subsystems as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating or modifying subsystems as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add spec deltas describing subsystem purpose and included objects in `openspec/changes/`.

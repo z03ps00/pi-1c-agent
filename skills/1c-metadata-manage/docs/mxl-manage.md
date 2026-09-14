@@ -364,6 +364,6 @@ The compile/decompile/info scripts (`mxl-compile`, `mxl-decompile`, `mxl-info`) 
 
 ## SDD Integration
 
-When creating or modifying MXL spreadsheet layouts as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating or modifying MXL spreadsheet layouts as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add spec deltas describing layout purpose, areas, and parameters in `openspec/changes/`.

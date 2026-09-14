@@ -6,9 +6,9 @@ Comprehensive managed form management: design patterns reference, create/remove 
 
 ## 1. Patterns — Design Reference
 
-**Canonical layout patterns:** `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/form-patterns.md` (project rule; Russian event/element names). The skill-local [`form-patterns.md`](form-patterns.md) is a thin pointer to that file — do not duplicate content here.
+**Canonical layout patterns:** `$PI_CODING_AGENT_DIR/rules-1c/rules/form-patterns.md` (project rule; Russian event/element names). The skill-local [`form-patterns.md`](form-patterns.md) is a thin pointer to that file — do not duplicate content here.
 
-Also load the project forms router `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/forms.md` first for any managed-form task (it selects `forms-add.md`, `form-module.md`, `async-methods.md`, …).
+Also load the project forms router `$PI_CODING_AGENT_DIR/rules-1c/rules/forms.md` first for any managed-form task (it selects `forms-add.md`, `form-module.md`, `async-methods.md`, …).
 
 Load `form-patterns.md` **before** designing a form via `1c-form-compile` when user requirements do not specify element placement (5+ elements or unclear requirements). For simple 1–3 field forms it is not needed.
 
@@ -174,7 +174,7 @@ Two modes:
 1. **JSON DSL** — generate `Form.xml` from a JSON definition.
 2. **From-object** (`-FromObject`) — generate a typical form from an object's metadata (Catalog, Document, InformationRegister, AccumulationRegister, ChartOfCharacteristicTypes, ExchangePlan, ChartOfAccounts) using the active preset (default `erp-standard`).
 
-> **Designing a form from scratch (5+ elements or unclear requirements)** — load canonical `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/form-patterns.md` first (skill-local [`form-patterns.md`](form-patterns.md) is a pointer). For simple forms (1–3 fields) it is not needed.
+> **Designing a form from scratch (5+ elements or unclear requirements)** — load canonical `$PI_CODING_AGENT_DIR/rules-1c/rules/form-patterns.md` first (skill-local [`form-patterns.md`](form-patterns.md) is a pointer). For simple forms (1–3 fields) it is not needed.
 >
 > **Full DSL reference** — see [`form-compile-dsl.md`](form-compile-dsl.md). The block below is a quick summary.
 
@@ -912,6 +912,6 @@ In addition to the form-compile / form-info / form-add / form-edit / form-remove
 
 ## SDD Integration
 
-When creating or modifying managed forms as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating or modifying managed forms as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add spec deltas describing the form purpose, key UI elements, and user scenarios in `openspec/changes/`.

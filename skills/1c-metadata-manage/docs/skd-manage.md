@@ -466,6 +466,6 @@ The PowerShell scripts under `tools/1c-skd-{compile,edit,info,validate}/scripts/
 
 ## SDD Integration
 
-When creating or modifying DCS/SKD schemas as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating or modifying DCS/SKD schemas as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add spec deltas describing report requirements, data sets, and expected output in `openspec/changes/`.

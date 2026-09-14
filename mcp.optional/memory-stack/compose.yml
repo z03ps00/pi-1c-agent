@@ -1,0 +1,51 @@
+# Portable OpenViking + Cognee memory MCP stack.
+# Image pins (digest). If pull by digest fails on another arch, use the tag
+# fallbacks in defaults.env (OPENVIKING_IMAGE_TAG_FALLBACK / COGNEE_IMAGE_TAG_FALLBACK).
+name: pi-1c-memory
+
+services:
+  openviking:
+    image: ${OPENVIKING_IMAGE:-ghcr.io/volcengine/openviking@sha256:49e20c09ec7ea2f16c116d9ddb2ea90b4c24bf3f5a83078609e52399487dbec1}
+    container_name: pi-1c-memory-openviking
+    restart: unless-stopped
+    ports:
+      - "${MEMORY_OPENVIKING_HOST:-127.0.0.1}:${MEMORY_OPENVIKING_PORT:-1933}:1933"
+    volumes:
+      - ${MEMORY_DATA_ROOT:-./data}/openviking:/app/.openviking
+    environment:
+      OPENVIKING_CONFIG_FILE: /app/.openviking/ov.conf
+      OPENVIKING_CLI_CONFIG_FILE: /app/.openviking/ovcli.conf
+    networks:
+      - memory-net
+    healthcheck:
+      test: ["CMD", "openviking-entrypoint", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+
+  cognee:
+    image: ${COGNEE_IMAGE:-cognee/cognee-mcp@sha256:ae7c1ade4c2b304264eb5d031022a0e18ec0671c4fc37f66f6594b7a91edfc0c}
+    container_name: pi-1c-memory-cognee
+    restart: unless-stopped
+    ports:
+      - "${MEMORY_COGNEE_HOST:-127.0.0.1}:${MEMORY_COGNEE_PORT:-8001}:8000"
+    volumes:
+      - ${MEMORY_DATA_ROOT:-./data}/cognee/system:/cognee-storage/system
+      - ${MEMORY_DATA_ROOT:-./data}/cognee/data:/cognee-storage/data
+    environment:
+      # Shared main_dataset for all MCP clients.
+      COGNEE_MCP_AGENT_SCOPED: "false"
+    networks:
+      - memory-net
+    healthcheck:
+      test:
+        ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+
+networks:
+  memory-net:
+    driver: bridge

@@ -1,0 +1,9 @@
+{
+  "vanessaAutomation": {
+    "url": "${VANESSA_MCP_URL}",
+    "auth": false,
+    "lifecycle": "keep-alive",
+    "requestTimeoutMs": 120000,
+    "httpTransport": "streamable-http"
+  }
+}

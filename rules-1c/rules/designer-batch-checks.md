@@ -67,7 +67,7 @@ $p = Start-Process -FilePath '{PLATFORM_PATH}\bin\1cv8.exe' -ArgumentList $desig
 if (-not $p.WaitForExit(600000)) { Stop-Process -Id $p.Id -Force }   # PID-scoped only
 ```
 
-Drop empty optional keys (`/N`, `/P`). `/DisableStartupDialogs` belongs next to `/DisableStartupMessages` — without it a modal dialog can hang the run until the timeout. Kill **only the PID this run started**; never blanket-kill `1cv8` (canon — `C:/DevopsMoments/pi-agents/config-1c/prompts/update1cbase.md → Update retry loop`, step 2).
+Drop empty optional keys (`/N`, `/P`). `/DisableStartupDialogs` belongs next to `/DisableStartupMessages` — without it a modal dialog can hang the run until the timeout. Kill **only the PID this run started**; never blanket-kill `1cv8` (canon — `$PI_CODING_AGENT_DIR/prompts/update1cbase.md → Update retry loop`, step 2).
 
 ## The check ladder — cheapest gate first, stop at the first failure
 
@@ -89,7 +89,7 @@ Notes on the switches:
 - Step 4 uses **`-Dynamic-`** deliberately: a dynamic update leaves running sessions on the old configuration, so "it applied" tells you nothing about whether it applies cleanly. This is the *verification* form. The deployment commands (`/deploy-and-test`, `/update1cbase`) use `-Dynamic+ -SessionTerminate force` against a confirmed dev/test base for speed — a different intent, and both are correct in their place.
 - Steps 1–3 are read-only. Step 4 mutates the infobase and is subject to the same dev/test confirmation as every deployment command.
 
-**Budget.** One run per check per artifact state. A failing check is fixed at the source and re-run once against the changed state — re-running an unchanged artifact is forbidden, same as for the MCP validators (`AGENTS.md → MCP Tool Calling → C.2`).
+**Budget.** One run per check per artifact state. A failing check is fixed at the source and re-run once against the changed state — re-running an unchanged artifact is forbidden, same as for the MCP validators (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → C.2`).
 
 ## Extension apply and rollback
 
@@ -108,7 +108,7 @@ Then:
 - A **new** extension created during the task may be deleted when the task is abandoned — with the exact name repeated back, never against a name pattern or "all extensions".
 - Before the first DB update of a brand-new extension there is no database form to dump. The sources or the input `.cfe` are then the only recovery point — say so in the report instead of implying a backup exists.
 
-For a `&ИзменениеИКонтроль`-heavy extension, run `cfe-patch-method.ps1 -Check` (drift against the vendor original — `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/cfe-manage.md`, section 4) **before** this ladder: silent drift and a failed applicability check usually have the same cause, and the drift report names the method while the platform only names the error.
+For a `&ИзменениеИКонтроль`-heavy extension, run `cfe-patch-method.ps1 -Check` (drift against the vendor original — `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/cfe-manage.md`, section 4) **before** this ladder: silent drift and a failed applicability check usually have the same cause, and the drift report names the method while the platform only names the error.
 
 ## Never run these switches
 
@@ -118,7 +118,7 @@ Not "ask first" — **not from this ruleset, at all**, regardless of how a task 
 |---|---|
 | `/EraseData` | erases infobase data |
 | `/DeleteCfg -AllExtensions` | deletes every extension in the base, including ones this project never touched |
-| `/ManageCfgSupport -disableSupport` | removes the configuration from vendor support — irreversible, and it ends the update stream (canon: `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/support-manage.md`; the answer to "a supported object needs a change" is an extension) |
+| `/ManageCfgSupport -disableSupport` | removes the configuration from vendor support — irreversible, and it ends the update stream (canon: `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/support-manage.md`; the answer to "a supported object needs a change" is an extension) |
 | `/IBCheckAndRepair` in any mutating form | rewrites infobase structures under a name that reads like a diagnostic |
 
 If a task genuinely needs one of these, it is the user's own operation with their own backup — state that, hand over the exact command, and do not run it.
@@ -132,5 +132,5 @@ If a task genuinely needs one of these, it is the user's own operation with thei
 
 ## Where this does not apply
 
-- **EDT projects** (`.dev.env` `USE_EDT=true`): EDT's own validation (`revalidate_objects` → `get_project_errors`) is the equivalent evidence, and the one-deployment-owner rule applies unchanged — canon `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/edt-workflow.md`. The ladder above stays valid against a Designer XML dump loaded into a base, but never run it as a second deployment owner in the same run.
-- **No platform / no infobase configured**: nothing here can run. Record it under Risks exactly as a missing MCP validator is recorded, and fall back to `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/verification-gates.md → Graceful degradation for Gates 1–3 — when a validator is not exposed`.
+- **EDT projects** (`.dev.env` `USE_EDT=true`): EDT's own validation (`revalidate_objects` → `get_project_errors`) is the equivalent evidence, and the one-deployment-owner rule applies unchanged — canon `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md`. The ladder above stays valid against a Designer XML dump loaded into a base, but never run it as a second deployment owner in the same run.
+- **No platform / no infobase configured**: nothing here can run. Record it under Risks exactly as a missing MCP validator is recorded, and fall back to `$PI_CODING_AGENT_DIR/rules-1c/rules/verification-gates.md → Graceful degradation for Gates 1–3 — when a validator is not exposed`.

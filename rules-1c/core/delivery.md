@@ -11,8 +11,7 @@
 
 - Never answer «собрать» with `Copy-Item` of XML. «Собрать» = binary artifact.
 - If the phrase is ambiguous, ask **one** question: binary or sources.
-- Project layout: `build/{cf,cfe,epf,erf}` (sibling of `src/`) holds sources prepared for transfer; `release/`
-  (`RELEASE_PATH`) holds release `.cf`/`.cfe`/`.cfu` binaries.
+- Project layout: `src/{cf,cfe,epf,erf}` is XML/BSL sources; `build/{cf,cfe,epf,erf}` holds compiled binaries named `OriginalName_YYYYMMDD` (gitignored). `docs/` is project documentation; `docs/techtask/` holds raw technical assignments for the agent. `RELEASE_PATH` overrides the `build/` root when set.
 
 ## Ident-safe extension delivery
 
@@ -36,7 +35,7 @@ Rules:
 # ПОСТАВКА <extension> <version>
 
 - Источник истины: git `src/cfe/<extension>` @ <commit>
-- Артефакт: `build/cfe/<extension>.cfe` (sha256 …)
+- Артефакт: `build/cfe/<extension>_YYYYMMDD.cfe` (sha256 …)
 - Что реально в дельте: <объект/форма>
 - Ожидаемые строки сравнения: <список>
 - Ложные строки сравнения (шум платформы): «только в файле», «порядок изменён», перезапись UUID

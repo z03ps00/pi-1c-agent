@@ -15,7 +15,7 @@ Use this skill when the project's configuration is **bound to a 1C configuration
 - **`REPOSITORY_PATH` is empty** and the user asks for a repository operation → ask once for the repository address, write it to `REPOSITORY_PATH`, proceed.
 - **`REPOSITORY_PATH` is empty** and nothing in the task mentions a repository → this skill does not apply; never ask about it up front.
 
-Parameter canon (classes, empty-value behavior): `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/dev-standards-env.md → Infobase / deployment parameters`.
+Parameter canon (classes, empty-value behavior): `$PI_CODING_AGENT_DIR/rules-1c/rules/dev-standards-env.md → Infobase / deployment parameters`.
 
 ## Hard rule
 
@@ -52,7 +52,7 @@ Reports (`status` / `history` / `diff`) are written to a file and only an excerp
 
 ## Path conventions
 
-The prefix `skills/1c-repository-manage/...` is relative to the active tool's skills directory (`.claude/skills/...`, `.cursor/skills/...`, etc.), exactly as described in `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/SKILL.md → Path conventions`. In the `1c-rules` source repository prepend `content/`.
+The prefix `skills/1c-repository-manage/...` is relative to the active tool's skills directory (`.claude/skills/...`, `.cursor/skills/...`, etc.), exactly as described in `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/SKILL.md → Path conventions`. In the `1c-rules` source repository prepend `content/`.
 
 Run the script per the `powershell-windows` skill conventions:
 

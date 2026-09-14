@@ -67,7 +67,7 @@ a 1C **binary container**, not XML — `search_forms` / `inspect_form_layout` an
 XML route see nothing for it. These two tools are the route to one, and the *same
 pair with the same arguments and the same result payload* is published by
 `1c-graph-metadata-mcp`. Contract, workspace layout, error codes and the warnings
-that matter: **`C:/DevopsMoments/pi-agents/config-1c/skills/v8unpack-cf/SKILL.md → Ordinary forms`** — read it
+that matter: **`$PI_CODING_AGENT_DIR/skills/v8unpack-cf/SKILL.md → Ordinary forms`** — read it
 before the first call.
 
 | Tool | Parameters | Purpose | When to use |

@@ -182,7 +182,7 @@ Registration adds exactly one `<Kind>Name</Kind>` line; the rest of the file is 
 | `end` (default / empty) | After the last object of the same kind — what Configurator does |
 | `byName` | Alphabetically inside the kind group, by the deterministic 1C-tree comparator (standard АПК:1108) |
 
-Regardless of the value: a group of a kind **not yet present** in the file is inserted in canonical kind order rather than appended to the end of the block, and the order-sensitive kinds (`Subsystem`, `CommandGroup`, `CommonAttribute`, `Language`) are never sorted by name. Objects already registered are never moved. Parameter reference — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/dev-standards-env.md → NEW_OBJECT_POSITION`.
+Regardless of the value: a group of a kind **not yet present** in the file is inserted in canonical kind order rather than appended to the end of the block, and the order-sensitive kinds (`Subsystem`, `CommandGroup`, `CommonAttribute`, `Language`) are never sorted by name. Objects already registered are never moved. Parameter reference — `$PI_CODING_AGENT_DIR/rules-1c/rules/dev-standards-env.md → NEW_OBJECT_POSITION`.
 
 ## Verification
 
@@ -563,6 +563,6 @@ The PowerShell scripts under `tools/1c-meta-{compile,edit,info,remove,validate}/
 
 ## SDD Integration
 
-When creating or modifying configuration objects as part of a larger feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating or modifying configuration objects as part of a larger feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add or update spec deltas in `openspec/changes/<change-id>/specs/` describing the new object, its attributes, and purpose.

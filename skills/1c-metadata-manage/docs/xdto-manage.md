@@ -223,4 +223,4 @@ powershell.exe -NoProfile -File skills/1c-metadata-manage/tools/1c-xdto-manage/s
 
 ## SDD Integration
 
-An exchange format is an interface contract. When adding or changing a package as part of a project, update the SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection) — the namespace, the package version and the counterparty belong in the integration spec, not only in the sources.
+An exchange format is an interface contract. When adding or changing a package as part of a project, update the SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection) — the namespace, the package version and the counterparty belong in the integration spec, not only in the sources.

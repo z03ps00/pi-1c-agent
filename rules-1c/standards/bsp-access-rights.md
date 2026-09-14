@@ -8,7 +8,7 @@ category: development
 
 Applies to БСП / SSL 3.x configurations (ЗУП 3.1, БП 3.x, ERP 2.x, УТ 11.x): creating and updating `Справочник.ПрофилиГруппДоступа` from a code console or an update handler, assigning profiles to users, and checking rights, roles and RLS access.
 
-> **Scope.** This file owns the *programmatic* side of access rights. Role **design** — which rights a role grants, RLS templates, role composition — lives in `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/role-manage.md`. Privileged-mode discipline in reports — `dcs-design.md §6`.
+> **Scope.** This file owns the *programmatic* side of access rights. Role **design** — which rights a role grants, RLS templates, role composition — lives in `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/role-manage.md`. Privileged-mode discipline in reports — `dcs-design.md §6`.
 
 ## 1. `Роли.Роль` is a reference, not a string
 
@@ -173,9 +173,9 @@ Exact signatures (all server-side, `ПрограммныйИнтерфейс`):
 
 | Concern | File |
 |---|---|
-| Role structure, rights and RLS in metadata | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/role-manage.md` |
+| Role structure, rights and RLS in metadata | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/role-manage.md` |
 | Extension-side constraints on adopted objects | `extension-patterns.md` |
-| БСП / SSL subsystem patterns | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/ssl-patterns.md` |
+| БСП / SSL subsystem patterns | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/ssl-patterns.md` |
 | Privileged mode in reports | `dcs-design.md §6` |
 | Logging of rights changes | `logging-strategy.md` |
 

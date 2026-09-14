@@ -149,7 +149,7 @@ Client-server traffic carries **serialisable** data only (`НастройкиК�
 | Concern | File |
 |---|---|
 | Ordinary DCS design and the standard programmatic override | `dcs-design.md` |
-| `.dcs` XML / schema mechanics | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/skd-manage.md` |
+| `.dcs` XML / schema mechanics | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/skd-manage.md` |
 | Query performance and anti-patterns | `anti-patterns.md`, `query-design.md` |
 | Reserved form-attribute names | `form-module.md → Reserved Names` |
 | Long-running composition in the background | `platform-solutions.md §2 → Long-running operations` |

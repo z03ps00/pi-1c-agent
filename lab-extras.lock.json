@@ -1,0 +1,34 @@
+{
+  "status": "extra/beta",
+  "updatedAt": "2026-09-14T00:00:00Z",
+  "note": "Not ai_rules_1c. Do not sync via /review-airules or upstream.lock.json.",
+  "trees": {
+    "vanessa-mcp": {
+      "status": "extra/beta",
+      "snapshotDate": "2026-09-14",
+      "source": "cursor-skills"
+    },
+    "kd2-rules": {
+      "status": "extra/beta",
+      "snapshotDate": "2026-09-14",
+      "source": "cursor-skills"
+    },
+    "kd31-rules": {
+      "status": "extra/beta",
+      "snapshotDate": "2026-09-14",
+      "source": "cursor-skills"
+    },
+    "1c-mcp-toolkit": {
+      "status": "extra/beta",
+      "snapshotDate": "2026-09-14",
+      "source": "cursor-skills"
+    },
+    "humanizer-ru": {
+      "status": "extra/snapshot",
+      "snapshotDate": "2026-09-14",
+      "source": "cursor-skills",
+      "humanizerRuSha": "e33188284ddd30b442ac86d91a00a79e3b3f3f2b",
+      "note": "Comol Humanizer_RU SHA cited by the skill linter pin. Not an ai_rules_1c SHA."
+    }
+  }
+}

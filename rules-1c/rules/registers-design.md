@@ -7,7 +7,7 @@ alwaysApply: false
 
 Registers are the spine of any non-trivial 1C configuration; mistakes here are expensive to undo because they are usually wired into document posting, RLS, and reports. This file consolidates the design decisions worth thinking through **before** running the metadata skill.
 
-> **Scope.** This file owns *design* rules. XML / schema mechanics live in `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/meta-manage.md`. Queries against registers — start at the router `query-design.md` (hard rules in `dev-standards-architecture.md §3 → "Queries"`, anti-patterns in `anti-patterns.md`).
+> **Scope.** This file owns *design* rules. XML / schema mechanics live in `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/meta-manage.md`. Queries against registers — start at the router `query-design.md` (hard rules in `dev-standards-architecture.md §3 → "Queries"`, anti-patterns in `anti-patterns.md`).
 
 <!-- help-mcp-router -->
 
@@ -20,11 +20,11 @@ standards(name="registers-design")     # this standard, entire - the normal call
 standards(query="<what you need>")  # only when unsure which rule governs
 ```
 
-`standards` is the tool for this collection. `docsearch` / `docinfo` serve the platform documentation and cannot reach it, and **no tool of this server takes a `corpus` argument**. Name resolution, paging, budget, and what to do when the server is not exposed - **`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/help-corpus-retrieval.md`**.
+`standards` is the tool for this collection. `docsearch` / `docinfo` serve the platform documentation and cannot reach it, and **no tool of this server takes a `corpus` argument**. Name resolution, paging, budget, and what to do when the server is not exposed - **`$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md`**.
 
 **Retrieve before you apply.** Every section below is a heading with no body: acting on a section title without the text behind it is inventing the rule, not following it. Fetch the rule once by name rather than a query per section.
 
-Pinned source, readable directly: <https://github.com/comol/ai_rules_1c/blob/410951e74fd3e6b7a763cf49757935b9a34d3f31/C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/registers-design.md>
+Pinned source, readable directly: <https://github.com/comol/ai_rules_1c/blob/410951e74fd3e6b7a763cf49757935b9a34d3f31/$PI_CODING_AGENT_DIR/rules-1c/rules/registers-design.md>
 
 ## Sections
 

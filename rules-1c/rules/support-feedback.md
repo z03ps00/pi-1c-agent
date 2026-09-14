@@ -15,8 +15,8 @@ alwaysApply: false
 | `/supportstatus` | статус своих обращений, ответы оператора, закрытие своего обращения | пользователь; модель — по просьбе |
 | `/checkupdates` | есть ли обновления образов MCP и набора правил (только чтение) | пользователь или модель по своей инициативе |
 
-Процедуры — `C:/DevopsMoments/pi-agents/config-1c/prompts/support.md`, `C:/DevopsMoments/pi-agents/config-1c/prompts/supportstatus.md`,
-`C:/DevopsMoments/pi-agents/config-1c/prompts/checkupdates.md`. Здесь — контракт: когда можно, когда нельзя, что
+Процедуры — `$PI_CODING_AGENT_DIR/prompts/support.md`, `$PI_CODING_AGENT_DIR/prompts/supportstatus.md`,
+`$PI_CODING_AGENT_DIR/prompts/checkupdates.md`. Здесь — контракт: когда можно, когда нельзя, что
 считается достаточным основанием.
 
 ## 1. Предусловия — жёсткие

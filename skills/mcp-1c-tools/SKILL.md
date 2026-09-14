@@ -11,7 +11,7 @@ This skill is the single source of truth for the project's MCP server catalog, t
 
 - **Mandatory for risk-bearing 1C work.** If a relevant server is exposed, call the fitting MCP tool for BSL / metadata edits or review, metadata XML, forms, integrations, refactoring, performance, runtime errors, platform API checks, impact analysis, syntax / quality validation, and project-memory operations.
 - **Conditional for external knowledge.** Use platform docs, БСП / SSL, and ITS MCP tools when the task depends on versioned platform behavior, reusable БСП APIs, or standards compliance. Do not call them for generic prose cleanup or rule-file editing unless such a fact is actually needed.
-- **Not required for Markdown / rules / documentation-only work.** For rule files, README, commands documentation, and similar prose-only edits, validate structure, links, paths, and internal consistency instead of calling 1C project MCP tools. **Exception:** OpenSpec artifacts that state concrete 1C facts (metadata / attribute names, API signatures, БСП subsystems, platform-version behaviour) are spec authoring, not documentation-only work — the mandatory scope above applies (`AGENTS.md → MCP Tool Calling → A.1`, `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md`).
+- **Not required for Markdown / rules / documentation-only work.** For rule files, README, commands documentation, and similar prose-only edits, validate structure, links, paths, and internal consistency instead of calling 1C project MCP tools. **Exception:** OpenSpec artifacts that state concrete 1C facts (metadata / attribute names, API signatures, БСП subsystems, platform-version behaviour) are spec authoring, not documentation-only work — the mandatory scope above applies (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → A.1`, `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md`).
 - **Mandatory before parameter-rich calls.** Read `docs/<server>.md` before the first call in the session to every parameter-rich tool listed below, and re-read it when switching tools on that server. A genuinely simple one-shot lookup with obvious arguments may skip the detail file only when it is not in the parameter-rich list.
 
 ### Parameter-rich tools — read the doc first
@@ -47,9 +47,19 @@ If `docs/<server>.md` conflicts with the descriptor exposed by the current envir
 | **1c-data-mcp** | Live-IB execution: BSL fragment run (`vcexecutecode`), query run (`vcexecutequery`), query parse-check (`validatequery`), last event-log error (`vcloggetlasterror`) | [`docs/1c-data-mcp.md`](docs/1c-data-mcp.md) |
 | **edt-mcp** *(conditional)* | Live 1C:EDT workspace: EDT validation markers, native navigation / references, metadata and modules in EDT (MDO) format, form snapshots, DB update, debug, profiling | [`docs/edt-mcp.md`](docs/edt-mcp.md) |
 
-**`edt-mcp` is conditional and does not replace the bundle.** It exists only in projects developed in 1C:EDT (`.dev.env` `USE_EDT=true`, plugin installed via `/install-edt-mcp`, EDT running with the workspace open). The bundle keeps ownership of indexed search, impact analysis, docs / БСП / ITS, templates, memory and the BSL validators; `edt-mcp` owns the live IDE state and the EDT-format tree. Routing, the source-format check and the model↔disk rule — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/edt-workflow.md`.
+### Lab extras (not the purchased 1C bundle)
+
+| Channel | Class | When |
+|---|---|---|
+| **Vanessa Automation MCP** (`vanessaAutomation`) | Test-client Gherkin / `.feature`. Opt-in fragment `mcp.optional/vanessa.json`. | Load `vanessa-mcp`. **Different class** than `1c-data-mcp`. Do not drive the test client with `vcexecutecode`. Unconfigured = `not configured`. |
+| **MCP Toolkit HTTP** | Live session via `MCP_Toolkit.epf`. Ports `MCP_TOOLKIT_PORT` / `KD2_PORT` / `KD31_PORT`. **Not** an `mcp.json` server. | KD 2 → `kd2-rules`; KD 3.1 → `kd31-rules`. Data-MCP fallback only on **explicit accept**. |
+| **Humanizer RU** | Russian prose editor skill. **Not** an MCP server. | `humanizer-ru` for «очеловечь»; not English `humanizer`. |
+
+**`edt-mcp` is conditional and does not replace the bundle.** It exists only in projects developed in 1C:EDT (`.dev.env` `USE_EDT=true`, plugin installed via `/install-edt-mcp`, EDT running with the workspace open). The bundle keeps ownership of indexed search, impact analysis, docs / БСП / ITS, templates, memory and the BSL validators; `edt-mcp` owns the live IDE state and the EDT-format tree. Routing, the source-format check and the model↔disk rule — `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md`.
 
 ## Fallback chain (highest priority to lowest)
+
+Start from servers actually present in the active `mcp.json` (and exposed in the session). Missing graph or code-metadata servers degrade in **one sentence** to the next available index or to native Grep/Read. Do not loop on absent tool names.
 
 Use only the applicable branch; stop as soon as the collected evidence is sufficient. Before each call, check that it closes a concrete context gap and is not a duplicate of an earlier call.
 
@@ -62,7 +72,7 @@ Native discovery tools (`Grep` / `rg`, `Glob` / file search by pattern, director
 3. `1c-code-metadata-mcp` with `grep=true` — substring retry inside the MCP index **only after** indexed / semantic / exact search did not find enough and only for tools that expose the parameter: `codesearch`, `metadatasearch`, `search_function`, `helpsearch`, `search_forms`. Typical scenarios: exact identifier, fragment of a query, metadata path, event handler name, error text, or literal string where semantic search is likely to miss.
 4. Only then a native discovery tool (`Grep` / `rg` / `Glob` / `Read`-scanning) — with a mandatory short note in the response listing which project-index MCP attempts were tried and why they did not return what was needed.
 
-The chain is a **bounded priority, not a prohibition**: when the project-index servers are not exposed, the chain collapses and native tools apply immediately (one-line note). When a tuned call plus the documented retry missed — fall back without spending further MCP calls on this rule. After fresh local edits the index may be stale — reading the disk state directly is legitimate. For understanding a single routine prefer fragment-level retrieval (`get_module_structure`, `search_code` `detail_level="L0"`, `search_function`) over a full-module `Read`; reading a direct edit target or an MCP-located file is normal work. Boundary cases — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/mcp-first-search.md`.
+The chain is a **bounded priority, not a prohibition**: when the project-index servers are not exposed, the chain collapses and native tools apply immediately (one-line note). When a tuned call plus the documented retry missed — fall back without spending further MCP calls on this rule. After fresh local edits the index may be stale — reading the disk state directly is legitimate. For understanding a single routine prefer fragment-level retrieval (`get_module_structure`, `search_code` `detail_level="L0"`, `search_function`) over a full-module `Read`; reading a direct edit target or an MCP-located file is normal work. Boundary cases — `$PI_CODING_AGENT_DIR/rules-1c/rules/mcp-first-search.md`.
 
 ### External knowledge
 
@@ -87,4 +97,4 @@ These servers have no `Grep` / `rg` equivalent; call them only when their knowle
 | Object usage search | `find_objects_using_object` / `find_usages_of_object` | `graph_dependencies` (`direction="reverse"`) |
 | Description / synonym / comment search | `search_metadata_by_description` | `metadatasearch` (`names_only=true`) |
 
-Step-by-step playbooks per task type (writing code, review, architecture, error fixing, performance, refactoring, metadata XML, forms, integrations, documentation, comparing platform versions) — `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/tooling-playbooks.md`.
+Step-by-step playbooks per task type (writing code, review, architecture, error fixing, performance, refactoring, metadata XML, forms, integrations, documentation, comparing platform versions) — `$PI_CODING_AGENT_DIR/rules-1c/rules/tooling-playbooks.md`.

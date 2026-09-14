@@ -8,7 +8,7 @@ category: development
 
 Registers are the spine of any non-trivial 1C configuration; mistakes here are expensive to undo because they are usually wired into document posting, RLS, and reports. This file consolidates the design decisions worth thinking through **before** running the metadata skill.
 
-> **Scope.** This file owns *design* rules. XML / schema mechanics live in `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/meta-manage.md`. Queries against registers — start at the router `query-design.md` (hard rules in `dev-standards-architecture.md §3 → "Queries"`, anti-patterns in `anti-patterns.md`).
+> **Scope.** This file owns *design* rules. XML / schema mechanics live in `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/meta-manage.md`. Queries against registers — start at the router `query-design.md` (hard rules in `dev-standards-architecture.md §3 → "Queries"`, anti-patterns in `anti-patterns.md`).
 
 ## 1. Choosing the register type
 
@@ -91,7 +91,7 @@ When a register has balances, the platform exposes virtual tables:
 
 | Concern | File |
 |---|---|
-| XML / schema mechanics for register objects | `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/meta-manage.md` (skill) |
+| XML / schema mechanics for register objects | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/meta-manage.md` (skill) |
 | Query anti-patterns (loops, dot-notation, subselects) | `anti-patterns.md` |
 | Authoritative query rules | `dev-standards-architecture.md §3 → "Queries"` |
 | Locks during posting | `locks-and-transactions.md` |

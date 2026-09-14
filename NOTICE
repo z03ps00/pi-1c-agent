@@ -1,0 +1,25 @@
+NOTICE
+
+This Pi 1C profile vendors and adapts material from comol/ai_rules_1c
+(https://github.com/comol/ai_rules_1c). The pin is recorded in upstream.lock.json
+and the human register is UPSTREAM-REGISTER.md.
+
+Upstream terms are those stated in that repository’s README (currently informal
+wording on GitHub; not a named OSI license). This overlay — Pi PLAN/BUILD,
+command catalog, MCP opt-in, Docker policy, `/review-airules` — is separate
+from the upstream 1C coding ruleset.
+
+This file does not invent a license. Redistributing a full vendored upstream
+snapshot must also follow any package UPSTREAM-LICENSE-NOTICE shipped with
+pi-1c-agent.
+
+Lab extras in this profile (`skills/vanessa-mcp`, `kd2-rules`, `kd31-rules`,
+`1c-mcp-toolkit`) are author-owned beta snapshots. They adapt third-party MIT
+skill text (Desko77/cursor-1c-skills) and depend at runtime on third-party
+products: Vanessa Automation (Pr-Mex), neurofish client MCP (`client_mcp.cfe`),
+and ROCTUP MCP_Toolkit.epf. They are not `comol/ai_rules_1c`.
+
+`skills/humanizer-ru` is a snapshot of Comol Humanizer_RU
+(https://github.com/comol/Humanizer_RU, MIT) plus this author’s knowledge/
+overlay. It is not the English humanizer skill and is not synced via
+/review-airules.

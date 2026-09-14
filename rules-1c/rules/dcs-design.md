@@ -5,9 +5,9 @@ alwaysApply: false
 
 # DCS / СКД — Report Design Rules
 
-The 1C Data Composition System (СхемаКомпоновкиДанных, СКД) is the canonical engine for reports. The rules below cover design decisions that recur in code review and that the structural skill (`C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/skd-manage.md`) intentionally does not opine on.
+The 1C Data Composition System (СхемаКомпоновкиДанных, СКД) is the canonical engine for reports. The rules below cover design decisions that recur in code review and that the structural skill (`$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/skd-manage.md`) intentionally does not opine on.
 
-> **Scope.** This file owns *report design* rules. XML / schema mechanics for `.dcs` files live in the `C:/DevopsMoments/pi-agents/config-1c/skills/1c-metadata-manage/docs/skd-manage.md` skill (XML structure, datasets API, query parameters API). Anti-patterns of slow queries inside a DCS — `anti-patterns.md` and `dev-standards-architecture.md §3 → "Queries"`.
+> **Scope.** This file owns *report design* rules. XML / schema mechanics for `.dcs` files live in the `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/skd-manage.md` skill (XML structure, datasets API, query parameters API). Anti-patterns of slow queries inside a DCS — `anti-patterns.md` and `dev-standards-architecture.md §3 → "Queries"`.
 
 <!-- help-mcp-router -->
 
@@ -20,11 +20,11 @@ standards(name="dcs-design")     # this standard, entire - the normal call
 standards(query="<what you need>")  # only when unsure which rule governs
 ```
 
-`standards` is the tool for this collection. `docsearch` / `docinfo` serve the platform documentation and cannot reach it, and **no tool of this server takes a `corpus` argument**. Name resolution, paging, budget, and what to do when the server is not exposed - **`C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/help-corpus-retrieval.md`**.
+`standards` is the tool for this collection. `docsearch` / `docinfo` serve the platform documentation and cannot reach it, and **no tool of this server takes a `corpus` argument**. Name resolution, paging, budget, and what to do when the server is not exposed - **`$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md`**.
 
 **Retrieve before you apply.** Every section below is a heading with no body: acting on a section title without the text behind it is inventing the rule, not following it. Fetch the rule once by name rather than a query per section.
 
-Pinned source, readable directly: <https://github.com/comol/ai_rules_1c/blob/410951e74fd3e6b7a763cf49757935b9a34d3f31/C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/dcs-design.md>
+Pinned source, readable directly: <https://github.com/comol/ai_rules_1c/blob/410951e74fd3e6b7a763cf49757935b9a34d3f31/$PI_CODING_AGENT_DIR/rules-1c/rules/dcs-design.md>
 
 ## Sections
 

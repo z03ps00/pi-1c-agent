@@ -1,6 +1,6 @@
 # v8unpack — pointer to standalone skill
 
-**Canonical source:** `C:/DevopsMoments/pi-agents/config-1c/skills/v8unpack-cf/SKILL.md` (or its installed copy under the active tool's skills directory).
+**Canonical source:** `$PI_CODING_AGENT_DIR/skills/v8unpack-cf/SKILL.md` (or its installed copy under the active tool's skills directory).
 
 This file is intentionally a thin pointer. Unpack / rebuild of CF, CFE, and EPF binaries without the 1C platform is owned by the standalone **`v8unpack-cf`** skill — commands, source layout, version checks, and limitations live there.
 

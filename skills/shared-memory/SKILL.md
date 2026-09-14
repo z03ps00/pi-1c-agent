@@ -7,9 +7,9 @@ description: Recall and store durable cross-agent context using a connected Cogn
 
 ## Mandatory behavior
 
-Do not assume Cognee method names. Inspect the available MCP tools first and use **only the permitted mutating tools**: `memory_remember` (Cognee) and `knowledge_remember` (OpenViking) — see the global memory rule. Update/delete/merge tools are not permitted: a correction is written as a **new** record that explicitly supersedes the old one.
+Do not assume Cognee method names. Inspect the available MCP tools first and use **only the permitted mutating tools**: Cognee `remember` and OpenViking `remember` (Pi may expose them as `memory_remember` / `knowledge_remember`) — see the global memory rule. Dataset is `main_dataset`. Update/delete/merge tools are not permitted: a correction is written as a **new** record that explicitly supersedes the old one.
 
-If Cognee is not connected or the needed operation is unavailable, report that condition explicitly. Never simulate a successful recall or write.
+If Cognee is not opted in (`memory` missing from `mcp.json`) or not connected, report “memory MCP not in use” **once** and continue with project files. Do not retry. Never simulate a successful recall or write. Do not treat a failed write as a task failure. The shipped Cognee is our stack on `127.0.0.1:8001`, not upstream `cognee-memory` on 8010.
 
 ## Recall
 

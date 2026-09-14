@@ -30,7 +30,7 @@ If the path is not provided — ask the user. The `--author`, `--title`, `--no-s
 
 ## Command
 
-`<skill-dir>` below is the directory of this skill: `C:/DevopsMoments/pi-agents/config-1c/skills/md-to-docx/` in the `1c-rules` source repo, or `<tool>/skills/md-to-docx/` after installation (e.g. `.cursor/skills/md-to-docx/`, `.claude/skills/md-to-docx/`).
+`<skill-dir>` below is the directory of this skill: `$PI_CODING_AGENT_DIR/skills/md-to-docx/` in the `1c-rules` source repo, or `<tool>/skills/md-to-docx/` after installation (e.g. `.cursor/skills/md-to-docx/`, `.claude/skills/md-to-docx/`).
 
 PowerShell (Windows, default for this project):
 

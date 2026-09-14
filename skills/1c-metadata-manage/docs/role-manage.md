@@ -393,6 +393,6 @@ The PowerShell scripts under `tools/1c-role-{compile,info,validate}/scripts/` we
 
 ## SDD Integration
 
-When creating or modifying roles as part of a feature, update SDD artifacts if present (see `C:/DevopsMoments/pi-agents/config-1c/rules-1c/rules/sdd-integrations.md` for detection):
+When creating or modifying roles as part of a feature, update SDD artifacts if present (see `$PI_CODING_AGENT_DIR/rules-1c/rules/sdd-integrations.md` for detection):
 
 - **OpenSpec**: Add spec deltas describing role purpose, access scope, and RLS rules in `openspec/changes/`.

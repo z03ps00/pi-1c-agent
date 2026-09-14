@@ -11,7 +11,9 @@ Full-cycle alone does **not** trigger the pipeline. The **standard path** for a 
 
 **Companion files:** `subagents.md` (catalog of subagents and when to delegate), `verification-checklist.md` (the closing gate of the pipeline), `orchestrator-economy.md` (optional project mode — `ORCHESTRATION=economy` in `.dev.env`, toggled by `/economymode` — makes stage 2/3 delegation the default and shifts bulk reads to subagents; stages and gates are unchanged).
 
-The pipeline is adapted from the `subagent-driven-development` skill of [obra/superpowers](https://github.com/obra/superpowers) and combined with the 13 specialized 1C subagents already shipped in `C:/DevopsMoments/pi-agents/config-1c/agents/1c-`.
+The pipeline is adapted from the `subagent-driven-development` skill of [obra/superpowers](https://github.com/obra/superpowers) and combined with the 13 specialized 1C subagents already shipped in `$PI_CODING_AGENT_DIR/agents/1c-`.
+
+**Lab extras:** Vanessa `.feature` work stays on `1c-tester` + `vanessa-mcp` (not the browser path). КД 2/3 plans and implementation use `kd2-rules` / `kd31-rules` over `1c-mcp-toolkit`. Russian «очеловечь» uses `1c-doc-writer` + `humanizer-ru`.
 
 ## Why a fixed pipeline
 
@@ -75,7 +77,7 @@ The pipeline removes those failure modes by separating **what to build** (planne
 
 ### Stage 1 — Triage (parent agent)
 
-Apply the matrix from `AGENTS.md → Triage: Quick-fix vs Docs-fix vs Spec-authoring vs Full-cycle`. **Only** full-cycle tasks for which delegation was chosen enter the pipeline; other full-cycle tasks follow the standard path (direct execution by the parent per `AGENTS.md`, same closing gate). If the task is a quick-fix, edit directly and run the strict applicable gate from `verification-checklist.md` (Gates 1–3 for BSL; Gate 5 for pure metadata XML; both when metadata embeds BSL). Tasks on the **docs-fix** path (Markdown / rules / docs only) bypass the pipeline and the BSL validators — apply the structural checks from `AGENTS.md → Triage` instead. Tasks on the **spec-authoring** path (OpenSpec artifacts with 1C facts) also bypass the pipeline but carry the MCP evidence obligations from `sdd-integrations.md`.
+Apply the matrix from `AGENTS.md → Triage: Quick-fix vs Docs-fix vs Spec-authoring vs Full-cycle`. **Only** full-cycle tasks for which delegation was chosen enter the pipeline; other full-cycle tasks follow the standard path (direct execution by the parent per `AGENTS.md`, same closing gate). If the task is a quick-fix, edit directly and run the strict applicable gate from `verification-checklist.md` (Gates 1–3 for BSL; Gate 5 for pure metadata XML; both when metadata embeds BSL). Tasks on the **docs-fix** path (Markdown / rules / docs only) bypass the pipeline and the BSL validators — apply the structural checks from `rules-1c/AGENTS-UPSTREAM.md` → Triage instead. Tasks on the **spec-authoring** path (OpenSpec artifacts with 1C facts) also bypass the pipeline but carry the MCP evidence obligations from `sdd-integrations.md`.
 
 The detailed promotion triggers (transactional paths, public exports, adopted objects, subscriptions / jobs / RLS, wired metadata) and the isolated-metadata-addition eligibility are owned by `verification-policy.md → Triage details` — apply them as written. When in doubt, full-cycle wins.
 
@@ -138,33 +140,22 @@ When stage 3 is split across multiple implementation subagents inside the same c
 
 The mechanism is a fixed-format **Handoff** block that every upstream implementation subagent puts at the top of its final report, that the parent forwards verbatim, and that the downstream subagent treats as authoritative inventory.
 
-**Mandatory Handoff format (emitted by the upstream subagent at the very top of its final report):**
+**Mandatory Handoff format** — JSON `## Upstream Handoff` as defined in `rules-1c/core/handoff.md`. Markdown heading `Handoff for the next subagent` is **not** required and must not be treated as the contract.
 
-```text
-## Handoff for the next subagent
-
-### Artifacts
-- <full repo path> — <one-line role> [stub | done | edited]
-- ...
-
-### Public surface
-- <ObjectName>.<RoutineName>(<params>) → <return type> — <one-line purpose>
-- <Metadata.Object> — <attribute / tabular section / form name>: <type / role>
-- ...
-
-### Open TODOs / stubs for the next subagent
-- <file>:<region or routine> — <what to implement> — <signature hint, if pre-agreed>
-- ...
-
-### Locked decisions (do not revisit without approval)
-- <decision> — <one-line rationale>
-- ...
-
-### Open questions raised
-- <CONFUSION-id> — <one-line summary> — <status: resolved / pending>
+```json
+{
+  "task": "...",
+  "artifacts": [],
+  "findings": [],
+  "public_surface": [],
+  "locked_decisions": [],
+  "constraints": [],
+  "unresolved": [],
+  "verification": []
+}
 ```
 
-The block is **not** a marketing summary — it is a machine-readable inventory. Keep each line short (≤120 chars), one fact per line, no prose paragraphs inside the block.
+Inventory (paths, public surface, TODOs, locked decisions) lives inside those JSON arrays. Keep entries short; no prose paragraphs inside the arrays.
 
 **Parent agent obligations:**
 
