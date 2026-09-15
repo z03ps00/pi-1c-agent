@@ -46,7 +46,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
 | `agents/` | Subagent prompts |
 | `skills/` | Profile skills |
 | `prompts/` | Slash-command templates (unprefixed) |
-| `tools/` | Host helpers (`update-profile.mjs` refreshes this clone from origin) |
+| `scripts/` | Host helpers (`update-profile.mjs` refreshes this clone from origin). Not Pi `tools/` — that name triggers a startup deprecation warning |
 | `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder, unpinned `npm:pi-cursor-sdk`) |
 | `mcp.json` | Default MCP (empty optional servers) |
 | `NOTICE` | Upstream `comol/ai_rules_1c` terms vs this overlay; lab extras vs Humanizer_RU |

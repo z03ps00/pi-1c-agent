@@ -39,4 +39,14 @@ test('/update-profile exists, is settings, and has no /1c-* alias', () => {
   );
   assert.notEqual(classifyCatalogSection(catalog, 'update-profile'), 'everyday');
   assert.notEqual(classifyCatalogSection(catalog, 'update-profile'), 'maintainer');
+  const helper = path.join(root, 'scripts', 'update-profile.mjs');
+  const prompt = fs.readFileSync(promptPath, 'utf8');
+  assert.ok(fs.existsSync(helper), `${helper} missing`);
+  assert.equal(
+    fs.existsSync(path.join(root, 'tools')),
+    false,
+    'profile-root tools/ makes Pi warn that custom tools belong in extensions/',
+  );
+  assert.match(prompt, /scripts\/update-profile\.mjs/);
+  assert.doesNotMatch(prompt, /tools\/update-profile\.mjs/);
 });

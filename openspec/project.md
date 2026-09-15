@@ -17,6 +17,7 @@ configuration dump. There is no `Configuration.xml` here.
 - `agents/` — 1C subagent definitions
 - `skills/` — profile skills
 - `prompts/` — unprefixed slash-command templates (no `/1c-*` aliases)
+- `scripts/` — host helpers (not Pi `tools/`, which is a deprecated extension path)
 - `openspec/` — spec-driven change workspace for this profile
 
 ## Notes for AI Agents

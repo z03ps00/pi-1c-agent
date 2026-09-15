@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Refresh the installed Pi 1C profile from its git remote.
- * Usage: node tools/update-profile.mjs [status|check|force|overwrite] [<ref>]
+ * Usage: node scripts/update-profile.mjs [status|check|force|overwrite] [<ref>]
  */
 import fs from 'node:fs';
 import os from 'node:os';

@@ -29,10 +29,10 @@ Parse `$ARGUMENTS` (case-insensitive for the verbs). Do not treat a 1C project p
 2. Prefer the helper (Node stdlib + `git` on PATH):
 
    ```bash
-   node "$PI_CODING_AGENT_DIR/tools/update-profile.mjs" $ARGUMENTS
+   node "$PI_CODING_AGENT_DIR/scripts/update-profile.mjs" $ARGUMENTS
    ```
 
-   On Windows, the same `node` invocation with `%PI_CODING_AGENT_DIR%\tools\update-profile.mjs`.
+   On Windows, the same `node` invocation with `%PI_CODING_AGENT_DIR%\scripts\update-profile.mjs`.
 3. If `node` or the helper file is missing, **do not** invent `git reset --hard`. Print the helper’s copy-paste (`git -C "$PI_CODING_AGENT_DIR" fetch origin` then `merge --ff-only`) **once** and stop unless the user already confirmed a manual run. If you must run git yourself: copy `mcp.json` and `settings.json` aside first, never delete `auth.json` / `trust.json` / `npm/`, restore extra `mcpServers` that are not in the incoming default, and put back a local filesystem path for `pi-1c-agent` in `settings.json` `packages`.
 4. Report the helper output: `state`, redacted `remote_url`, `old_sha` / `new_sha`. Do not print tokens, `auth.json`, or credentialed userinfo.
 5. Do **not** run `pi install`, `npm install`, `install.ps1`, or `/review-airules`. After a successful **updated** result, you MAY mention `pi install npm:pi-cursor-sdk` as a separate optional step. Recommend `/doctor` and a client reload so new prompts load.

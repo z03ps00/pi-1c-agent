@@ -16,7 +16,7 @@ import {
   restoreMcpServers,
   restorePi1cAgentPath,
   run,
-} from '../../tools/update-profile.mjs';
+} from '../../scripts/update-profile.mjs';
 
 function git(cwd, args) {
   const r = spawnSync('git', args, {
