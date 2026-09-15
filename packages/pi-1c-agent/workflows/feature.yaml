@@ -1,0 +1,8 @@
+name: feature
+stages:
+  - 1c-explorer
+  - 1c-planner
+  - 1c-developer
+  - 1c-tester
+  - 1c-code-reviewer
+  - verification

@@ -1,0 +1,7 @@
+name: performance
+stages:
+  - 1c-explorer
+  - 1c-performance-optimizer
+  - 1c-developer
+  - 1c-tester
+  - 1c-code-reviewer

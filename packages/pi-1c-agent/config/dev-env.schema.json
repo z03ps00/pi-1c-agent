@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "upstreamCommit": "8901177ef92b611537fe79a4e4dfe19c600d9cc8",
+  "description": "Human-friendly wizard metadata for variables discovered from upstream .dev.env.example. The upstream template remains the source of truth; this file only supplies UX metadata and dependency hints.",
+  "groups": [
+    {"id":"code","title":"Генерация и политика кода"},
+    {"id":"runtime","title":"Платформа, информационная база, расширения и инфраструктура"},
+    {"id":"agents","title":"Модели и оркестрация"},
+    {"id":"process","title":"Процесс разработки"},
+    {"id":"support","title":"Канал поддержки ai_rules_1c"}
+  ],
+  "variables": [
+    {"name":"PREFIX","group":"code","title":"Префикс новых объектов","description":"Префикс добавленных объектов метаданных и реквизитов. Пусто = создавать без префикса.","class":"advisory","capability":"code"},
+    {"name":"COMPANY","group":"code","title":"Компания / проект в маркерах доработки","description":"Имя компании или проекта для комментариев доработки. Пусто вместе с DEVELOPER отключает маркеры.","class":"advisory","capability":"change-markers"},
+    {"name":"DEVELOPER","group":"code","title":"Идентификатор разработчика","description":"Имя/идентификатор разработчика для комментариев доработки. Пусто отключает маркеры.","class":"advisory","capability":"change-markers","dependsOn":{"COMPANY":"nonempty"}},
+    {"name":"PLATFORM_VERSION","group":"code","title":"Минимальная версия платформы / CompatibilityMode","description":"Минимальная версия платформы 1С для кода, чувствительного к версии. Сначала выполняется автодетект из Configuration.xml.","class":"highly-desirable","capability":"code","autodetect":"compatibility-mode"},
+    {"name":"COMMENT_OPEN","group":"code","title":"Открывающий комментарий доработки","description":"Шаблон открывающего маркера. Поддерживает {COMPANY}, {DEVELOPER}, {DATE}, {TASK}.","class":"defaulted","capability":"change-markers","default":"// +++ {COMPANY}; {DEVELOPER}; {DATE}; {TASK}","dependsOn":{"COMPANY":"nonempty","DEVELOPER":"nonempty"}},
+    {"name":"COMMENT_CLOSE","group":"code","title":"Закрывающий комментарий доработки","description":"Шаблон закрывающего маркера. Поддерживает те же плейсхолдеры.","class":"defaulted","capability":"change-markers","default":"// --- {COMPANY}; {DEVELOPER}; {DATE}; {TASK}","dependsOn":{"COMPANY":"nonempty","DEVELOPER":"nonempty"}},
+    {"name":"NEW_OBJECTS_IN","group":"code","title":"Куда добавлять новые объекты","description":"Политика проекта: основная конфигурация или расширение.","class":"policy","capability":"code","choices":["main_configuration","extension"],"default":"main_configuration","recommended":"ask"},
+
+    {"name":"PLATFORM_PATH","group":"runtime","title":"Каталог платформы 1С","description":"Каталог установки платформы 1С, содержащий bin/1cv8(.exe). Сначала выполняется автодетект.","class":"highly-desirable","capability":"infobase","autodetect":"platform-path"},
+    {"name":"INFOBASE_KIND","group":"runtime","title":"Тип информационной базы","description":"file для файловой ИБ или server для клиент-серверной.","class":"defaulted","capability":"infobase","choices":["file","server"],"default":"file"},
+    {"name":"INFOBASE_PATH","group":"runtime","title":"Путь / строка подключения к ИБ","description":"Путь к файловой ИБ либо строка подключения к серверной тестовой/DEV базе.","class":"highly-desirable","capability":"infobase"},
+    {"name":"IB_USER","group":"runtime","title":"Пользователь ИБ","description":"Пользователь DEV/TEST ИБ. Пусто = подключение без аутентификации; это валидный режим.","class":"defaulted","capability":"infobase"},
+    {"name":"IB_PASSWORD","group":"runtime","title":"Пароль пользователя ИБ","description":"Только DEV/TEST пароль. Пусто = без пароля. Никогда не переносится в project.yaml или отчёты.","class":"defaulted","capability":"infobase","secret":true},
+    {"name":"EXTENSION_NAME","group":"runtime","title":"Основное расширение","description":"Имя одной целевой конфигурации-расширения. Пусто = операции над основной конфигурацией.","class":"defaulted","capability":"extensions"},
+    {"name":"EXTENSION_NAMES","group":"runtime","title":"Список расширений полного снимка","description":"Список расширений через запятую в порядке загрузки для полного effective snapshot.","class":"defaulted","capability":"extensions"},
+    {"name":"EXPORT_PATH","group":"runtime","title":"Каталог исходников основной конфигурации","description":"Каталог выгрузки исходников. Пусто = корень текущего репозитория.","class":"defaulted","capability":"sources","autodetect":"source-root"},
+    {"name":"EXTENSIONS_PATH","group":"runtime","title":"Корневой каталог исходников расширений","description":"Путь, внутри которого лежат каталоги расширений из EXTENSION_NAMES. Пусто = ./cfe.","class":"defaulted","capability":"extensions"},
+    {"name":"DT_SNAPSHOT_PATH","group":"runtime","title":"DT-снимок тестовой базы","description":"Путь к .dt baseline для /restore-testbase. Пусто = восстанавливать только конфигурацию.","class":"defaulted","capability":"restore-testbase"},
+    {"name":"RELEASE_PATH","group":"runtime","title":"Каталог артефактов релиза","description":"Необязательный override. Пусто = build/{cf,cfe,epf,erf} с именами OriginalName_YYYYMMDD. Заданное значение — альтернативный корень (внутри него те же cf/cfe/epf/erf).","class":"defaulted","capability":"release"},
+    {"name":"LOG_PATH","group":"runtime","title":"Лог Designer","description":"Файл лога Designer. Пусто = системный TEMP/1cv8.log.","class":"defaulted","capability":"infobase"},
+    {"name":"INFOBASE_PUBLISH_URL","group":"runtime","title":"URL веб-публикации тестовой ИБ","description":"Используется UI-тестами и 1c-data-mcp. Пусто = UI-тесты могут быть пропущены.","class":"highly-desirable","capability":"ui-testing"},
+    {"name":"UI_TESTING","group":"runtime","title":"Режим UI-тестирования","description":"manual = только по запросу; auto = автоматически после deploy/verification; off = выключено.","class":"defaulted","capability":"ui-testing","choices":["manual","auto","off"],"default":"manual"},
+    {"name":"USE_EDT","group":"runtime","title":"Использовать 1C:EDT","description":"Включает EDT-ветку правил и рекомендации EDT-MCP.","class":"install-selection","capability":"edt","choices":["true","false"],"default":"false"},
+    {"name":"IBCMD_CONFIG","group":"runtime","title":"config.yml автономного сервера для ibcmd","description":"Если задан и ibcmd доступен, config-операции выполняются через ibcmd; иначе Designer.","class":"defaulted","capability":"ibcmd"},
+    {"name":"PLATFORM_ARGS","group":"runtime","title":"Дополнительные аргументы 1cv8","description":"Дополнительные аргументы платформы через запятую. Пусто = без дополнительных аргументов.","class":"defaulted","capability":"infobase"},
+    {"name":"IBCMD_ARGS","group":"runtime","title":"Дополнительные аргументы ibcmd","description":"Дополнительные аргументы ibcmd в форме --key=value. Пусто = без дополнительных аргументов.","class":"defaulted","capability":"ibcmd"},
+    {"name":"SUPPORT_GUARD","group":"runtime","title":"Защита типовых объектов на поддержке","description":"deny = запрещать прямые изменения типовых locked-объектов; warn = предупреждать; off = не проверять.","class":"defaulted","capability":"metadata","choices":["deny","warn","off"],"default":"deny","recommended":"deny"},
+    {"name":"NEW_OBJECT_POSITION","group":"runtime","title":"Позиция новых объектов в Configuration.xml","description":"end = как Конфигуратор; byName = по имени внутри группы вида.","class":"defaulted","capability":"metadata","choices":["end","byName"],"default":"end"},
+    {"name":"REPOSITORY_PATH","group":"runtime","title":"Адрес хранилища конфигурации 1С","description":"Непустое значение включает repository SDLC: захват перед правкой и помещение после проверки.","class":"optional","capability":"repository"},
+    {"name":"REPOSITORY_USER","group":"runtime","title":"Пользователь хранилища","description":"Пусто = без явного пользователя; повторно спрашивать только после ошибки аутентификации.","class":"defaulted","capability":"repository","dependsOn":{"REPOSITORY_PATH":"nonempty"}},
+    {"name":"REPOSITORY_PASSWORD","group":"runtime","title":"Пароль хранилища","description":"DEV/TEST пароль хранилища. Не показывается в preview и не попадает в project.yaml.","class":"defaulted","capability":"repository","secret":true,"dependsOn":{"REPOSITORY_PATH":"nonempty"}},
+    {"name":"REPOSITORY_ALLOW_FORCE","group":"runtime","title":"Разрешить force-операции хранилища","description":"Опасная настройка: первая половина двойного подтверждения для force/get/commit/unlock с риском потери изменений.","class":"defaulted","capability":"repository","choices":["false","true"],"default":"false","recommended":"false","dependsOn":{"REPOSITORY_PATH":"nonempty"}},
+
+    {"name":"AGENT_MODEL","group":"agents","title":"Профиль модели головного агента","description":"Профиль поведения parent-agent. Пусто = базовый model-neutral ruleset.","class":"defaulted","capability":"models","choices":["","opus5","sonnet5","fable5","gpt56"],"default":""},
+    {"name":"SUBAGENT_MODEL_CODING","group":"agents","title":"Модель субагентов coding-tier","description":"developer, metadata-manager, architect, performance-optimizer, refactoring. Пусто = текущая/default модель Pi.","class":"defaulted","capability":"models"},
+    {"name":"SUBAGENT_MODEL_ANALYSIS","group":"agents","title":"Модель субагентов analysis-tier","description":"planner, analytic, reviewers, tester, doc-writer. Пусто = текущая/default модель Pi.","class":"defaulted","capability":"models"},
+    {"name":"SUBAGENT_MODEL_LIGHT","group":"agents","title":"Модель субагентов light-tier","description":"explorer и error-fixer. Пусто = текущая/default модель Pi.","class":"defaulted","capability":"models"},
+    {"name":"ORCHESTRATION","group":"agents","title":"Режим оркестрации","description":"standard = делегировать по необходимости; economy = активнее делегировать чтение/запись субагентам.","class":"defaulted","capability":"models","choices":["standard","economy"],"default":"standard"},
+
+    {"name":"QUICKFIX_MAX_LINES","group":"process","title":"Лимит строк quick-fix","description":"Максимум изменённых BSL-строк для быстрого пути. Пусто/невалидно = 40.","class":"defaulted","capability":"process","default":"40"},
+    {"name":"DEBUG_FAST_PATH","group":"process","title":"Быстрый путь отладки","description":"standard, extended или off. Управляет тем, когда можно не запускать полный 4-фазный debugging cycle.","class":"defaulted","capability":"process","choices":["standard","extended","off"],"default":"standard"},
+    {"name":"VERIFICATION_DEPTH","group":"process","title":"Глубина статической проверки","description":"full, standard или lite. Не ослабляет обязательные проверки high-risk изменений.","class":"defaulted","capability":"process","choices":["full","standard","lite"],"default":"standard","recommended":"standard"},
+    {"name":"CAVEMAN","group":"process","title":"Caveman-стиль общения","description":"on, auto или off. Влияет только на стиль ответа, не на correctness/verification.","class":"defaulted","capability":"process","choices":["on","auto","off"],"default":"on"},
+
+    {"name":"SUPPORT_KEY","group":"support","title":"Ключ канала поддержки","description":"Секретный ключ для /support. Пусто = канал поддержки отключён.","class":"optional","capability":"support","secret":true},
+    {"name":"SUPPORT_EMAIL","group":"support","title":"E-mail для обращений поддержки","description":"Рабочий e-mail автора тикетов. Нужен только если используется /support.","class":"optional","capability":"support"},
+    {"name":"SUPPORT_API_URL","group":"support","title":"URL сервиса поддержки","description":"Обычно оставляется пустым и раскрывается в upstream default; заполнять только для собственного endpoint.","class":"defaulted","capability":"support"}
+  ]
+}

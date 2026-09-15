@@ -1,0 +1,1 @@
+Проведи независимый code review изменений 1С через 1c-code-reviewer. Проверяй requirements, correctness, regressions, edge cases, architecture, error handling, integration, security/data safety, compatibility и тесты. Не придумывай замечания ради количества.

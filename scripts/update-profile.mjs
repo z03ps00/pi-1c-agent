@@ -86,19 +86,39 @@ export function restoreMcpServers(beforeDoc, incomingDoc) {
   return incoming;
 }
 
-export function restorePi1cAgentPath(beforeSettings, afterSettings) {
-  const before = beforeSettings && typeof beforeSettings === 'object' ? beforeSettings : {};
-  const after = afterSettings && typeof afterSettings === 'object' ? { ...afterSettings } : {};
-  const beforePkgs = Array.isArray(before.packages) ? before.packages : [];
-  const localPath = beforePkgs.find((entry) => isLocalPi1cAgentPath(entry));
-  if (!localPath) return after;
+export const IN_REPO_PACKAGE_REL = path.join('packages', 'pi-1c-agent');
+
+export function inRepoPackageDir(profileRoot) {
+  if (!profileRoot) return null;
+  return path.resolve(profileRoot, IN_REPO_PACKAGE_REL);
+}
+
+export function inRepoPackageReady(profileRoot) {
+  const dir = inRepoPackageDir(profileRoot);
+  return Boolean(dir && fs.existsSync(path.join(dir, 'package.json')));
+}
+
+export function applyPi1cAgentPackagePath(settings, packagePath) {
+  const after = settings && typeof settings === 'object' ? { ...settings } : {};
   const afterPkgs = Array.isArray(after.packages) ? [...after.packages] : [];
   const idx = afterPkgs.findIndex(
     (entry) => entry === PLACEHOLDER_PACKAGE || isLocalPi1cAgentPath(entry),
   );
-  if (idx >= 0) afterPkgs[idx] = localPath;
-  else afterPkgs.unshift(localPath);
+  if (idx >= 0) afterPkgs[idx] = packagePath;
+  else afterPkgs.unshift(packagePath);
   after.packages = afterPkgs;
+  return after;
+}
+
+export function restorePi1cAgentPath(beforeSettings, afterSettings, profileRoot) {
+  const before = beforeSettings && typeof beforeSettings === 'object' ? beforeSettings : {};
+  const after = afterSettings && typeof afterSettings === 'object' ? { ...afterSettings } : {};
+  const beforePkgs = Array.isArray(before.packages) ? before.packages : [];
+  const localPath = beforePkgs.find((entry) => isLocalPi1cAgentPath(entry));
+  if (localPath) return applyPi1cAgentPackagePath(after, localPath);
+  if (profileRoot && inRepoPackageReady(profileRoot)) {
+    return applyPi1cAgentPackagePath(after, inRepoPackageDir(profileRoot));
+  }
   return after;
 }
 
@@ -475,7 +495,7 @@ export function run(opts = {}) {
     const incomingSettings = readJsonFile(settingsPath) ?? {};
     if (beforeMcp) writeJsonFile(mcpPath, restoreMcpServers(beforeMcp, incomingMcp));
     if (beforeSettings) {
-      writeJsonFile(settingsPath, restorePi1cAgentPath(beforeSettings, incomingSettings));
+      writeJsonFile(settingsPath, restorePi1cAgentPath(beforeSettings, incomingSettings, profileDir));
     }
 
     const newSha = gitOut(gitBin, profileDir, ['rev-parse', 'HEAD']).text;

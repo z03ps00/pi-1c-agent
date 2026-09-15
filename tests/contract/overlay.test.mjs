@@ -14,3 +14,13 @@ test('AGENTS.md overlay has PI-1C-AGENT markers and no global docker ban', () =>
   assert.doesNotMatch(text, /never docker/i);
   assert.match(text, /Docker \/ Podman is a product capability/);
 });
+
+test('AGENTS.md header tells the agent to install from scratch or update in place', () => {
+  const agentsPath = path.join(profileRoot(), 'AGENTS.md');
+  const text = fs.readFileSync(agentsPath, 'utf8');
+  assert.match(text, /## This profile: install or update/);
+  assert.match(text, /scripts\/setup\.mjs/);
+  assert.match(text, /\/update-profile/);
+  assert.match(text, /run the matching steps/i);
+  assert.match(text, /Do not send the user to copy a package from another machine/);
+});

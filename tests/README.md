@@ -42,7 +42,8 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | Destructive IB prompts confirm target | `contract/destructive-confirm` | regression | implemented |
 | Writer/pipeline agents require JSON `## Upstream Handoff` | `unit/agents` + `contract/handoff` | unit + regression | implemented |
 | `CAVEMAN` default `auto` | `unit/skills` + `contract/caveman` | unit + regression | implemented |
-| `NOTICE` present; `settings.json` placeholder | `contract/notice-settings` | regression | implemented |
+| `NOTICE` present; `settings.json` placeholder; in-repo `packages/pi-1c-agent` | `contract/notice-settings` | regression | implemented |
+| First-time `scripts/setup.mjs` resolves in-repo package path | `unit/setup` | unit | implemented |
 | Unpinned default `npm:pi-cursor-sdk` (no `@version`) | `contract/notice-settings` | regression | implemented |
 | `upstream.lock.json` seeded pin | `contract/upstream-pin` | regression | implemented |
 | No foreign machine-local paths in shipped tree | `unit/paths-scan` + `contract/machine-paths` | unit + regression | implemented |
@@ -58,6 +59,6 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 
 Recorded after `node tests/run-all.mjs` on 2026-09-15.
 
-- **Pass count:** 61 passed, 0 failed
+- **Pass count:** 72 passed, 0 failed
 - **Skipped live scenarios:** 1 — `scenario/live-harness` PLAN-only file effects — reason: `RUN_LIVE_SCENARIOS is not 1`
 

@@ -1,0 +1,1 @@
+Выполни систематический bugfix 1С: 1c-explorer собирает доказательства и локализует проблему → 1c-error-fixer делает минимальное исправление → 1c-tester проверяет regression scenario → 1c-code-reviewer проверяет fix → verification.

@@ -7,6 +7,7 @@ import test from 'node:test';
 import { withTempDir } from '../lib/fsutil.mjs';
 import {
   SDK_REMINDER,
+  inRepoPackageDir,
   isLocalPi1cAgentPath,
   isProfileRoot,
   parseArgs,
@@ -143,6 +144,35 @@ test('restorePi1cAgentPath keeps local filesystem path', () => {
   assert.equal(out.packages[0], '/opt/local/pi-1c-agent');
 });
 
+test('restorePi1cAgentPath fills in-repo package when placeholder remains', async () => {
+  await withTempDir(async (tmp) => {
+    const pkgDir = path.join(tmp, 'packages', 'pi-1c-agent');
+    fs.mkdirSync(pkgDir, { recursive: true });
+    fs.writeFileSync(path.join(pkgDir, 'package.json'), '{"name":"pi-1c-agent"}\n');
+    const out = restorePi1cAgentPath(
+      { packages: ['<path-to-pi-1c-agent>', 'npm:pi-cursor-sdk'] },
+      { packages: ['<path-to-pi-1c-agent>', 'npm:pi-cursor-sdk'] },
+      tmp,
+    );
+    assert.equal(out.packages[0], inRepoPackageDir(tmp));
+    assert.equal(out.packages[1], 'npm:pi-cursor-sdk');
+  });
+});
+
+test('restorePi1cAgentPath prefers existing local path over in-repo package', async () => {
+  await withTempDir(async (tmp) => {
+    const pkgDir = path.join(tmp, 'packages', 'pi-1c-agent');
+    fs.mkdirSync(pkgDir, { recursive: true });
+    fs.writeFileSync(path.join(pkgDir, 'package.json'), '{"name":"pi-1c-agent"}\n');
+    const out = restorePi1cAgentPath(
+      { packages: ['/opt/local/pi-1c-agent', 'npm:pi-cursor-sdk'] },
+      { packages: ['<path-to-pi-1c-agent>', 'npm:pi-cursor-sdk'] },
+      tmp,
+    );
+    assert.equal(out.packages[0], '/opt/local/pi-1c-agent');
+  });
+});
+
 test('resolveProfileRoot prefers PI_CODING_AGENT_DIR over project cwd', async () => {
   await withProfileClone(async ({ profile, project }) => {
     assert.equal(isProfileRoot(profile), true);
@@ -236,6 +266,24 @@ test('fast-forward update keeps secrets, extras, local package path, npm dir', a
     assert.ok(result.newSha);
     assert.notEqual(result.oldSha, result.newSha);
     assert.doesNotMatch(result.lines.join('\n'), /secret-token-do-not-print/);
+  });
+});
+
+test('fast-forward update fills in-repo package path when placeholder remains', async () => {
+  await withProfileClone(async ({ profile, upstream }) => {
+    fs.mkdirSync(path.join(upstream, 'packages', 'pi-1c-agent'), { recursive: true });
+    fs.writeFileSync(
+      path.join(upstream, 'packages', 'pi-1c-agent', 'package.json'),
+      `${JSON.stringify({ name: 'pi-1c-agent', version: '0.6.1' }, null, 2)}\n`,
+    );
+    git(upstream, ['add', 'packages/pi-1c-agent/package.json']);
+    git(upstream, ['commit', '-m', 'bundle package']);
+    const result = runOn(profile);
+    assert.equal(result.ok, true);
+    assert.equal(result.action, 'updated');
+    const afterSettings = JSON.parse(fs.readFileSync(path.join(profile, 'settings.json'), 'utf8'));
+    assert.equal(afterSettings.packages[0], inRepoPackageDir(profile));
+    assert.equal(afterSettings.packages[1], 'npm:pi-cursor-sdk');
   });
 });
 

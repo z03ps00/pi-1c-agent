@@ -50,3 +50,22 @@ test('settings.json lists unpinned npm:pi-cursor-sdk', () => {
     `${settingsPath} must not pin pi-cursor-sdk, got ${JSON.stringify(packages)}`,
   );
 });
+
+test('packages/pi-1c-agent ships with expected extensions', () => {
+  const pkgRoot = path.join(profileRoot(), 'packages', 'pi-1c-agent');
+  const pkgPath = path.join(pkgRoot, 'package.json');
+  assert.ok(fs.existsSync(pkgPath), `${pkgPath} missing — clone must include the runtime package`);
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  assert.equal(pkg.name, 'pi-1c-agent');
+  const extensions = pkg.pi?.extensions || [];
+  const required = [
+    'extensions/1c-mode/index.ts',
+    'extensions/1c-init/index.ts',
+    'extensions/1c-admin/index.ts',
+    'extensions/1c-session-rotate/index.ts',
+  ];
+  for (const rel of required) {
+    assert.ok(extensions.includes(rel), `${pkgPath} must register ${rel}, got ${JSON.stringify(extensions)}`);
+    assert.ok(fs.existsSync(path.join(pkgRoot, rel)), `${path.join(pkgRoot, rel)} missing`);
+  }
+});

@@ -5,7 +5,26 @@ Use the decomposed 1C multi-agent workflow supplied by `pi-1c-agent`.
 
 Before non-trivial work read the adapted upstream context/rules under `rules-1c/` and the Pi-native core rules `modes.md`, `orchestration.md`, `handoff.md`, `openspec.md`, `extension-targeting.md`, and `delivery.md`. Process documents: this overlay, then `rules-1c/AGENTS-UPSTREAM.md`, then `rules-1c/core/*`.
 
-Install scope: rules, agents, skills, prompts and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
+## This profile: install or update (do it, do not only explain)
+
+This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already contains the runtime at `packages/pi-1c-agent/`. Do not send the user to copy a package from another machine. Do not install this agent into a 1C project.
+
+**Install from scratch** when `$PI_CODING_AGENT_DIR` is unset, the target is not this profile (`AGENTS.md` with `PI-1C-AGENT`, `prompts/CATALOG.md`, `rules-1c/`), `packages/pi-1c-agent/package.json` is missing, or `settings.json` still lists `<path-to-pi-1c-agent>`:
+
+1. Clone this repository into the profile directory. Set `PI_CODING_AGENT_DIR` to that clone (no trailing-space folder names).
+2. Run `node "$PI_CODING_AGENT_DIR/scripts/setup.mjs"` (Windows: `node "%PI_CODING_AGENT_DIR%\scripts\setup.mjs"`). It fills `packages[0]`, copies `auth.json` / `trust.json` from the examples if they are missing, and is safe to re-run.
+3. Optional: `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk`.
+4. Check with `/doctor`.
+
+**Update an existing install** when this directory is already the profile clone:
+
+1. In Pi BUILD run `/update-profile` (or `node "$PI_CODING_AGENT_DIR/scripts/update-profile.mjs"`; Cursor: the same helper). That refreshes profile files and `packages/pi-1c-agent` from `origin`.
+2. If `settings.json` `packages[0]` still points at an old path outside this clone, point it at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or restore the placeholder and re-run `scripts/setup.mjs`).
+3. Check with `/doctor`. Do not run `pi install` as part of the update.
+
+If the user asks to install or update this agent, **run the matching steps**. Do not stop after describing them.
+
+Install scope: rules, agents, skills, prompts, the in-repo `packages/pi-1c-agent` runtime, and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
 
 Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). One command per verb — no `/1c-*` aliases and no prompt file that repeats a package `registerCommand` name. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`).
 

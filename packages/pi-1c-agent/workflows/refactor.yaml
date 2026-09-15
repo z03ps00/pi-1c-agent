@@ -1,0 +1,7 @@
+name: refactor
+stages:
+  - 1c-explorer
+  - 1c-refactoring
+  - 1c-tester
+  - 1c-code-reviewer
+  - verification

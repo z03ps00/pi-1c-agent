@@ -1,0 +1,44 @@
+{
+  "name": "pi-1c-agent",
+  "version": "0.6.1",
+  "private": true,
+  "description": "Multi-agent 1C:Enterprise package for vanilla Pi with PLAN/BUILD, Configuration Knowledge Layer, and detailed project initialization wizard",
+  "keywords": [
+    "pi-package",
+    "1c",
+    "bsl",
+    "subagents",
+    "openspec",
+    "sdd"
+  ],
+  "pi": {
+    "extensions": [
+      "extensions/1c-mode/index.ts",
+      "extensions/1c-subagents/index.ts",
+      "extensions/1c-admin/index.ts",
+      "extensions/1c-knowledge/index.ts",
+      "extensions/1c-init/index.ts",
+      "extensions/1c-session-rotate/index.ts"
+    ],
+    "skills": [
+      "skills"
+    ],
+    "prompts": [
+      "prompts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-agent-core": "*",
+    "typebox": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "node tests/run-all.mjs",
+    "doctor:package": "node tools/doctor.mjs --package-only"
+  }
+}

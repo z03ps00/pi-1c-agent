@@ -1,0 +1,1 @@
+Выполни задачу как 1С multi-agent workflow. Для нетривиальной задачи используй: 1c-explorer → 1c-planner → подходящий implementation-agent → 1c-tester → 1c-code-reviewer → исправления → verification. Передавай между стадиями compact handoff, не заставляй каждого агента повторять исследование.

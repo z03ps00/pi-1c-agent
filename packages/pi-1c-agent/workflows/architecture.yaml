@@ -1,0 +1,5 @@
+name: architecture
+stages:
+  - parallel: [1c-explorer, 1c-analytic]
+  - 1c-architect
+  - 1c-arch-reviewer

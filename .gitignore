@@ -23,6 +23,7 @@ id_ed25519
 node/
 npm/
 bin/
+# packages/pi-1c-agent is the shipped Pi extension package — keep it tracked.
 
 # --- Caches & generated state ---
 mcp-cache.json

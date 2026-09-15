@@ -1,0 +1,44 @@
+baseline: 0.4.0
+target: 0.4.2
+status: integrated
+fixes:
+  - id: BF-001
+    name: explicit-install-bootstrap-contract
+    severity: critical
+    done: true
+  - id: BF-002
+    name: plan-state-machine
+    severity: critical
+    done: true
+  - id: BF-003
+    name: project-agent-trust
+    severity: critical
+    done: true
+  - id: BF-004
+    name: capability-aware-child-tools
+    severity: high
+    done: true
+  - id: BF-005
+    name: runtime-handoff-validation
+    severity: high
+    done: true
+  - id: BF-006
+    name: writer-concurrency-and-recursion-guard
+    severity: high
+    done: true
+  - id: BF-007
+    name: deterministic-doctor-command
+    severity: high
+    done: true
+  - id: BF-008
+    name: openspec-plan-write-policy
+    severity: high
+    done: true
+  - id: BF-009
+    name: executable-workflow-runtime
+    severity: medium
+    done: true
+  - id: BF-010
+    name: pi-frontmatter-parser
+    severity: medium
+    done: true
