@@ -1,0 +1,9 @@
+{
+  "name": "pi-1c-agent-profile-manifest",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Rebranding manifest for packages that resolve PI_PACKAGE_DIR - here pi-mcp-adapter. It supplies piConfig.clientUri for OAuth dynamic client registration, so registering a client never advertises a foreign URL. Do NOT add piConfig.name: pi-mcp-adapter would then resolve its agent dir from <NAME>_CODING_AGENT_DIR (uppercase, spaces kept) and PI_CODING_AGENT_DIR would stop being honoured.",
+  "piConfig": {
+    "clientUri": "http://localhost"
+  }
+}

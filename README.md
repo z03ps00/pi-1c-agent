@@ -35,6 +35,8 @@ Vanessa MCP is a **separate** opt-in family (`mcp.optional/vanessa.json`, `${VAN
 
 Default `mcp.json` does not register Cognee, OpenViking, 1C ports 8002–8008, or Vanessa. Ask at `/installtools` or `/install-memory-mcp` (our OpenViking + Cognee pair; not the upstream Cognee installer). Fragments: `mcp.optional/`. Stack: `mcp.optional/memory-stack/`. Example merge: `mcp.example.json` (knowledge + memory + 1C bundle only — Vanessa is not in that example). `notifyOnStartupConnect` is `false`. `/checkmcp` is status-only; repair is explicit. Absent Vanessa = `not configured`.
 
+External OAuth servers (`auth: "oauth"`, Keycloak-style realms): recipe plus the trusted-host, loopback-callback, scope and `/reload` pitfalls — [`MCP-OAUTH.md`](MCP-OAUTH.md).
+
 ## Docker
 
 The agent may use Docker when the engine is reachable. Confirm creates. If `docker ps` fails, print host commands once (no loop). Lab-only hard-block: `PI_1C_BLOCK_DOCKER=1`. `~/mcp-ctl.sh` / `~/mcp-host.sh` are this lab’s helpers, not the Windows Docker Desktop path.
@@ -52,6 +54,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
 | `scripts/` | Host helpers (`setup.mjs` first install, `update-profile.mjs` refreshes this clone from origin). Not Pi `tools/` — that name triggers a startup deprecation warning |
 | `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder until `scripts/setup.mjs` or `/update-profile` resolves the in-repo path; unpinned `npm:pi-cursor-sdk`) |
 | `mcp.json` | Default MCP (empty optional servers) |
+| `manifest/` | Manifest resolved through `PI_PACKAGE_DIR`. Supplies `piConfig.clientUri` so OAuth client registration passes realms with a trusted-host policy (`MCP-OAUTH.md`) |
 | `NOTICE` | Upstream `comol/ai_rules_1c` terms vs this overlay; lab extras vs Humanizer_RU |
 | `upstream.lock.json`, `UPSTREAM-REGISTER.md` | Comol pin and apply register |
 | `LAB-EXTRAS.md`, `lab-extras.lock.json` | Lab extras snapshot (not the airules pin) |
