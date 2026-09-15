@@ -69,8 +69,11 @@ test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   assert.doesNotMatch(mode, /registerCommand\("1c-execute-plan"/);
   assert.match(mode, /registerCommand\("anon"/);
   assert.match(mode, /registerFlag\("anon"/);
+  assert.match(mode, /registerCommand\("approve"/);
+  assert.match(mode, /registerFlag\("approve"/);
   assert.match(mode, /Key\.ctrlAlt\("a"\)/);
   assert.match(mode, /Key\.ctrlAlt\("p"\)/);
+  assert.match(mode, /Key\.ctrlAlt\("s"\)/);
   assert.match(mode, /Unknown 1C mode: \$\{requested\}\. Use plan, build, or ask/);
   assert.match(mode, /\[1C MODE CHANGE\]/);
   assert.match(mode, /Memory: skipped — anonymous/);

@@ -7,6 +7,11 @@
 
 ## Unreleased
 
+### Approval mode (`/approve`)
+- `/approve off|safe|strict|status` (no argument opens a picker) and `Ctrl+Alt+S` cycle a BUILD tool-approval gate. Footer shows `approve:off|safe|strict`. Default **off**.
+- `safe` prompts on dangerous actions (file writes, destructive bash, MCP/IB mutations). `strict` prompts on every tool call. Dialog: once / all like this (session) / deny. Without UI the would-be prompt is fail-closed.
+- Flag `--approve` and env `PI_1C_APPROVE` apply on new sessions; the level is persisted in Pi session state. **Pi-only** — Cursor Auto-run is unchanged.
+
 ### Session rotation (opt-in)
 - `/session-rotate on|off|status|<percent>` replaces in-place compaction with a handoff plus a fresh session when context usage reaches a threshold. Default **off**, threshold **85** (range 50–95).
 - Idle check uses `agent_settled`; `session_before_compact` with `reason === "threshold"` is cancelled once while idle. Overflow and manual `/compact` still run.

@@ -1,5 +1,14 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Key } from "@earendil-works/pi-tui";
+import {
+  approveLevelName,
+  classifyDanger,
+  cycleApproveLevel,
+  describeApprove,
+  normalizeApproveLevel,
+  parseApproveLevel,
+  shouldPrompt,
+} from "../../lib/approve-policy.mjs";
 import { dockerBlockReason } from "../../lib/docker-policy.mjs";
 import { evaluatePlanMcpToolCall, evaluatePlanToolCall, getPlanVisibleTools } from "../../lib/plan-policy.mjs";
 import { acceptPlan, enterBuild, enterPlan, executePlan, extractPlanArtifact, initialModeState } from "../../lib/plan-state.mjs";
@@ -14,6 +23,7 @@ type ModeState = {
   phase: OneCPhase;
   plan: PlanArtifact | null;
   anonLevel?: number;
+  approveLevel?: number;
   lastInjectedMode?: OneCMode;
 };
 type SharedState = typeof globalThis & { __PI_1C_MODE__?: OneCMode; __PI_1C_PHASE__?: OneCPhase; __PI_1C_PLAN_ID__?: string };
@@ -196,7 +206,8 @@ Implementation is allowed.
 - Use specialized 1C subagents and validated handoffs.
 - Writer agents sharing one working tree run sequentially.
 - Finish non-trivial work with tests/checks, independent review and verification.
-- If verification cannot be performed, report UNVERIFIED explicitly.`;
+- If verification cannot be performed, report UNVERIFIED explicitly.
+- Approval mode (\`/approve off|safe|strict\`, footer \`approve:…\`) may pause dangerous (safe) or every (strict) tool call until the user allows it. Do not retry a denied call in a loop.`;
 
 const MODE_MEANING: Record<OneCMode, string> = {
   plan: "read-only: investigate and produce the plan artifact; no project-code writes",
@@ -237,13 +248,19 @@ function lastAssistantText(messages: any[]): string {
   return "";
 }
 
+const APPROVE_ONCE = "Approve once";
+const APPROVE_ALL = "Approve all like this (session)";
+const APPROVE_DENY = "Deny";
+
 export default function oneCModeExtension(pi: ExtensionAPI): void {
   let state: ModeState = initialModeState() as ModeState;
   let buildTools: string[] = [];
   let cwd = process.cwd();
+  const approveAllowlist = new Set<string>();
 
   pi.registerFlag("1c-mode", { description: "1C primary mode: plan, build, or ask", type: "string" });
   pi.registerFlag("anon", { description: "Anonymous session level: 1 = no memory writes, 2 = no reads, 3 = no local traces", type: "string" });
+  pi.registerFlag("approve", { description: "Approval mode: off, safe (dangerous actions), or strict (every tool)", type: "string" });
 
   function publishSharedState(): void {
     shared.__PI_1C_MODE__ = state.mode;
@@ -258,6 +275,10 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
 
   function anonLevel(): number {
     return anonNormalize(state.anonLevel);
+  }
+
+  function approveLevel(): number {
+    return normalizeApproveLevel(state.approveLevel);
   }
 
   function persist(): void {
@@ -284,6 +305,10 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
         ? ctx.ui.theme.fg("warning", `anon:${anon}`)
         : ctx.ui.theme.fg("dim", "anon:off"),
     );
+    const approve = approveLevel();
+    const approveName = approveLevelName(approve);
+    const approveColor = approve >= 2 ? "warning" : approve === 1 ? "accent" : "dim";
+    ctx.ui.setStatus("pi-1c-approve", ctx.ui.theme.fg(approveColor, `approve:${approveName}`));
   }
 
   function applyReadOnlyTools(): void {
@@ -327,6 +352,18 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     if (notify) {
       if (next === 0) ctx.ui.notify("anon: off — shared memory policy restored", "info");
       else ctx.ui.notify(`anon:${next} — ${anonDescribe(next)}`, "warning");
+    }
+  }
+
+  function setApproveLevel(level: number, ctx: ExtensionContext, notify = true): void {
+    const next = normalizeApproveLevel(level);
+    approveAllowlist.clear();
+    state = { ...state, approveLevel: next };
+    sync(ctx);
+    if (notify) {
+      const name = approveLevelName(next);
+      const kind = next === 0 ? "info" : "warning";
+      ctx.ui.notify(`approve:${name} — ${describeApprove(next)}`, kind);
     }
   }
 
@@ -411,6 +448,38 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     },
   });
 
+  pi.registerCommand("approve", {
+    description: "Approval mode: /approve off | safe | strict | status",
+    handler: async (args, ctx) => {
+      const parsed = parseApproveLevel(args);
+      if (parsed.kind === "invalid") {
+        ctx.ui.notify(`Unknown approve argument: ${String(args ?? "").trim()}. Use off | safe | strict | status.`, "error");
+        return;
+      }
+      if (parsed.kind === "status") {
+        const level = approveLevel();
+        const name = approveLevelName(level);
+        ctx.ui.notify(`approve=${name} · ${describeApprove(level)} · session-scoped (new session starts at off)`, "info");
+        return;
+      }
+      if (parsed.kind === "pick") {
+        const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
+        if (selected === "off") setApproveLevel(0, ctx);
+        if (selected === "safe") setApproveLevel(1, ctx);
+        if (selected === "strict") setApproveLevel(2, ctx);
+        return;
+      }
+      setApproveLevel(parsed.level ?? 0, ctx);
+    },
+  });
+
+  pi.registerShortcut(Key.ctrlAlt("s"), {
+    description: "Cycle approval mode: off → safe → strict",
+    handler: async (ctx) => {
+      setApproveLevel(cycleApproveLevel(approveLevel()), ctx);
+    },
+  });
+
   pi.registerShortcut(Key.ctrlAlt("p"), {
     description: "Cycle 1C BUILD/PLAN/ASK mode",
     handler: async (ctx) => {
@@ -437,7 +506,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     });
   });
 
-  pi.on("tool_call", async (event) => {
+  pi.on("tool_call", async (event, ctx) => {
     const anon = anonLevel();
     if (anon > 0) {
       const verdict = anonVerdict(anon, event.toolName, event.input ?? {}, cwd);
@@ -450,19 +519,40 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     }
     const dockerReason = dockerBlockReason(event.toolName, event.input ?? {});
     if (dockerReason) return { block: true, reason: dockerReason };
-    if (!readOnly()) return;
-    const viaLib = libCall<{ allowed: boolean; reason?: string }>(ANON_LIB.readOnlyCall, [state.mode, cwd, event.toolName, event.input ?? {}]);
-    const decision = viaLib ?? (
-      state.mode === "ask" && (event.toolName === "write" || event.toolName === "edit")
-        ? { allowed: false, reason: "ASK is read-only research; file writes are disabled" }
-        : evaluatePlanToolCall(cwd, event.toolName, event.input ?? {})
-    );
-    if (!decision.allowed) {
-      const hint = state.mode === "ask"
-        ? "Continue answering in read-only research mode."
-        : "Continue planning without mutating project code.";
-      return { block: true, reason: `1C ${state.mode.toUpperCase()} blocked '${event.toolName}': ${decision.reason}. ${hint}` };
+    if (readOnly()) {
+      const viaLib = libCall<{ allowed: boolean; reason?: string }>(ANON_LIB.readOnlyCall, [state.mode, cwd, event.toolName, event.input ?? {}]);
+      const decision = viaLib ?? (
+        state.mode === "ask" && (event.toolName === "write" || event.toolName === "edit")
+          ? { allowed: false, reason: "ASK is read-only research; file writes are disabled" }
+          : evaluatePlanToolCall(cwd, event.toolName, event.input ?? {})
+      );
+      if (!decision.allowed) {
+        const hint = state.mode === "ask"
+          ? "Continue answering in read-only research mode."
+          : "Continue planning without mutating project code.";
+        return { block: true, reason: `1C ${state.mode.toUpperCase()} blocked '${event.toolName}': ${decision.reason}. ${hint}` };
+      }
+      return;
     }
+    const level = approveLevel();
+    if (level <= 0) return;
+    const classification = classifyDanger(event.toolName, event.input ?? {}, cwd);
+    if (!shouldPrompt(level, classification.dangerous)) return;
+    if (approveAllowlist.has(classification.category)) return;
+    const label = `${event.toolName}: ${classification.reason}`;
+    if (!ctx?.hasUI) {
+      return {
+        block: true,
+        reason: `Approval mode (${approveLevelName(level)}) blocked '${event.toolName}': ${classification.reason}. No UI available to confirm.`,
+      };
+    }
+    const choice = await ctx.ui.select(`Approve action? ${label}`, [APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY]);
+    if (choice === APPROVE_ALL) {
+      approveAllowlist.add(classification.category);
+      return;
+    }
+    if (choice === APPROVE_ONCE) return;
+    return { block: true, reason: "Отклонено пользователем (approve mode)" };
   });
 
   pi.on("before_agent_start", async (event) => {
@@ -551,6 +641,16 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     if (anonRaw !== undefined) {
       const parsed = anonParse(anonRaw);
       state = { ...state, anonLevel: anonNormalize(parsed.kind === "set" ? parsed.level : anonRaw) };
+    }
+
+    const approveFlag = pi.getFlag("approve");
+    const approveEnv = process.env.PI_1C_APPROVE;
+    const approveRaw = approveFlag !== undefined && approveFlag !== null && String(approveFlag).trim() !== ""
+      ? String(approveFlag)
+      : (!restored && typeof approveEnv === "string" && approveEnv.trim() ? approveEnv : undefined);
+    if (approveRaw !== undefined) {
+      const parsed = parseApproveLevel(approveRaw);
+      state = { ...state, approveLevel: normalizeApproveLevel(parsed.kind === "set" ? parsed.level : approveRaw) };
     }
 
     publishSharedState();

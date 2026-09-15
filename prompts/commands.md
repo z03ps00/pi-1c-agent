@@ -14,7 +14,7 @@ Rules:
 
 - Canonical names have no `1c-` prefix. There are no `/1c-*` aliases. One command per verb. If `pi-1c-agent` already `registerCommand`s a name, there must be no `prompts/<name>.md` (that doubles the `/` palette).
 - `/review-airules` belongs under maintainer, not everyday.
-- Do **not** invent `/help`, `/plan`, `/build`, or `/debug` as 1C commands. Cursor `/help` stays Cursor’s help. Modes are `/mode plan|build|ask`. Anonymous session is `/anon`.
+- Do **not** invent `/help`, `/plan`, `/build`, or `/debug` as 1C commands. Cursor `/help` stays Cursor’s help. Modes are `/mode plan|build|ask`. Anonymous session is `/anon`. Approval mode is `/approve`.
 - Settings and maintainer commands remain invocable by exact name even when they are not in the everyday section. If the user ran a maintainer command by name, state that it is a maintainer command.
 
 If `$ARGUMENTS` names a command, print only that row plus whether it is everyday, settings, or maintainer.

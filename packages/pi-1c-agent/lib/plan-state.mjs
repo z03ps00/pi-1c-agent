@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { normalizeApproveLevel } from './approve-policy.mjs';
 
 export const PLAN_REQUIRED_SECTIONS = [
   '## Plan',
@@ -10,6 +11,7 @@ export const PLAN_REQUIRED_SECTIONS = [
 export const READ_ONLY_MODES = Object.freeze(['plan', 'ask']);
 
 export const ANON_MAX_LEVEL = 3;
+export const APPROVE_MAX_LEVEL = 2;
 
 /** Startup default when env/flag do not override. */
 export const DEFAULT_MODE = 'ask';
@@ -81,7 +83,7 @@ export function anonBlocksLocalTraces(level) {
 
 export function initialModeState() {
   const mode = resolveDefaultMode();
-  return { mode, phase: MODE_PHASES[mode], plan: null, anonLevel: 0 };
+  return { mode, phase: MODE_PHASES[mode], plan: null, anonLevel: 0, approveLevel: 0 };
 }
 
 export function enterPlan(state = initialModeState()) {
@@ -150,6 +152,7 @@ export function sanitizeModeState(candidate) {
     phase: nextPhase,
     plan,
     anonLevel: normalizeAnonLevel(candidate.anonLevel),
+    approveLevel: normalizeApproveLevel(candidate.approveLevel),
   };
   for (const flag of [
     'memoryGateRequired', 'memoryGatePrompted',

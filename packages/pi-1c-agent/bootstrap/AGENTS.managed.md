@@ -5,7 +5,7 @@ Use the decomposed 1C multi-agent workflow supplied by `pi-1c-agent`.
 
 Before non-trivial work read the adapted upstream context/rules under `rules-1c/` and the Pi-native core rules `modes.md`, `orchestration.md`, `handoff.md`, and `openspec.md`.
 
-## ASK / PLAN / BUILD / ANON
+## ASK / PLAN / BUILD / ANON / APPROVE
 
 A **new** session starts in **ASK** (read-only Q&A). Override with `--1c-mode` or `PI_1C_DEFAULT_MODE`. `/mode ask|plan|build`; `Ctrl+Alt+P` cycles BUILD → PLAN → ASK.
 
@@ -26,7 +26,9 @@ PLAN protects project code but permits planning artifacts only in `openspec/**`,
 
 **Anonymous session.** `/anon 1|2|3|off`, `Ctrl+Alt+A`. Level 1: no writes to Cognee/OpenViking and no pending record under `$PI_CODING_AGENT_DIR/state/agent-memory/pending/**`. Level 2: plus no reads. Level 3: plus no `handoffs/**` documents (full ephemeral transcript needs `--no-session`). Double-enforced in every mode. Substantial turns report `Memory: skipped — anonymous`. New session starts at `anon:off`.
 
-**Dual host.** ASK/PLAN/BUILD/ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads this overlay but does **not** enforce the write-block or anon denials.
+**Approval mode.** `/approve off|safe|strict`, `Ctrl+Alt+S`. `off` does not ask (default). `safe` prompts on dangerous BUILD actions (file writes, destructive bash, MCP/IB mutations). `strict` prompts on every tool call. Footer shows `approve:off|safe|strict`. Pi-only; without UI the would-be prompt is blocked, not auto-allowed.
+
+**Dual host.** ASK/PLAN/BUILD/ANON/APPROVE tool gates exist in **Pi** (`1c-mode`). Cursor loads this overlay but does **not** enforce the write-block, anon denials, or approve prompts.
 
 ## Project initialization
 

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findMachineLocalPathHits } from '../lib/product-health.mjs';
@@ -32,7 +33,7 @@ test('shipped lib/ and extensions/ contain no foreign absolute paths', () => {
 
 test('anon roots resolve from PI_CODING_AGENT_DIR and project-relative handoffs', () => {
   const prev = process.env.PI_CODING_AGENT_DIR;
-  const profile = path.join(root, 'tmp-profile-does-not-need-to-exist');
+  const profile = path.join(os.tmpdir(), 'pi-1c-anon-root-test');
   process.env.PI_CODING_AGENT_DIR = profile;
   try {
     const pending = resolveAnonPendingRoot();

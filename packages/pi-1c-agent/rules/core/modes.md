@@ -4,7 +4,7 @@ Pi 1C exposes three primary modes. PLAN is a **workflow/state machine**, not mer
 
 A **new** session starts in **ASK**. Override with `--1c-mode plan|build|ask` (this launch) or `PI_1C_DEFAULT_MODE` (new sessions only). A resumed session keeps its persisted mode; `--1c-mode` still applies for that launch.
 
-Anonymous sessions (`/anon`) are independent of ASK/PLAN/BUILD: switching modes does not reset the anon level. A new session always starts at `anon:off`. Resume keeps the level. Enforcement is **Pi-only** (`1c-mode`); Cursor loads the same texts but does not apply the runtime gates.
+Anonymous sessions (`/anon`) and approval mode (`/approve`) are independent of ASK/PLAN/BUILD: switching modes does not reset the anon or approve level. A new session always starts at `anon:off` and `approve:off`. Resume keeps the levels. Enforcement is **Pi-only** (`1c-mode`); Cursor loads the same texts but does not apply the runtime gates.
 
 ## Mode lifecycle
 
@@ -93,13 +93,26 @@ Work without leaving traces in shared agent memory (Cognee/OpenViking) or the lo
 - Hard double enforcement in **every** mode, including BUILD: `tool_call` block + MCP adapter `deny`. Unknown `memory`/`knowledge` tools count as writes (fail-closed).
 - Post-task memory policy is suspended: end substantial turns with `Memory: skipped — anonymous`. Never claim a blocked write was stored or queued.
 
+## Approval mode (`/approve`)
+
+Ask before the model executes a tool in BUILD. Independent of ASK/PLAN/BUILD and of `/anon`. **Pi-only** (`1c-mode`); Cursor has its own Auto-run and does not enforce this gate.
+
+- Surfaces: `/approve off|safe|strict|status` (no argument opens a picker like `/mode`), `Ctrl+Alt+S` (cycle off → safe → strict), `--approve <level>`, env `PI_1C_APPROVE` (new sessions). Footer always shows `approve:off|safe|strict`.
+- `off` — do not ask (current BUILD behaviour). Default for a new session.
+- `safe` — prompt only on dangerous actions: `write`/`edit`, destructive `bash` (`rm -rf`, `git push` / `reset --hard` / `clean -fd` / `checkout --`, docker/podman, `.dt`/`.cf`/`.cfe` load, `ЗагрузитьИнформационнуюБазу`, publication), MCP mutations, live-IB tools (`vcexecutecode`, execute-code/query).
+- `strict` — prompt on every tool call.
+- Dialog: Approve once / Approve all like this (session) / Deny. Without UI (RPC/print) the would-be prompt is fail-closed: the call is blocked, not auto-allowed.
+- ASK/PLAN still hard-block mutations first; this gate runs in BUILD after those checks.
+
 ## Commands
 
 - `/mode plan`
 - `/mode build`
 - `/mode ask`
 - `/anon 1|2|3|off|status`
+- `/approve off|safe|strict|status`
 - `Ctrl+Alt+P` cycles BUILD → PLAN → ASK
 - `Ctrl+Alt+A` cycles anon off → 1 → 2 → 3
+- `Ctrl+Alt+S` cycles approve off → safe → strict
 
-The mode, plan artifact and anon level are persisted in Pi session state; PLAN does not need to mutate the project merely to remember a plan.
+The mode, plan artifact, anon level and approve level are persisted in Pi session state; PLAN does not need to mutate the project merely to remember a plan.

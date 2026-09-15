@@ -73,6 +73,7 @@ test('default mode is ASK unless env overrides', () => {
     assert.equal(state.mode, 'ask');
     assert.equal(state.phase, 'ask-idle');
     assert.equal(state.anonLevel, 0);
+    assert.equal(state.approveLevel, 0);
     assert.equal(state.plan, null);
   });
   withEnv('PI_1C_DEFAULT_MODE', 'build', () => {
@@ -118,6 +119,7 @@ test('sanitizeModeState degrades damaged records', () => {
     const fallback = sanitizeModeState(null);
     assert.equal(fallback.mode, 'ask');
     assert.equal(fallback.anonLevel, 0);
+    assert.equal(fallback.approveLevel, 0);
 
     const badMode = sanitizeModeState({ mode: 'fly', phase: 'plan-draft' });
     assert.equal(badMode.mode, 'ask');

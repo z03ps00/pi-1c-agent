@@ -26,11 +26,11 @@ If the user asks to install or update this agent, **run the matching steps**. Do
 
 Install scope: rules, agents, skills, prompts, the in-repo `packages/pi-1c-agent` runtime, and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
 
-Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). One command per verb — no `/1c-*` aliases and no prompt file that repeats a package `registerCommand` name. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`).
+Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). One command per verb — no `/1c-*` aliases and no prompt file that repeats a package `registerCommand` name. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`). Approval mode is `/approve off|safe|strict` (`Ctrl+Alt+S`).
 
 Comol `ai_rules_1c` updates for **this profile** go through `/review-airules` and `UPSTREAM-REGISTER.md`. `/updaterules` and `/checkupdates` are for 1C *projects* that use `install.ps1`, not for syncing this profile.
 
-## ASK / PLAN / BUILD / ANON
+## ASK / PLAN / BUILD / ANON / APPROVE
 
 A **new** Pi session starts in **ASK** (read-only Q&A). Override with `--1c-mode` or `PI_1C_DEFAULT_MODE`. `/mode ask|plan|build`; `Ctrl+Alt+P` cycles BUILD → PLAN → ASK.
 
@@ -51,7 +51,9 @@ PLAN protects project code but permits planning artifacts only in `openspec/**`,
 
 **Anonymous session.** `/anon 1|2|3|off`, `Ctrl+Alt+A`. Level 1: no writes to Cognee/OpenViking and no pending record under `$PI_CODING_AGENT_DIR/state/agent-memory/pending/**`. Level 2: plus no reads. Level 3: plus no `handoffs/**` documents (full ephemeral transcript needs `--no-session`). Double-enforced in every mode. Substantial turns report `Memory: skipped — anonymous`. New session starts at `anon:off`.
 
-**Dual host.** ASK/PLAN/BUILD/ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads this `AGENTS.md` but does **not** enforce the write-block or anon denials. `/init` TUI is Pi-only. Cursor users follow the same prompts as procedures.
+**Approval mode.** `/approve off|safe|strict`, `Ctrl+Alt+S`. `off` does not ask (default). `safe` prompts on dangerous BUILD actions (file writes, destructive bash, MCP/IB mutations). `strict` prompts on every tool call. Footer shows `approve:off|safe|strict`. Pi-only; without UI the would-be prompt is blocked, not auto-allowed.
+
+**Dual host.** ASK/PLAN/BUILD/ANON/APPROVE tool gates exist in **Pi** (`1c-mode`). Cursor loads this `AGENTS.md` but does **not** enforce the write-block, anon denials, or approve prompts. `/init` TUI is Pi-only. Cursor users follow the same prompts as procedures.
 
 ## Project initialization
 
