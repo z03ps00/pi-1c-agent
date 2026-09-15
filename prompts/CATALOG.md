@@ -33,6 +33,7 @@ Canonical names have **no** `1c-` prefix. `/1c-*` files are one-release aliases 
 | `/updatemcp` | Update an already installed 1C MCP bundle |
 | `/checkupdates` | Read-only check of MCP images and **project** 1c-rules |
 | `/updaterules` | Update 1c-rules in a **1C project** (`install.ps1`) — not this profile |
+| `/update-profile` | Refresh **this Pi profile** from its git remote (`origin`) — not `/updaterules` |
 | `/caveman` | Persistent `CAVEMAN` (on\|auto\|off); shipped default `auto` |
 | `/session-rotate` | Opt-in Pi-only session rotation at context threshold (default off, 85%) |
 | `/anon` | Pi anonymous session: `1` no memory writes, `2` no reads, `3` no local traces, `off` |

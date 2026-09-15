@@ -86,6 +86,16 @@ Read shipped `settings.json` → `packages`:
 - A missing Cursor API key / no `cursor` entry in `auth.json` is **not** FAIL CORE and not required for this WARN. Cursor models stay unused until `/login`.
 - Do not install the package during `/doctor`. Do not FAIL CORE for this check: DeepSeek remains the default; 1C work can continue.
 
+## Check 9. Profile git remote (WARN, not CORE)
+
+Read-only. Do not `git fetch` (that is `/update-profile status`). Do not modify files.
+
+- If `$PI_CODING_AGENT_DIR` (or the loaded profile root) has no `.git` → **SKIP** this check (first install may be a copied tree).
+- If `git` is missing → **SKIP** (say so).
+- If the clone has no usable remote (`git remote` empty / no `origin`) → **WARN**, not FAIL CORE. Next action: `/update-profile` will refuse until `origin` exists; clone per README.
+- If `@{upstream}` exists and `git rev-list --count HEAD..@{upstream}` is greater than zero → **WARN**, not FAIL CORE: the clone is behind its tracking ref. Name **`/update-profile`** as the refresh command.
+- Ahead or current → OK for this check.
+
 ## After the table
 
 List only actionable fixes. Do not print secrets.

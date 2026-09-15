@@ -4,7 +4,7 @@ description: [settings] Update the 1c-rules ruleset from GitHub (https://github.
 
 # /updaterules — update 1c-rules in a 1C project
 
-This command is for 1C **projects** that use `.ai-rules.json` / `install.ps1`. To review Comol updates for **this Pi profile**, use `/review-airules` instead. Do not run `install.ps1` against the profile tree.
+This command is for 1C **projects** that use `.ai-rules.json` / `install.ps1`. To review Comol updates for **this Pi profile**, use `/review-airules` instead. To refresh **this profile** from the owner’s git remote, use `/update-profile`. Do not run `install.ps1` against the profile tree.
 
 Source: `https://github.com/comol/ai_rules_1c`.
 

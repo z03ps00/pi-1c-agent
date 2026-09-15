@@ -18,6 +18,7 @@ Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/
 - `/initproject` — alias of `/init` from-infobase.
 - `/doctor` — deterministic health check. LLM diagnostic is `/doctor-explain`.
 - `/review-airules` — maintainer review of `comol/ai_rules_1c` for **this profile**. `/updaterules` / `/checkupdates` stay for 1C *projects*.
+- `/update-profile` — refresh **this profile** from the clone’s git remote (`origin`). Not `/updaterules`. Preserves `auth.json`, `trust.json`, opted-in MCP servers, and a local `pi-1c-agent` path. Does not run `pi install`.
 - `/session-rotate` — opt-in Pi-only session rotation at a context threshold (default off, 85%). Reuses the `handoff` skill format. Does not change `settings.json` compaction defaults.
 
 ## Lab extras (beta)
@@ -45,6 +46,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
 | `agents/` | Subagent prompts |
 | `skills/` | Profile skills |
 | `prompts/` | Slash-command templates (unprefixed) |
+| `tools/` | Host helpers (`update-profile.mjs` refreshes this clone from origin) |
 | `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder, unpinned `npm:pi-cursor-sdk`) |
 | `mcp.json` | Default MCP (empty optional servers) |
 | `NOTICE` | Upstream `comol/ai_rules_1c` terms vs this overlay; lab extras vs Humanizer_RU |
@@ -76,6 +78,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
    A Cursor API key is optional. 1C work uses the shipped DeepSeek default until you run `/login`, choose an API key, and pick Cursor. If npm is unreachable, skip this step: `/doctor` WARNs, CORE can still pass, DeepSeek still works.
 5. Optional MCP: `/installtools` or standalone installers. Do not copy another machine’s `mcp.json` ports blindly.
 6. Check: `/doctor`.
+7. Later refresh of **this clone**: `/update-profile` (or `/update-profile status` first). First install stays a clone; this command does not create a new directory. It does **not** auto-update npm — Cursor SDK refresh remains `pi install npm:pi-cursor-sdk`.
 
 ## License
 

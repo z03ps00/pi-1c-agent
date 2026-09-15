@@ -38,6 +38,7 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | No `/help` `/plan` `/build` `/debug` prompts | `contract/command-surface` | regression | implemented |
 | Prompt titles unprefixed; `/1c-*` alias stubs exist | `unit/commands` + `contract/command-surface` | unit + regression | implemented |
 | `/session-rotate` opt-in, Pi-only, Settings catalog, handoff reuse | `contract/catalog` + `contract/command-surface` | regression | implemented |
+| `/update-profile` refreshes this profile from git remote, Settings, preserves local secrets/MCP | `unit/update-profile` + `contract/catalog` | unit + regression | implemented |
 | Destructive IB prompts confirm target | `contract/destructive-confirm` | regression | implemented |
 | Writer/pipeline agents require JSON `## Upstream Handoff` | `unit/agents` + `contract/handoff` | unit + regression | implemented |
 | `CAVEMAN` default `auto` | `unit/skills` + `contract/caveman` | unit + regression | implemented |
@@ -57,6 +58,6 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 
 Recorded after `node tests/run-all.mjs` on 2026-09-15.
 
-- **Pass count:** 50 passed, 0 failed
+- **Pass count:** 62 passed, 0 failed
 - **Skipped live scenarios:** 1 — `scenario/live-harness` PLAN-only file effects — reason: `RUN_LIVE_SCENARIOS is not 1`
 
