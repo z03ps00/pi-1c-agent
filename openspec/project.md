@@ -16,7 +16,7 @@ configuration dump. There is no `Configuration.xml` here.
 - `rules-1c/` — adapted 1C rules and upstream snapshot
 - `agents/` — 1C subagent definitions
 - `skills/` — profile skills
-- `prompts/` — `/1c-*` command templates
+- `prompts/` — unprefixed slash-command templates (no `/1c-*` aliases)
 - `openspec/` — spec-driven change workspace for this profile
 
 ## Notes for AI Agents

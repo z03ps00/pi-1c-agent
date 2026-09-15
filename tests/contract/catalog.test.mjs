@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { classifyCatalogSection, isAliasStub } from '../lib/commands.mjs';
+import { classifyCatalogSection } from '../lib/commands.mjs';
 import { profileRoot } from '../lib/profile-root.mjs';
 
 test('/review-airules exists and is classified maintainer', () => {
@@ -25,12 +25,12 @@ test('/review-airules exists and is classified maintainer', () => {
   assert.match(commands, /maintainer/i);
 });
 
-test('/update-profile exists, is settings, and has a /1c-* alias stub', () => {
+test('/update-profile exists, is settings, and has no /1c-* alias', () => {
   const root = profileRoot();
   const promptPath = path.join(root, 'prompts', 'update-profile.md');
   const aliasPath = path.join(root, 'prompts', '1c-update-profile.md');
   assert.ok(fs.existsSync(promptPath), `${promptPath} missing`);
-  assert.ok(fs.existsSync(aliasPath), `${aliasPath} missing`);
+  assert.equal(fs.existsSync(aliasPath), false, `${aliasPath} must not exist`);
   const catalog = fs.readFileSync(path.join(root, 'prompts', 'CATALOG.md'), 'utf8');
   assert.equal(
     classifyCatalogSection(catalog, 'update-profile'),
@@ -39,6 +39,4 @@ test('/update-profile exists, is settings, and has a /1c-* alias stub', () => {
   );
   assert.notEqual(classifyCatalogSection(catalog, 'update-profile'), 'everyday');
   assert.notEqual(classifyCatalogSection(catalog, 'update-profile'), 'maintainer');
-  const alias = fs.readFileSync(aliasPath, 'utf8');
-  assert.ok(isAliasStub(alias), 'prompts/1c-update-profile.md must be an alias stub');
 });

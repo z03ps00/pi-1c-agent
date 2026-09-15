@@ -26,7 +26,11 @@ bin/
 
 # --- Caches & generated state ---
 mcp-cache.json
+mcp-onboarding.json
 cursor-sdk-model-list.json
+models.db
+models.db-shm
+models.db-wal
 
 # --- Bootstrap state with absolute machine paths (regenerated) ---
 1c/

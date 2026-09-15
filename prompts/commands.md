@@ -12,7 +12,7 @@ Print the catalog from `prompts/CATALOG.md` in this order:
 
 Rules:
 
-- Canonical names have no `1c-` prefix. If the user ran `/1c-commands`, say once that it is an alias of `/commands`.
+- Canonical names have no `1c-` prefix. There are no `/1c-*` aliases. One command per verb.
 - `/review-airules` belongs under maintainer, not everyday.
 - Do **not** invent `/help`, `/plan`, `/build`, or `/debug` as 1C commands. Cursor `/help` stays Cursor’s help. Modes are `/mode plan|build|ask`. Anonymous session is `/anon`.
 - Settings and maintainer commands remain invocable by exact name even when they are not in the everyday section. If the user ran a maintainer command by name, state that it is a maintainer command.

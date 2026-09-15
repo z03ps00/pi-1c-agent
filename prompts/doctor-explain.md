@@ -4,7 +4,7 @@ description: [settings] Diagnose whether 1c-rules is installed, connected, confi
 
 # /doctor-explain — 1c-rules readiness diagnostic (LLM)
 
-This is **not** `/doctor`. Canonical `/doctor` is the deterministic profile health check (`prompts/doctor.md`). Use this command only when the user asked for the LLM 1c-rules diagnostic.
+This is **not** `/doctor`. Canonical `/doctor` is the deterministic Pi-package health check. Use this command only when the user asked for the LLM 1c-rules diagnostic.
 
 Run a read-only health check for the current project. The goal is to answer one question: **will the current agent actually use this ruleset safely for 1C work?**
 

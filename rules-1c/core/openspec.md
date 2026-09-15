@@ -15,7 +15,7 @@ Do not use Oh My Pi artifacts and do not translate another tool's bundle when na
 ## Command palette
 
 Pi discovers project `.pi/prompts/*.md` as slash commands, but only at startup or `/reload`. After OpenSpec
-artifacts are installed (on `/1c-init` Apply or `/1c-openspec-setup`) the resources are reloaded automatically; if
+artifacts are installed (on `/init` Apply or `/openspec-setup`) the resources are reloaded automatically; if
 `/opsx-*` is still missing, run `/reload` (or restart Pi). `openspec-setup` normalizes the prompt frontmatter to
 Pi-supported keys (`description`, `argument-hint`) and keeps the `opsx-propose` plain-language preamble idempotent.
 

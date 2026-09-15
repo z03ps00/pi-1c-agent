@@ -1,12 +1,12 @@
 # Detailed 1C project initialization
 
-`/1c-init` is the canonical project-onboarding flow for `pi-1c-agent`.
+`/init` is the canonical project-onboarding flow for `pi-1c-agent`.
 
 ## Source of truth
 
 The environment variable list comes from the **pinned upstream** `ai_rules_1c/.dev.env.example`. The package's `config/dev-env.schema.json` is only a UX metadata overlay (titles, explanations, choices, sensitivity, dependency hints). It must not silently invent, drop, or rename upstream variables.
 
-`/1c-init advanced` reviews every variable discovered in the upstream template. When upstream and UX schema drift, initialization must warn before proceeding and `/1c-doctor` must surface the mismatch.
+`/init advanced` reviews every variable discovered in the upstream template. When upstream and UX schema drift, initialization must warn before proceeding and `/doctor` must surface the mismatch.
 
 ## Mutation boundary
 
@@ -25,7 +25,7 @@ Written state:
 - optional `tools/mcp-toolkit/` and KD port keys when KD extra is not none;
 - optional Humanizer RU auto-use flag in `.pi/1c/project.yaml` when Humanizer extra is Yes.
 
-**Selected extras are installed on Apply, not deferred.** A Yes on OpenSpec (or Knowledge, or scaffold) materializes that dependency during Apply. Do not leave the user with a flag and a follow-up command. `/1c-openspec-setup` remains a repair/retry path if Apply's install failed.
+**Selected extras are installed on Apply, not deferred.** A Yes on OpenSpec (or Knowledge, or scaffold) materializes that dependency during Apply. Do not leave the user with a flag and a follow-up command. `/openspec-setup` remains a repair/retry path if Apply's install failed.
 
 Lab extras (Vanessa, Конвертация данных, Humanizer RU) are **not** `ai_rules_1c`. `/init` must ask them; silence is not Yes. Apply writes only project data:
 
@@ -49,7 +49,7 @@ Project-local, by contract:
 
 `tools/bootstrap.mjs --project` is **data-only** by default: it writes the project data above and retires any legacy project-local agent artifacts listed in the previous project manifest. `--with-agent` restores the legacy full project install and is used only on an explicit user request (offline or global-profile-less setups). `extensions/1c-subagents` resolves agents from the global profile first; project agents are an opt-in (`settings.json` `projectAgents: true`) superset, never a duplicate copy.
 
-`/1c-doctor project` keeps agent-artifact checks on the global profile and reports a non-required WARN when duplicate project-local agent artifacts are present.
+`/doctor project` keeps agent-artifact checks on the global profile and reports a non-required WARN when duplicate project-local agent artifacts are present.
 
 Secrets (`IB_PASSWORD`, `REPOSITORY_PASSWORD`, `SUPPORT_KEY`) never appear in preview, `project.yaml`, `init-state.json`, knowledge, handoffs, or reports. Production credentials must not be requested for `.dev.env`.
 
@@ -68,10 +68,10 @@ Autodetected values are proposals, not silent irreversible decisions.
 
 ## Modes
 
-- `/1c-init` — lets the user choose detailed or quick mode; detailed is recommended.
-- `/1c-init advanced` — reviews all upstream variables one by one with human explanations.
-- `/1c-init quick` — asks key project decisions and keeps upstream defaults for the rest.
-- `/1c-init status` — deterministic status/schema coverage report.
+- `/init` — lets the user choose detailed or quick mode; detailed is recommended.
+- `/init advanced` — reviews all upstream variables one by one with human explanations.
+- `/init quick` — asks key project decisions and keeps upstream defaults for the rest.
+- `/init status` — deterministic status/schema coverage report.
 
 Defaulted/advisory values must be explained as defaults instead of being treated as mandatory input. Empty values that upstream defines as valid remain valid.
 

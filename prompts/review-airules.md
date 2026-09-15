@@ -4,7 +4,7 @@ description: "[maintainer] Read-only review of comol/ai_rules_1c against this pr
 
 # /review-airules — review Comol ai_rules_1c for this Pi profile
 
-Maintainer command. If the user ran `/1c-review-airules`, say once that it is an alias of `/review-airules`.
+Maintainer command.
 
 This is **not** `/updaterules`. `/updaterules` / `/checkupdates` update 1C *projects* that use `.ai-rules.json` / `install.ps1`. This command reviews the **Pi 1C profile** against `https://github.com/comol/ai_rules_1c`.
 

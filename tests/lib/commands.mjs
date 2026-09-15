@@ -24,17 +24,8 @@ export function findPromptFiles(dir) {
     .sort();
 }
 
-export function isAliasStub(md) {
-  if (!md) return false;
-  const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  const descAlias = Boolean(fm && /^\s*description:\s*Alias of \//im.test(fm[1]));
-  const bodyAlias = /This command is an alias of\s+`?\/[A-Za-z0-9._-]+/i.test(md);
-  const followCanonical = /follow `prompts\/(?!1c-)[A-Za-z0-9._-]+\.md`/.test(md);
-  return (descAlias || bodyAlias) && (bodyAlias || followCanonical);
-}
-
-export function isAliasPromptFile(filePath) {
-  return /^1c-/.test(path.basename(filePath));
+export function prefixedPromptFiles(dir) {
+  return findPromptFiles(dir).filter((filePath) => /^1c-/.test(path.basename(filePath)));
 }
 
 const CATALOG_SECTIONS = ['everyday', 'settings', 'maintainer'];

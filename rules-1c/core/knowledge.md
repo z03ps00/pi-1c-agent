@@ -37,8 +37,8 @@ Each item records `kind`, `scope`, `topic`, `statement`, `status`, `confidence`,
 ## PLAN / BUILD contract
 
 - PLAN may inspect source and create **draft** proposals only.
-- `/1c-config analyze` and `/1c-config update` are PLAN-only discovery operations.
-- `/1c-learn` produces a draft; it never silently activates knowledge.
+- `/config analyze` and `/config update` are PLAN-only discovery operations.
+- `/learn` produces a draft; it never silently activates knowledge.
 - Canonical apply/disable/configuration initialization requires explicit command in BUILD.
 - Drafts live under `.pi/1c/knowledge-drafts/**`, an approved planning-artifact area.
 

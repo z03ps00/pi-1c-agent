@@ -6,8 +6,8 @@ import test from 'node:test';
 import {
   classifyCatalogSection,
   findPromptFiles,
-  isAliasStub,
   parseCommandTitle,
+  prefixedPromptFiles,
 } from '../lib/commands.mjs';
 
 const fixtures = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'prompts');
@@ -20,16 +20,6 @@ test('parseCommandTitle: unprefixed canonical title', () => {
 test('parseCommandTitle: prefixed title is visible', () => {
   const md = fs.readFileSync(path.join(fixtures, 'title-bad.md'), 'utf8');
   assert.equal(parseCommandTitle(md), '/1c-installmcp');
-});
-
-test('isAliasStub: compliant alias stub', () => {
-  const md = fs.readFileSync(path.join(fixtures, 'alias-stub.md'), 'utf8');
-  assert.equal(isAliasStub(md), true);
-});
-
-test('isAliasStub: full body is not a stub', () => {
-  const md = fs.readFileSync(path.join(fixtures, 'alias-not-stub.md'), 'utf8');
-  assert.equal(isAliasStub(md), false);
 });
 
 test('classifyCatalogSection: everyday / settings / maintainer', () => {
@@ -46,4 +36,9 @@ test('findPromptFiles lists markdown except CATALOG.md', () => {
   assert.ok(!files.some((f) => path.basename(f) === 'catalog.md') || files.some((f) => f.endsWith('catalog.md')));
   const names = files.map((f) => path.basename(f));
   assert.ok(!names.includes('CATALOG.md'));
+});
+
+test('prefixedPromptFiles lists only 1c-*.md names', () => {
+  const names = prefixedPromptFiles(fixtures).map((f) => path.basename(f));
+  assert.deepEqual(names, ['1c-dummy.md']);
 });

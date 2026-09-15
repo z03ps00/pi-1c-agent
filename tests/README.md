@@ -36,7 +36,7 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | Default `mcp.json` has no unsolicited memory/knowledge/1C-bundle | `unit/mcp-inspect` + `contract/mcp-default` | unit + regression | implemented |
 | Vanessa MCP only in `mcp.optional/` | `contract/mcp-default` | regression | implemented |
 | No `/help` `/plan` `/build` `/debug` prompts | `contract/command-surface` | regression | implemented |
-| Prompt titles unprefixed; `/1c-*` alias stubs exist | `unit/commands` + `contract/command-surface` | unit + regression | implemented |
+| Prompt titles unprefixed; no `/1c-*` prompt files | `unit/commands` + `contract/command-surface` | unit + regression | implemented |
 | `/session-rotate` opt-in, Pi-only, Settings catalog, handoff reuse | `contract/catalog` + `contract/command-surface` | regression | implemented |
 | `/update-profile` refreshes this profile from git remote, Settings, preserves local secrets/MCP | `unit/update-profile` + `contract/catalog` | unit + regression | implemented |
 | Destructive IB prompts confirm target | `contract/destructive-confirm` | regression | implemented |
@@ -58,6 +58,6 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 
 Recorded after `node tests/run-all.mjs` on 2026-09-15.
 
-- **Pass count:** 62 passed, 0 failed
+- **Pass count:** 61 passed, 0 failed
 - **Skipped live scenarios:** 1 — `scenario/live-harness` PLAN-only file effects — reason: `RUN_LIVE_SCENARIOS is not 1`
 

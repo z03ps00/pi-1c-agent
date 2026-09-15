@@ -7,7 +7,7 @@ Before non-trivial work read the adapted upstream context/rules under `rules-1c/
 
 Install scope: rules, agents, skills, prompts and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
 
-Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). `/1c-*` names remain aliases for one release. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`).
+Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). One command per verb — no `/1c-*` aliases. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`).
 
 Comol `ai_rules_1c` updates for **this profile** go through `/review-airules` and `UPSTREAM-REGISTER.md`. `/updaterules` and `/checkupdates` are for 1C *projects* that use `install.ps1`, not for syncing this profile.
 
@@ -26,7 +26,7 @@ A plan is ready only when it contains:
 - `## Risks / edge cases`
 - `## Verification`
 
-After `PLAN_READY`, offer Execute in BUILD / Refine / Stay in PLAN. `/1c-execute-plan` must carry the same plan_id into BUILD.
+After `PLAN_READY`, offer Execute in BUILD / Refine / Stay in PLAN. Switch with `/mode build`; keep the same `plan_id`.
 
 PLAN protects project code but permits planning artifacts only in `openspec/**`, `.pi/1c/plans/**`, `.pi/1c/knowledge-drafts/**`.
 
@@ -52,7 +52,7 @@ Delivery words (`rules-1c/core/delivery.md`): «собрать / для пере
 
 For non-trivial work, query `knowledge_1c` with the task/object/subsystem when project/configuration-specific context may change the solution. Do not load the whole knowledge store.
 
-Precedence: PROJECT rules/preferences > CONFIGURATION rules/preferences > fresh verified CONFIGURATION facts > generic BASE rules. Draft knowledge is never active. `/1c-config analyze` and `/1c-config update` are PLAN discovery flows; `/1c-learn` creates a draft; activation requires explicit approval in BUILD. Read `knowledge.md`.
+Precedence: PROJECT rules/preferences > CONFIGURATION rules/preferences > fresh verified CONFIGURATION facts > generic BASE rules. Draft knowledge is never active. `/config analyze` and `/config update` are PLAN discovery flows; `/learn` creates a draft; activation requires explicit approval in BUILD. Read `knowledge.md`.
 
 ## Delegation
 

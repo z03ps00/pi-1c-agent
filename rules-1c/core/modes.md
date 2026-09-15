@@ -78,7 +78,7 @@ Writer/execution agents are blocked by runtime policy. Child Pi processes receiv
 
 ## BUILD
 
-Implementation is allowed. If a `PLAN_READY` artifact exists, `/1c-execute-plan` moves to `BUILD_EXECUTING` and injects the exact same `plan_id` and plan text. Do not restart full discovery unless new evidence invalidates a plan step.
+Implementation is allowed. If a `PLAN_READY` artifact exists, `/mode build` moves to `BUILD_EXECUTING` and injects the exact same `plan_id` and plan text. Do not restart full discovery unless new evidence invalidates a plan step.
 
 All writer stages sharing one working tree are sequential. Non-trivial work ends with tests/checks, independent review and verification.
 
@@ -98,10 +98,6 @@ Work without leaving traces in shared agent memory (Cognee/OpenViking) or the lo
 - `/mode plan`
 - `/mode build`
 - `/mode ask`
-- `/1c-plan`
-- `/1c-build`
-- `/1c-ask`
-- `/1c-execute-plan`
 - `/anon 1|2|3|off|status`
 - `Ctrl+Alt+P` cycles BUILD → PLAN → ASK
 - `Ctrl+Alt+A` cycles anon off → 1 → 2 → 3

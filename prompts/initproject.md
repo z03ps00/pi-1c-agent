@@ -49,7 +49,7 @@ On a dump error, follow that command's result-check step — show the log fragme
 
 ## Step 4. Lab extras (before the final report)
 
-Follow `prompts/init.md` → **Lab extras (Vanessa / КД / Humanizer RU)** before finishing. Silence is No. Do not copy extra skill trees into the project. Do not re-run the empty-scaffold wizard.
+Follow `rules-1c/core/project-init.md` lab extras before finishing: Vanessa / КД / Humanizer RU. Silence is No. Do not copy extra skill trees into the project. Do not re-run the empty-scaffold wizard.
 
 ## Step 5. Final report
 

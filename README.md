@@ -4,7 +4,7 @@ Git-tracked Pi 1C agent profile (`PI_CODING_AGENT_DIR`): rules, agents, skills, 
 
 ## Dual host (Pi vs Cursor)
 
-ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the same `AGENTS.md` but does **not** enforce the write-block or anonymous denials. `/init` TUI is Pi-only; in Cursor follow `prompts/init.md` as a procedure. Catalog is `/commands` (not Cursor `/help`). `/session-rotate` is an **opt-in Pi-only** alternative to in-place compaction (handoff → new session → continue). It is **off** by default, does not change `settings.json` compaction, and does **not** activate under Cursor.
+ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the same `AGENTS.md` but does **not** enforce the write-block or anonymous denials. `/init` TUI is Pi-only; in Cursor follow `rules-1c/core/project-init.md` as the procedure. Catalog is `/commands` (not Cursor `/help`). `/session-rotate` is an **opt-in Pi-only** alternative to in-place compaction (handoff → new session → continue). It is **off** by default, does not change `settings.json` compaction, and does **not** activate under Cursor.
 
 **BREAKING (Pi startup):** a new session starts in **ASK** (read-only), not BUILD. Pin BUILD with `--1c-mode build` or `PI_1C_DEFAULT_MODE=build`. `/mode ask|plan|build`; `Ctrl+Alt+P` cycles BUILD → PLAN → ASK.
 
@@ -12,7 +12,7 @@ ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the
 
 ## Commands
 
-Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/installmcp`, `/installtools`, `/checkmcp`, `/review-airules`. `/1c-*` remain aliases for one release. See `prompts/CATALOG.md` and `/commands` (everyday, then settings, then maintainer).
+Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/installmcp`, `/installtools`, `/checkmcp`, `/review-airules`. One command per verb — no `/1c-*` aliases. `/init` and `/doctor` are registered by the Pi package. See `prompts/CATALOG.md` and `/commands` (everyday, then settings, then maintainer).
 
 - `/init` — one wizard. First question: empty scaffold vs dump from IB / `.cf` / `.dt`.
 - `/initproject` — alias of `/init` from-infobase.

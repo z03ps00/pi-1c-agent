@@ -15,7 +15,7 @@ you happen to hold (a fresh `openspec/changes/...`, a brand-new CFE, a random mo
 |---|---|
 | `NEW_OBJECTS_IN=main_configuration` | main configuration (`src/cf`) |
 | `NEW_OBJECTS_IN=extension` and `EXTENSION_NAME` set | that extension under `EXTENSIONS_PATH` |
-| `NEW_OBJECTS_IN=extension`, `EXTENSION_NAME` empty, exactly one extension present | that extension (fill `EXTENSION_NAME` at `/1c-init`) |
+| `NEW_OBJECTS_IN=extension`, `EXTENSION_NAME` empty, exactly one extension present | that extension (fill `EXTENSION_NAME` at `/init`) |
 | `NEW_OBJECTS_IN=extension`, several extensions, no explicit user choice | ask once; never guess |
 | user explicitly asked for "отдельное расширение" / "new extension <name>" | new CFE — explicit user intent only |
 

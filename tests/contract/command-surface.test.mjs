@@ -5,9 +5,8 @@ import test from 'node:test';
 import {
   FORBIDDEN_PROMPT_NAMES,
   findPromptFiles,
-  isAliasPromptFile,
-  isAliasStub,
   parseCommandTitle,
+  prefixedPromptFiles,
 } from '../lib/commands.mjs';
 import { profileRoot } from '../lib/profile-root.mjs';
 
@@ -19,27 +18,24 @@ test('no help/plan/build/debug prompt files', () => {
   }
 });
 
-test('canonical prompt titles are unprefixed; /1c-* alias stubs exist', () => {
+test('no /1c-* prompt files; remaining titles are unprefixed', () => {
   const promptsDir = path.join(profileRoot(), 'prompts');
-  const files = findPromptFiles(promptsDir);
-  const aliases = [];
+  const prefixed = prefixedPromptFiles(promptsDir).map((f) => path.basename(f));
+  assert.deepEqual(prefixed, [], `prefixed prompt files must not exist: ${prefixed.join(', ')}`);
+
   const canonical = [];
-  for (const filePath of files) {
+  for (const filePath of findPromptFiles(promptsDir)) {
     const md = fs.readFileSync(filePath, 'utf8');
     const title = parseCommandTitle(md);
     const base = path.basename(filePath, '.md');
-    if (isAliasPromptFile(filePath)) {
-      aliases.push(base);
-      assert.ok(isAliasStub(md), `${filePath} must be a /1c-* alias stub`);
-      assert.ok(title && title.startsWith('/1c-'), `${filePath} title must be /1c-*: ${title}`);
-    } else {
-      canonical.push(base);
-      assert.ok(title && title.startsWith('/') && !title.startsWith('/1c-'), `${filePath} title must be unprefixed, got ${title}`);
-    }
+    assert.ok(
+      title && title.startsWith('/') && !title.startsWith('/1c-'),
+      `${filePath} title must be unprefixed, got ${title}`,
+    );
+    canonical.push(base);
   }
   assert.ok(canonical.includes('commands'), 'prompts/commands.md missing');
   assert.ok(canonical.includes('installmcp'), 'prompts/installmcp.md missing');
-  for (const name of canonical) {
-    assert.ok(aliases.includes(`1c-${name}`), `missing alias stub prompts/1c-${name}.md`);
-  }
+  assert.ok(!canonical.includes('init'), 'prompts/init.md must not exist (package owns /init)');
+  assert.ok(!canonical.includes('doctor'), 'prompts/doctor.md must not exist (package owns /doctor)');
 });

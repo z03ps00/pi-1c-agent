@@ -1,14 +1,14 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. `/1c-*` files are one-release aliases that print “alias of `/…`” once. Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init` and `/doctor` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`.
 
 ## Everyday (at most twelve)
 
 | Command | Purpose |
 |---|---|
 | `/commands` | This catalog: everyday first, then settings, then maintainer |
-| `/init` | One init wizard. Step 0: empty scaffold vs dump from IB / `.cf` / `.dt` |
-| `/doctor` | Deterministic profile/package health check |
+| `/init` | One init wizard (Pi package). Step 0: empty scaffold vs dump from IB / `.cf` / `.dt` |
+| `/doctor` | Deterministic profile/package health check (Pi package) |
 | `/installtools` | Guided installer menu (asks before any MCP install) |
 | `/checkmcp` | MCP status only (repair is explicit) |
 | `/mode plan` / `/mode build` / `/mode ask` | Pi ASK/PLAN/BUILD switch (not a prompt file; default ASK) |
