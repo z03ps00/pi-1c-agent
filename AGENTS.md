@@ -7,7 +7,7 @@ Before non-trivial work read the adapted upstream context/rules under `rules-1c/
 
 Install scope: rules, agents, skills, prompts and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
 
-Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). One command per verb — no `/1c-*` aliases. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`).
+Canonical slash commands have no `1c-` prefix (`/init`, `/doctor`, `/installmcp`, `/commands`). One command per verb — no `/1c-*` aliases and no prompt file that repeats a package `registerCommand` name. Catalog: `/commands`. Do not register `/help`, `/plan`, `/debug`. Mode switch is `/mode plan|build|ask`. Anonymous session is `/anon 1|2|3|off` (`Ctrl+Alt+A`).
 
 Comol `ai_rules_1c` updates for **this profile** go through `/review-airules` and `UPSTREAM-REGISTER.md`. `/updaterules` and `/checkupdates` are for 1C *projects* that use `install.ps1`, not for syncing this profile.
 

@@ -12,7 +12,7 @@ ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the
 
 ## Commands
 
-Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/installmcp`, `/installtools`, `/checkmcp`, `/review-airules`. One command per verb — no `/1c-*` aliases. `/init` and `/doctor` are registered by the Pi package. See `prompts/CATALOG.md` and `/commands` (everyday, then settings, then maintainer).
+Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/installmcp`, `/installtools`, `/checkmcp`, `/review-airules`. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, and `/session-rotate` are registered by the Pi package (no matching `prompts/*.md`). See `prompts/CATALOG.md` and `/commands` (everyday, then settings, then maintainer). The `/` palette lists prompt templates and extension commands only (`enableSkillCommands: false`); skills still load on demand, they are not `/skill:name` entries. Toggle back in `/settings` if needed.
 
 - `/init` — one wizard. First question: empty scaffold vs dump from IB / `.cf` / `.dt`.
 - `/initproject` — alias of `/init` from-infobase.

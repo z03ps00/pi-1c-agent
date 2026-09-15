@@ -27,6 +27,16 @@ test('settings.json uses <path-to-pi-1c-agent> placeholder', () => {
   );
 });
 
+test('settings.json does not register skills as slash commands', () => {
+  const settingsPath = path.join(profileRoot(), 'settings.json');
+  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  assert.equal(
+    settings.enableSkillCommands,
+    false,
+    `${settingsPath} must set enableSkillCommands false so / lists prompts, not /skill:*`,
+  );
+});
+
 test('settings.json lists unpinned npm:pi-cursor-sdk', () => {
   const settingsPath = path.join(profileRoot(), 'settings.json');
   const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));

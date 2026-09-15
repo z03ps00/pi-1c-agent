@@ -15,5 +15,6 @@
     "npm:pi-mcp-adapter@2.32.1",
     "npm:pi-cursor-sdk"
   ],
+  "enableSkillCommands": false,
   "hideThinkingBlock": false
 }

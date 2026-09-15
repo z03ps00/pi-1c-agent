@@ -1,6 +1,6 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init` and `/doctor` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/mode`, and `/anon` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`.
 
 ## Everyday (at most twelve)
 

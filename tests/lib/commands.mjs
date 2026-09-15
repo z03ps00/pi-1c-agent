@@ -2,6 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const FORBIDDEN_PROMPT_NAMES = ['help', 'plan', 'build', 'debug'];
+/** Pi package registerCommand names — a matching prompts/<name>.md duplicates the palette. */
+export const PACKAGE_OWNED_COMMANDS = [
+  'init',
+  'doctor',
+  'session-rotate',
+  'mode',
+  'anon',
+  'agents',
+  'config',
+  'learn',
+  'rule',
+  'bootstrap',
+  'openspec-setup',
+  'agent-scope',
+];
 export const DESTRUCTIVE_PROMPT_NAMES = [
   'update1cbase',
   'restore-testbase',

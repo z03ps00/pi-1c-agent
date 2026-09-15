@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   FORBIDDEN_PROMPT_NAMES,
+  PACKAGE_OWNED_COMMANDS,
   findPromptFiles,
   parseCommandTitle,
   prefixedPromptFiles,
@@ -36,6 +37,10 @@ test('no /1c-* prompt files; remaining titles are unprefixed', () => {
   }
   assert.ok(canonical.includes('commands'), 'prompts/commands.md missing');
   assert.ok(canonical.includes('installmcp'), 'prompts/installmcp.md missing');
-  assert.ok(!canonical.includes('init'), 'prompts/init.md must not exist (package owns /init)');
-  assert.ok(!canonical.includes('doctor'), 'prompts/doctor.md must not exist (package owns /doctor)');
+  for (const name of PACKAGE_OWNED_COMMANDS) {
+    assert.ok(
+      !canonical.includes(name),
+      `prompts/${name}.md must not exist (pi-1c-agent owns /${name})`,
+    );
+  }
 });

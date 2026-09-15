@@ -37,7 +37,7 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | Vanessa MCP only in `mcp.optional/` | `contract/mcp-default` | regression | implemented |
 | No `/help` `/plan` `/build` `/debug` prompts | `contract/command-surface` | regression | implemented |
 | Prompt titles unprefixed; no `/1c-*` prompt files | `unit/commands` + `contract/command-surface` | unit + regression | implemented |
-| `/session-rotate` opt-in, Pi-only, Settings catalog, handoff reuse | `contract/catalog` + `contract/command-surface` | regression | implemented |
+| `/session-rotate` opt-in, Pi-only, Settings catalog, no prompt twin | `contract/catalog` + `contract/command-surface` | regression | implemented |
 | `/update-profile` refreshes this profile from git remote, Settings, preserves local secrets/MCP | `unit/update-profile` + `contract/catalog` | unit + regression | implemented |
 | Destructive IB prompts confirm target | `contract/destructive-confirm` | regression | implemented |
 | Writer/pipeline agents require JSON `## Upstream Handoff` | `unit/agents` + `contract/handoff` | unit + regression | implemented |
