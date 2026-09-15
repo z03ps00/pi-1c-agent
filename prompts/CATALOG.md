@@ -1,6 +1,6 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/mode`, `/anon`, and `/approve` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`. Approval mode is `/approve`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/anon`, and `/approve` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`. Approval mode is `/approve`.
 
 ## Everyday (at most twelve)
 
@@ -34,8 +34,12 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/checkupdates` | Read-only check of MCP images and **project** 1c-rules |
 | `/updaterules` | Update 1c-rules in a **1C project** (`install.ps1`) — not this profile |
 | `/update-profile` | Refresh **this Pi profile** from its git remote (`origin`) — not `/updaterules` |
+| `/update-pi-cli` | Update the **Pi CLI shell** (`@earendil-works/pi-coding-agent`) in its npm prefix |
 | `/caveman` | Persistent `CAVEMAN` (on\|auto\|off); shipped default `auto` |
 | `/session-rotate` | Opt-in Pi-only session rotation at context threshold (default off, 85%) |
+| `/wrap` | Capture this dialog now; `/wrap auto on\|off` toggles Pi idle capture (default on) |
+| `/memory-flush` | Replay pending Cognee/OpenViking records (confirmed / still-pending / duplicates) |
+| `/capture-model` | Distiller: `off` / `stack` / `ollama <model>` / `routerai <model>` / `chat` (default `stack`) |
 | `/anon` | Pi anonymous session: `1` no memory writes, `2` no reads, `3` no local traces, `off` |
 | `/approve` | Pi approval mode: `off` do not ask, `safe` ask on dangerous BUILD actions, `strict` approve every tool (`Ctrl+Alt+S`) |
 | `/litemode` | `VERIFICATION_DEPTH` |

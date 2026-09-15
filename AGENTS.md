@@ -19,8 +19,9 @@ This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already c
 **Update an existing install** when this directory is already the profile clone:
 
 1. In Pi BUILD run `/update-profile` (or `node "$PI_CODING_AGENT_DIR/scripts/update-profile.mjs"`; Cursor: the same helper). That refreshes profile files and `packages/pi-1c-agent` from `origin`.
-2. If `settings.json` `packages[0]` still points at an old path outside this clone, point it at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or restore the placeholder and re-run `scripts/setup.mjs`).
-3. Check with `/doctor`. Do not run `pi install` as part of the update.
+2. To update the Pi CLI shell itself, in Pi BUILD run `/update-pi-cli` (or `node "$PI_CODING_AGENT_DIR/scripts/update-pi-cli.mjs"`). That safely updates `@earendil-works/pi-coding-agent` in the detected npm prefix without overwriting profile configs or secrets.
+3. If `settings.json` `packages[0]` still points at an old path outside this clone, point it at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or restore the placeholder and re-run `scripts/setup.mjs`).
+4. Check with `/doctor`. Do not run `pi install` as part of the update.
 
 If the user asks to install or update this agent, **run the matching steps**. Do not stop after describing them.
 
@@ -113,11 +114,13 @@ Routing (only when the corresponding server is opted in):
 - These are the only permitted shared-context mutating tools. Do not use Cognee `forget` / `call_tool`, or OpenViking `write` / `edit` / `add_resource` / `forget` / `cancel_watch`. A correction is a **new** `remember` that explicitly supersedes the old record.
 
 Safety and idempotency:
-- Redact secrets before any MCP tool call or pending-queue write: tokens, passwords, cookies, API keys, private keys, Authorization headers, credentialed DSNs, and secret-store values become `[REDACTED:<kind>]`.
+- Redact secrets with the shared routine `packages/pi-1c-agent/lib/redact.mjs` before any MCP tool call or pending-queue write. Tokens, passwords, cookies, API keys, private keys, Authorization headers, credentialed DSNs, and secret-store values become `[REDACTED:<kind>]`. If a leftover secret remains, do not write.
 - Never store credentials, raw secrets, private keys, cookies, or temporary execution output. Tilda passwords, license keys, IB passwords, and `KNOWLEDGE_MCP_AUTHORIZATION` stay in local secret files (`.dev.env`, `auth.json`, installer `config.env` outside git) — never `memory.md`, Cognee, OpenViking, AGENTS, or handoffs.
 - Use task/agent/date/content_hash idempotency: `task=<stable task or plan id>; agent=<agent/runtime>; date=<YYYY-MM-DD>; content_hash=<sha256 of the redacted content>`. Compute the hash only after redaction. Search existing memory/knowledge or pending records for that key before recording; update/merge rather than duplicate.
-- If runtime approval for Cognee/OpenViking writes is not granted, the MCP server is unavailable, or the tool call fails, state the memory/knowledge write as `UNVERIFIED`/`UNCONFIRMED`, save a redacted pending record under `$PI_CODING_AGENT_DIR/state/agent-memory/pending/` when local filesystem is available, and continue local implementation.
-- Explicitly mark unconfirmed facts as unconfirmed; never present pending or failed remote writes as confirmed.
+- Pair a short Cognee fact with an OpenViking report using one `correlation_id`.
+- Derive `project:<project-id>` from git remote, `.pi/1c/project-id`, or the normalized repo basename (strip trailing workspace-path space).
+- After every write, recall by `idempotency_key`. Only a positive read-back is `recorded`. Otherwise report `UNCONFIRMED`, save a redacted pending record under `$PI_CODING_AGENT_DIR/state/agent-memory/pending/`, and continue. `/memory-flush` and session-start reconciliation move confirmed records to `state/agent-memory/done/` (history kept).
+- End a substantial response with one line: `Memory: recalled N / nothing relevant; saved N / UNCONFIRMED / nothing to save`. Anonymous: `Memory: skipped — anonymous`.
 - Keep global memory separate from project-scoped memory.
 <!-- agent-shared-context:global-memory-rule:end -->
 

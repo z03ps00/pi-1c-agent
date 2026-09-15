@@ -9,7 +9,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
 test('package registers stabilized extensions', () => {
   assert.equal(pkg.version, '0.6.1');
-  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts']) {
+  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts']) {
     assert.ok(pkg.pi.extensions.includes(p));
     assert.ok(fs.existsSync(path.join(root, p)));
   }
@@ -40,6 +40,17 @@ test('project init UX schema is explicit and complete', () => {
   assert.match(initExt, /Принять все предложенные/);
   assert.match(initExt, /build\/\{cf,cfe,epf,erf\}/);
   assert.match(initExt, /docs\/techtask/);
+});
+
+test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
+  const src = fs.readFileSync(path.join(root, 'extensions', '1c-memory', 'index.ts'), 'utf8');
+  assert.match(src, /registerCommand\("memory-flush"/);
+  assert.match(src, /registerCommand\("wrap"/);
+  assert.match(src, /registerCommand\("capture-model"/);
+  assert.doesNotMatch(src, /registerCommand\("1c-memory-flush"/);
+  assert.doesNotMatch(src, /registerCommand\("1c-wrap"/);
+  assert.match(src, /agent_settled/);
+  assert.doesNotMatch(src, /pi\.sendUserMessage|sendUserMessage\(/);
 });
 
 test('session-rotate command and compaction hooks are registered', () => {

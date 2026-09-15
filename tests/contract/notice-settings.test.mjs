@@ -63,6 +63,7 @@ test('packages/pi-1c-agent ships with expected extensions', () => {
     'extensions/1c-init/index.ts',
     'extensions/1c-admin/index.ts',
     'extensions/1c-session-rotate/index.ts',
+    'extensions/1c-memory/index.ts',
   ];
   for (const rel of required) {
     assert.ok(extensions.includes(rel), `${pkgPath} must register ${rel}, got ${JSON.stringify(extensions)}`);

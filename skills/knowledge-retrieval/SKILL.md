@@ -7,17 +7,15 @@ description: Retrieve documentation and indexed project knowledge from a connect
 
 ## Purpose
 
-Use OpenViking for source material, documentation, procedures and reports (including the handoff document), not for short behavioural facts/decisions/preferences — those go to Cognee (skill `shared-memory`). Both are permitted write targets per the global memory rule (OpenViking `remember` / Cognee `remember`). Host: `127.0.0.1:1933` when using the shipped stack.
+Use OpenViking for source material, documentation, procedures and reports (including the handoff document), not for short behavioural facts/decisions/preferences — those go to Cognee (skill `shared-memory`). Both are permitted write targets per the global memory rule.
 
-Typical content:
-- documentation;
-- requirements and specifications;
-- architecture;
-- AGENTS.md;
-- Skills;
-- Markdown;
-- API/reference material;
-- indexed project documents.
+Typical content: documentation, requirements, architecture, AGENTS.md, skills, Markdown, API/reference material, indexed project documents, detailed session handoffs.
+
+## Write contract
+
+Same pipeline as Cognee: redact (`lib/redact.mjs`) → `content_hash` after redaction → dedup by `idempotency_key` → write → verify-by-recall. When pairing with a Cognee fact, reuse the same `correlation_id`. Raw transcripts are never stored as decisions; an opt-in `/wrap archive` may store a redacted transcript as a document marked `raw-transcript-document` only.
+
+If a write cannot be verified, queue a redacted pending record and report `UNCONFIRMED`.
 
 ## Procedure
 
@@ -29,12 +27,9 @@ Typical content:
 
 ## Boundary with memory
 
-Question: "How is the mechanism documented?" -> OpenViking.
+- "How is the mechanism documented?" → OpenViking.
+- "Why did we decide not to use that mechanism?" → Cognee/shared-memory.
+- "What did the last session hand off?" → OpenViking (handoff/report) + Cognee (short confirmed facts), joined by `correlation_id` when present.
+- "What does the code currently do?" → project files/runtime evidence.
 
-Question: "Why did we decide not to use that mechanism?" -> Cognee/shared-memory.
-
-Question: "What did the last session hand off?" -> OpenViking (handoff/report documents) + Cognee (short confirmed facts).
-
-Question: "What does the code currently do?" -> project files/runtime evidence.
-
-If OpenViking is not in `mcp.json` or not connected, note that once and do not fabricate indexed knowledge. Continue with project files.
+If OpenViking is unavailable, do not fabricate indexed knowledge.

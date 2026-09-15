@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { anonMutatorFallbackRegex, isMemoryMutator } from './memory-mutators.mjs';
 
 export const PLAN_WRITABLE_ROOTS = [
   'openspec',
@@ -41,9 +42,10 @@ export const ANON_HANDOFF_RELATIVE_ROOTS = Object.freeze([
   path.join('.pi', '1c', 'handoffs'),
 ]);
 
-const ANON_MEMORY_READ_TOOLS = new Set(['recall', 'search_tools', 'health', 'get', 'list', 'status']);
-const ANON_KNOWLEDGE_READ_TOOLS = new Set(['find', 'search', 'read', 'list', 'list_watches', 'tree', 'grep', 'glob', 'health']);
+export const ANON_MEMORY_READ_TOOLS = new Set(['recall', 'search_tools', 'health', 'get', 'list', 'status']);
+export const ANON_KNOWLEDGE_READ_TOOLS = new Set(['find', 'search', 'read', 'list', 'list_watches', 'tree', 'grep', 'glob', 'health']);
 const ANON_ALWAYS_ALLOWED_TOOLS = new Set(['health']);
+const ANON_MUTATOR_FALLBACK_RE = anonMutatorFallbackRegex();
 
 export function isPlanReadOnlyToolName(name) {
   if (EXACT_READ_ONLY.has(name)) return true;
@@ -269,6 +271,9 @@ export function evaluateAnonMcpCall(level, serverName, originalToolName) {
   const server = String(serverName ?? '').trim();
   if (!isSharedMemoryServer(server)) return { allowed: true, reason: 'not a shared-memory server' };
   const tool = normalizeMcpToolName(server, originalToolName);
+  if (isMemoryMutator(server, tool) || isMemoryMutator(server, originalToolName)) {
+    return { allowed: false, reason: `anonymous session (anon:${lvl}) forbids writing to '${server}.${originalToolName}'` };
+  }
   if (ANON_ALWAYS_ALLOWED_TOOLS.has(tool)) return { allowed: true, reason: 'liveness check only' };
   const readTools = server === 'memory' ? ANON_MEMORY_READ_TOOLS : ANON_KNOWLEDGE_READ_TOOLS;
   if (!readTools.has(tool)) {
@@ -356,7 +361,7 @@ export function fallbackAnonVerdict(level, input) {
   if (lvl >= 3 && /handoffs[/\\]/.test(blob)) {
     return { allowed: false, reason: 'anonymous level 3 forbids handoff documents (stale lib fallback)' };
   }
-  if (lvl >= 1 && /knowledge_(remember|write|edit|add_resource|forget|move|delete|import)|memory_remember|memory_forget/.test(blob)) {
+  if (lvl >= 1 && ANON_MUTATOR_FALLBACK_RE.test(blob)) {
     return { allowed: false, reason: 'anonymous session forbids shared-memory writes (stale lib fallback)' };
   }
   if (lvl >= 2 && /knowledge_(find|search|read|list|tree|grep|glob)|memory_recall|memory_search_tools/.test(blob)) {

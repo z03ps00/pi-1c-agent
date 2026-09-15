@@ -1,0 +1,121 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { hasUnredactableSecret, redact } from '../lib/redact.mjs';
+import { buildIdempotencyKey, contentHash } from '../lib/memory-key.mjs';
+import { deriveProjectId, normalizeWorkspacePath } from '../lib/project-id.mjs';
+import { formatMemoryStatus, prepareWrite, writeWithVerify } from '../lib/memory-write.mjs';
+import {
+  ANON_KNOWLEDGE_READ_TOOLS,
+  ANON_MEMORY_READ_TOOLS,
+  evaluateAnonMcpCall,
+  fallbackAnonVerdict,
+} from '../lib/plan-policy.mjs';
+import { MEMORY_MUTATORS, anonMutatorFallbackRegex, isMemoryMutator } from '../lib/memory-mutators.mjs';
+
+test('redacts each secret kind and blocks leftovers', () => {
+  const mixed = [
+    'fact: port is 8001',
+    'password=hunter2',
+    'Authorization: Bearer abcdef0123456789',
+    'Cookie: sid=abc',
+    'postgres://u:s3cret@localhost/db',
+    'sk-abcdefghijklmnopqrstuvwxyz012345',
+    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abc',
+    'API_KEY=supersecretvalue',
+    '-----BEGIN PRIVATE KEY-----\nMIIB\n-----END PRIVATE KEY-----',
+  ].join('\n');
+  const out = redact(mixed);
+  assert.ok(out.kinds.includes('password'));
+  assert.ok(out.kinds.includes('authorization'));
+  assert.ok(out.kinds.includes('cookie'));
+  assert.ok(out.kinds.includes('dsn'));
+  assert.ok(out.kinds.includes('api_key'));
+  assert.ok(out.kinds.includes('token'));
+  assert.ok(out.kinds.includes('secret_store'));
+  assert.ok(out.kinds.includes('private_key'));
+  assert.match(out.text, /\[REDACTED:password\]/);
+  assert.doesNotMatch(out.text, /hunter2/);
+  assert.equal(hasUnredactableSecret(out.text), false);
+  assert.equal(hasUnredactableSecret('password=still-here'), true);
+});
+
+test('content hash is after redaction and key is stable', () => {
+  const a = redact('decision: use port 8001 password=one').text;
+  const b = redact('decision: use port 8001 password=two').text;
+  assert.equal(contentHash(a), contentHash(b));
+  const rawHash = contentHash('decision: use port 8001 password=one');
+  assert.notEqual(contentHash(a), rawHash);
+  const key1 = buildIdempotencyKey({ task: 't', agent: 'pi', date: '2026-09-16', contentHash: contentHash(a) });
+  const key2 = buildIdempotencyKey({ task: 't', agent: 'pi', date: '2026-09-16', contentHash: contentHash(b) });
+  assert.equal(key1, key2);
+  assert.match(key1, /^task=t; agent=pi; date=2026-09-16; content_hash=[0-9a-f]{64}$/);
+});
+
+test('project-id ignores trailing space and bind-mount prefix', () => {
+  const a = deriveProjectId({ cwd: '/mnt/vol_328/work_folder/projects_code/1c-pi-profile ' });
+  const b = deriveProjectId({ cwd: '/mnt/vol_238_ssd/data/projects_code/1c-pi-profile ' });
+  const c = deriveProjectId({ cwd: '/mnt/vol_238_ssd/data/projects_code/1c-pi-profile' });
+  assert.equal(a, b);
+  assert.equal(b, c);
+  assert.equal(a, '1c-pi-profile');
+  assert.equal(normalizeWorkspacePath('/tmp/foo '), '/tmp/foo');
+  assert.equal(deriveProjectId({ gitRemote: 'git@github.com:acme/demo.git' }), 'acme/demo');
+  assert.equal(deriveProjectId({ marker: 'My Project ' }), 'my project');
+});
+
+test('verify-after-write confirms or queues UNCONFIRMED', async () => {
+  const prep = prepareWrite({ content: 'fact: ok', task: 't', agent: 'pi', date: '2026-09-16', cwd: '/tmp/demo' });
+  assert.equal(prep.ok, true);
+  const confirmed = await writeWithVerify({
+    record: prep.record,
+    existsByKey: async () => false,
+    remember: async () => ({ ok: true }),
+    recall: async () => true,
+  });
+  assert.equal(confirmed.status, 'recorded');
+
+  const queued = [];
+  const failed = await writeWithVerify({
+    record: prep.record,
+    existsByKey: async () => false,
+    remember: async () => ({ ok: true }),
+    recall: async () => false,
+    queuePending: (r) => queued.push(r),
+  });
+  assert.equal(failed.status, 'UNCONFIRMED');
+  assert.equal(queued.length, 1);
+
+  const dup = await writeWithVerify({
+    record: prep.record,
+    existsByKey: async () => true,
+    remember: async () => ({ ok: true }),
+    recall: async () => true,
+  });
+  assert.equal(dup.status, 'duplicate');
+});
+
+test('unredactable secret blocks prepareWrite', () => {
+  const blocked = prepareWrite({ content: '-----BEGIN PRIVATE KEY-----\nMIIB', task: 't', agent: 'pi' });
+  assert.equal(blocked.ok, false);
+});
+
+test('unified Memory status line', () => {
+  assert.equal(formatMemoryStatus({ anonymous: true }), 'Memory: skipped — anonymous');
+  assert.equal(formatMemoryStatus({ recalled: 2, saved: 1 }), 'Memory: recalled 2; saved 1');
+  assert.equal(formatMemoryStatus({ recalled: 0, unconfirmed: 1 }), 'Memory: nothing relevant; UNCONFIRMED');
+  assert.equal(formatMemoryStatus({ nothingToSave: true }), 'Memory: nothing relevant; nothing to save');
+});
+
+test('every listed mutator is denied at anon >= 1 and covered by the fallback regex', () => {
+  const regex = anonMutatorFallbackRegex();
+  for (const mut of MEMORY_MUTATORS) {
+    assert.equal(isMemoryMutator(mut.server, mut.tool), true, `${mut.server}.${mut.tool} must be listed`);
+    assert.equal(evaluateAnonMcpCall(1, mut.server, mut.tool).allowed, false, `${mut.server}.${mut.tool} must be denied`);
+    const readSet = mut.server === 'memory' ? ANON_MEMORY_READ_TOOLS : ANON_KNOWLEDGE_READ_TOOLS;
+    assert.equal(readSet.has(mut.tool), false, `${mut.server}.${mut.tool} must not be classified as a read tool`);
+    for (const alias of [`${mut.server}_${mut.tool}`, ...mut.aliases]) {
+      assert.equal(regex.test(alias), true, `${alias} must match fallback regex`);
+      assert.equal(fallbackAnonVerdict(1, { tool: alias }).allowed, false, `${alias} fallback must deny`);
+    }
+  }
+});

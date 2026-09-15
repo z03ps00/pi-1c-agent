@@ -10,6 +10,7 @@ import {
   shouldPrompt,
 } from "../../lib/approve-policy.mjs";
 import { dockerBlockReason } from "../../lib/docker-policy.mjs";
+import { anonMutatorFallbackRegex } from "../../lib/memory-mutators.mjs";
 import { evaluatePlanMcpToolCall, evaluatePlanToolCall, getPlanVisibleTools } from "../../lib/plan-policy.mjs";
 import { acceptPlan, enterBuild, enterPlan, executePlan, extractPlanArtifact, initialModeState } from "../../lib/plan-state.mjs";
 import * as planStateLib from "../../lib/plan-state.mjs";
@@ -92,7 +93,7 @@ function fallbackAnonVerdict(level: number, input: unknown): AnonVerdict {
   if (level >= 3 && /handoffs[/\\]/.test(blob)) {
     return { allowed: false, reason: "anonymous level 3 forbids handoff documents (stale lib fallback)" };
   }
-  if (level >= 1 && /knowledge_(remember|write|edit|add_resource|forget|move|delete|import)|memory_remember|memory_forget/.test(blob)) {
+  if (level >= 1 && anonMutatorFallbackRegex().test(blob)) {
     return { allowed: false, reason: "anonymous session forbids shared-memory writes (stale lib fallback)" };
   }
   if (level >= 2 && /knowledge_(find|search|read|list|tree|grep|glob)|memory_recall|memory_search_tools/.test(blob)) {

@@ -20,6 +20,7 @@ Run at the beginning of a meaningful project work session, not for trivial chat.
    - memory: `project:<project-id>` plus optional `global`;
    - knowledge: project/repository namespace when the provider supports it.
 6. Retrieve only minimal start context that materially affects the task.
+7. If Cognee/OpenViking are opted in and reachable, reconcile `state/agent-memory/pending/**` (or rely on the Pi `/memory-flush` / `session_start` hook). Confirmed records move to `state/agent-memory/done/`. If servers are down, leave the queue intact and do not retry in a loop.
 
 Do not load the entire memory or knowledge base.
 

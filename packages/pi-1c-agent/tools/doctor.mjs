@@ -64,6 +64,10 @@ add('1C admin extension', exists(path.join(packageRoot, 'extensions', '1c-admin'
 add('1C knowledge extension', exists(path.join(packageRoot, 'extensions', '1c-knowledge', 'index.ts')) && extList.includes('extensions/1c-knowledge/index.ts'));
 add('1C project-init extension', exists(path.join(packageRoot, 'extensions', '1c-init', 'index.ts')) && extList.includes('extensions/1c-init/index.ts'));
 add('1C session-rotate extension', exists(path.join(packageRoot, 'extensions', '1c-session-rotate', 'index.ts')) && extList.includes('extensions/1c-session-rotate/index.ts'));
+add('1C memory lifecycle extension', exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) && extList.includes('extensions/1c-memory/index.ts'));
+const memorySrc = exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) : '';
+add('canonical /memory-flush /wrap /capture-model', /registerCommand\("memory-flush"/.test(memorySrc) && /registerCommand\("wrap"/.test(memorySrc) && /registerCommand\("capture-model"/.test(memorySrc) && !/registerCommand\("1c-wrap"/.test(memorySrc));
+add('memory write helpers', exists(path.join(packageRoot, 'lib', 'redact.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-key.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-reconcile.mjs')));
 const rotateSrc = exists(path.join(packageRoot, 'extensions', '1c-session-rotate', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-session-rotate', 'index.ts')) : '';
 add('canonical /session-rotate registration', /registerCommand\("session-rotate"/.test(rotateSrc) && !/registerCommand\("1c-session-rotate"/.test(rotateSrc));
 const adminSrc = read(path.join(packageRoot, 'extensions', '1c-admin', 'index.ts'));

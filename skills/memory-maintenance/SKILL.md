@@ -16,6 +16,7 @@ Use when memory retrieval reveals conflicts/duplicates, after a material decisio
 5. Preserve rationale for important architecture decisions.
 6. Current files/configuration override remembered operational state.
 7. If the supersede write fails or is unconfirmed, say so explicitly (`UNCONFIRMED`); never report a memory correction that did not happen.
+8. Report the unified line `Memory: recalled …; saved … / UNCONFIRMED` (or `Memory: skipped — anonymous`). Pending records that later confirm move to `state/agent-memory/done/` — history is kept, not deleted.
 
 ## Example
 

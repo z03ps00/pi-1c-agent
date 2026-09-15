@@ -28,7 +28,9 @@ Before the final response for a substantial task:
 2. If Cognee/OpenViking are opted in, search them and local pending records by the idempotency key. If they are off, skip remote search.
 3. Write the short durable result to Cognee and the detailed handoff to OpenViking **only when those servers are opted in and connected**.
 4. If they are off, skip memory writes. If a write is unavailable or fails, save a redacted pending record and report `UNCONFIRMED`/`UNVERIFIED` — that is not a task failure.
-5. Put an explicit `Memory:` status in the final response (`not in use` when MCP is off).
+5. Put an explicit unified `Memory:` status in the final response (`Memory: recalled …; saved …` / `UNCONFIRMED` / `skipped — anonymous` / `not in use` when MCP is off).
+
+`/wrap` (and Pi idle capture) reuse this same handoff field set. They **distill** — they never dump the raw transcript into Cognee or into OpenViking's decision layer. Optional `/wrap archive` stores a redacted transcript as an OpenViking **document** marked `raw-transcript-document` only.
 
 A durable file/configuration change is always substantial. Only routine Q&A, trivial reads, failed attempts without reusable lessons, and transient output may be marked `not required`.
 

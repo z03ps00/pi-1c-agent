@@ -50,3 +50,11 @@ Never allow remembered state to override current code/config without evidence.
 3. Invoke the corresponding skill(s).
 4. Continue with the task using retrieved evidence.
 5. If no MCP/tool exists, do not fabricate a result; state the limitation.
+
+## Status line
+
+Every substantial task ends with exactly one line:
+
+`Memory: recalled N / nothing relevant; saved N / UNCONFIRMED / nothing to save`
+
+Anonymous sessions: `Memory: skipped — anonymous`. Do not invent a second phrasing.

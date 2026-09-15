@@ -47,4 +47,8 @@ Do not collapse explorer/planner/developer/tester/reviewer/fixer roles into one 
 Read-only roles may run in parallel. Writer roles sharing one working tree are sequential. Project-local agents require project trust plus explicit project-agent opt-in.
 
 If `openspec/` exists, use native Pi OpenSpec resources. Explore/propose belong to PLAN; apply requires BUILD; verify/archive follow implementation verification.
+
+## Shared memory contract
+
+Redact with `lib/redact.mjs` before any Cognee/OpenViking or pending write. Hash `content_hash` only after redaction. Dedup by `idempotency_key`. Pair Cognee fact + OpenViking report with one `correlation_id`. Scope is `project:<canonical-id>`. Verify by recall; otherwise `UNCONFIRMED` + pending. Report one `Memory:` line (`skipped — anonymous` in anon). `/wrap` distills; it does not dump raw transcripts.
 <!-- PI-1C-AGENT:END -->

@@ -6,7 +6,7 @@ Git-tracked Pi 1C agent profile (`PI_CODING_AGENT_DIR`): rules, agents, skills, 
 
 ## Dual host (Pi vs Cursor)
 
-ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the same `AGENTS.md` but does **not** enforce the write-block or anonymous denials. `/init` TUI is Pi-only; in Cursor follow `rules-1c/core/project-init.md` as the procedure. Catalog is `/commands` (not Cursor `/help`). `/session-rotate` is an **opt-in Pi-only** alternative to in-place compaction (handoff → new session → continue). It is **off** by default, does not change `settings.json` compaction, and does **not** activate under Cursor.
+ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the same `AGENTS.md` but does **not** enforce the write-block or anonymous denials. `/init` TUI is Pi-only; in Cursor follow `rules-1c/core/project-init.md` as the procedure. Catalog is `/commands` (not Cursor `/help`). `/session-rotate` is an **opt-in Pi-only** alternative to in-place compaction (handoff → new session → continue). It is **off** by default, does not change `settings.json` compaction, and does **not** activate under Cursor. Session capture (`/wrap`) **distills** a dialog into Cognee + OpenViking — never a raw transcript. In **Pi**, idle capture is **on by default** (toggle `/wrap auto off|on`); `/wrap` is the manual reserve. Idle capture is Pi-only (Cursor: `/wrap` only). `/memory-flush` replays `state/agent-memory/pending`. `/capture-model` chooses the distiller (`off` / `stack` / `ollama` / `routerai` / `chat`). Anon and ASK/PLAN still block every write even with automatic capture on.
 
 **BREAKING (Pi startup):** a new session starts in **ASK** (read-only), not BUILD. Pin BUILD with `--1c-mode build` or `PI_1C_DEFAULT_MODE=build`. `/mode ask|plan|build`; `Ctrl+Alt+P` cycles BUILD → PLAN → ASK.
 
@@ -21,7 +21,11 @@ Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/
 - `/doctor` — deterministic health check. LLM diagnostic is `/doctor-explain`.
 - `/review-airules` — maintainer review of `comol/ai_rules_1c` for **this profile**. `/updaterules` / `/checkupdates` stay for 1C *projects*.
 - `/update-profile` — refresh **this profile** from the clone’s git remote (`origin`). Not `/updaterules`. Preserves `auth.json`, `trust.json`, opted-in MCP servers, and a local `pi-1c-agent` path. If the placeholder is still present, points `packages[0]` at the in-repo `packages/pi-1c-agent`. Does not run `pi install`.
+- `/update-pi-cli` — update the **Pi CLI shell** (`@earendil-works/pi-coding-agent`) in its npm prefix to the latest version. Preserves `settings.json`, `mcp.json`, and secrets.
 - `/session-rotate` — opt-in Pi-only session rotation at a context threshold (default off, 85%). Reuses the `handoff` skill format. Does not change `settings.json` compaction defaults.
+- `/wrap` — capture this dialog now (manual reserve). `/wrap auto on|off` toggles Pi idle capture (default **on** in Pi). Distills; does not store raw transcripts in memory. `/wrap archive` opts in to a redacted OpenViking transcript **document**.
+- `/memory-flush` — replay pending Cognee/OpenViking records; report confirmed / still-pending / duplicate-skipped.
+- `/capture-model` — distiller: `status | off | stack | ollama <model> | routerai <model> | chat` (default `stack`).
 
 ## Lab extras (beta)
 
@@ -50,8 +54,8 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
 | `agents/` | Subagent prompts |
 | `skills/` | Profile skills |
 | `prompts/` | Slash-command templates (unprefixed) |
-| `packages/pi-1c-agent/` | Pi runtime package (extensions that register `/init`, `/doctor`, `/mode`, `/anon`, `/session-rotate`). Updated with this clone |
-| `scripts/` | Host helpers (`setup.mjs` first install, `update-profile.mjs` refreshes this clone from origin). Not Pi `tools/` — that name triggers a startup deprecation warning |
+| `packages/pi-1c-agent/` | Pi runtime package (extensions that register `/init`, `/doctor`, `/mode`, `/anon`, `/session-rotate`, `/wrap`, `/memory-flush`, `/capture-model`). Updated with this clone |
+| `scripts/` | Host helpers (`setup.mjs` first install, `update-profile.mjs` refreshes this clone from origin, `update-pi-cli.mjs` updates the Pi CLI shell). Not Pi `tools/` — that name triggers a startup deprecation warning |
 | `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder until `scripts/setup.mjs` or `/update-profile` resolves the in-repo path; unpinned `npm:pi-cursor-sdk`) |
 | `mcp.json` | Default MCP (empty optional servers) |
 | `manifest/` | Manifest resolved through `PI_PACKAGE_DIR`. Supplies `piConfig.clientUri` so OAuth client registration passes realms with a trusted-host policy (`MCP-OAUTH.md`) |
@@ -89,7 +93,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
    A Cursor API key is optional. 1C work uses the shipped DeepSeek default until you run `/login`, choose an API key, and pick Cursor. If npm is unreachable, skip this step: `/doctor` WARNs, CORE can still pass, DeepSeek still works.
 4. Optional MCP: `/installtools` or standalone installers. Do not copy another machine’s `mcp.json` ports blindly.
 5. Check: `/doctor`.
-6. Later refresh of **this clone**: `/update-profile` (or `/update-profile status` first). First install stays a clone; this command does not create a new directory. It updates both the profile files and `packages/pi-1c-agent`. It does **not** auto-update npm — Cursor SDK refresh remains `pi install npm:pi-cursor-sdk`. To switch an existing install from an old package path to the bundled copy, point `settings.json` `packages[0]` at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or replace it with the placeholder and re-run `scripts/setup.mjs`).
+6. Later refresh of **this clone**: `/update-profile` (or `/update-profile status` first). First install stays a clone; this command does not create a new directory. It updates both the profile files and `packages/pi-1c-agent`. It does **not** auto-update npm — Cursor SDK refresh remains `pi install npm:pi-cursor-sdk`. To update the Pi CLI shell itself, run `/update-pi-cli` (or `/update-pi-cli status`). To switch an existing install from an old package path to the bundled copy, point `settings.json` `packages[0]` at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or replace it with the placeholder and re-run `scripts/setup.mjs`).
 
 ## License
 

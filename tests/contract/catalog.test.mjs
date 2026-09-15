@@ -21,6 +21,9 @@ test('/review-airules exists and is classified maintainer', () => {
     'settings',
     'CATALOG.md must list /session-rotate under Settings',
   );
+  assert.equal(classifyCatalogSection(catalog, 'wrap'), 'settings');
+  assert.equal(classifyCatalogSection(catalog, 'memory-flush'), 'settings');
+  assert.equal(classifyCatalogSection(catalog, 'capture-model'), 'settings');
   assert.match(commands, /review-airules/);
   assert.match(commands, /maintainer/i);
 });
@@ -50,3 +53,24 @@ test('/update-profile exists, is settings, and has no /1c-* alias', () => {
   assert.match(prompt, /scripts\/update-profile\.mjs/);
   assert.doesNotMatch(prompt, /tools\/update-profile\.mjs/);
 });
+
+test('/update-pi-cli exists, is settings, and has no /1c-* alias', () => {
+  const root = profileRoot();
+  const promptPath = path.join(root, 'prompts', 'update-pi-cli.md');
+  const aliasPath = path.join(root, 'prompts', '1c-update-pi-cli.md');
+  assert.ok(fs.existsSync(promptPath), `${promptPath} missing`);
+  assert.equal(fs.existsSync(aliasPath), false, `${aliasPath} must not exist`);
+  const catalog = fs.readFileSync(path.join(root, 'prompts', 'CATALOG.md'), 'utf8');
+  assert.equal(
+    classifyCatalogSection(catalog, 'update-pi-cli'),
+    'settings',
+    'CATALOG.md must list /update-pi-cli under Settings',
+  );
+  assert.notEqual(classifyCatalogSection(catalog, 'update-pi-cli'), 'everyday');
+  assert.notEqual(classifyCatalogSection(catalog, 'update-pi-cli'), 'maintainer');
+  const helper = path.join(root, 'scripts', 'update-pi-cli.mjs');
+  const prompt = fs.readFileSync(promptPath, 'utf8');
+  assert.ok(fs.existsSync(helper), `${helper} missing`);
+  assert.match(prompt, /scripts\/update-pi-cli\.mjs/);
+});
+
