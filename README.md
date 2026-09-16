@@ -18,6 +18,95 @@
 
 Память opt-in: по умолчанию выключена, MCP-серверов в `mcp.json` нет. Подключается `/install-memory-mcp` или руками через `mcp.optional/memory-stack/`.
 
+```mermaid
+flowchart TB
+    subgraph SESSION ["BUILD-сессия"]
+        work["Агент работает:<br/>пишет код, принимает решения"]
+        idle{"Сессия завершается<br/>или idle-таймер"}
+    end
+
+    subgraph GATE ["Проверки на входе"]
+        anon{"anon ≥ 1?"}
+        mode{"Режим ASK<br/>или PLAN?"}
+    end
+
+    subgraph DISTILL ["Дистилляция сессии"]
+        entries["Записи сессии:<br/>tool calls, файлы,<br/>решения, ошибки"]
+        distiller{"Дистиллятор"}
+        heuristic["Эвристика:<br/>парсит файлы, решения,<br/>незакрытые вопросы"]
+        llm["LLM-дистиллятор:<br/>ollama / routerai / chat"]
+        substantial{"Есть дurable-<br/>артефакты?"}
+    end
+
+    subgraph WRITE ["Парная запись"]
+        redact["redact.mjs<br/>секреты → REDACTED"]
+        secret_check{"Остались<br/>незачищенные<br/>секреты?"}
+        idemp["Идемпотентность:<br/>task + agent + date<br/>+ content_hash"]
+        dup{"Дубликат?"}
+        fact_write["remember → Cognee<br/>короткий факт"]
+        report_write["remember → OpenViking<br/>развёрнутый отчёт"]
+        verify{"Read-back<br/>подтверждён?"}
+    end
+
+    subgraph PENDING ["Pending-очередь"]
+        queue["state/agent-memory/<br/>pending/*.md"]
+        reconcile["Reconciliation<br/>при старте сессии"]
+        done["state/agent-memory/<br/>done/*.md"]
+    end
+
+    subgraph MCP ["MCP-серверы"]
+        cognee[("Cognee<br/>:8001<br/>факты, решения")]
+        viking[("OpenViking<br/>:1933<br/>отчёты, документы")]
+    end
+
+    work --> idle
+    idle --> anon
+    anon -- "да" --> skip1["⏹ Memory: skipped — anonymous"]
+    anon -- "нет" --> mode
+    mode -- "да" --> skip2["⏹ read-only, нечего сохранять"]
+    mode -- "нет" --> entries
+
+    entries --> distiller
+    distiller -- "stack / off" --> heuristic
+    distiller -- "ollama / routerai / chat" --> llm
+    heuristic --> substantial
+    llm -- "ошибка" --> heuristic
+    llm --> substantial
+    substantial -- "нет" --> skip3["⏹ nothing durable to save"]
+    substantial -- "да" --> redact
+
+    redact --> secret_check
+    secret_check -- "да" --> block["⏹ запись заблокирована"]
+    secret_check -- "нет" --> idemp
+
+    idemp --> dup
+    dup -- "да" --> skip4["⏹ duplicate"]
+    dup -- "нет" --> fact_write & report_write
+
+    fact_write --> cognee
+    report_write --> viking
+    cognee --> verify
+    viking --> verify
+
+    verify -- "да" --> recorded["✅ recorded<br/>correlation_id связывает пару"]
+    verify -- "нет" --> queue
+
+    reconcile -- "retry" --> fact_write & report_write
+    reconcile -- "confirmed" --> done
+    queue -.-> reconcile
+
+    style cognee fill:#4a9eff,stroke:#2d7cd4,color:#fff
+    style viking fill:#ff8c42,stroke:#d4712d,color:#fff
+    style skip1 fill:#888,stroke:#666,color:#fff
+    style skip2 fill:#888,stroke:#666,color:#fff
+    style skip3 fill:#888,stroke:#666,color:#fff
+    style skip4 fill:#888,stroke:#666,color:#fff
+    style block fill:#e74c3c,stroke:#c0392b,color:#fff
+    style recorded fill:#27ae60,stroke:#1e8449,color:#fff
+    style queue fill:#f39c12,stroke:#d68910,color:#fff
+    style done fill:#27ae60,stroke:#1e8449,color:#fff
+```
+
 Два бэкенда:
 
 | Бэкенд | Что хранит | Примеры |
