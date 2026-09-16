@@ -11,6 +11,7 @@ import {
   configurationRootForLayout,
   detectConfiguration,
   effectiveVariableMeta,
+  ensureProjectKnowledgeLayout,
   inferSourceLayoutRoot,
   initStatus,
   inspectSourceScaffold,
@@ -23,7 +24,7 @@ import {
   redactValue,
   summarizeEnv,
 } from "../../lib/project-init.mjs";
-import { initConfiguration, loadConfiguration } from "../../lib/knowledge.mjs";
+import { loadConfiguration } from "../../lib/knowledge.mjs";
 
 type OneCMode = "plan" | "build";
 type SharedState = typeof globalThis & { __PI_1C_MODE__?: OneCMode };
@@ -198,6 +199,7 @@ function previewText(project: any, templateRaw: string, values: Record<string, s
   if (sourceScaffoldEnabled) lines.push(`- ${project.sourceLayoutRoot || "src"}/{cf,cfe,epf,erf} — только отсутствующие каталоги; существующие данные не изменяются`);
   if (buildScaffoldEnabled) lines.push("- build/{cf,cfe,epf,erf} — готовые .cf/.cfe/.epf/.erf, имя + штамп даты");
   if (docsScaffoldEnabled) lines.push("- docs/ и docs/techtask/ — документация и сырые ТЗ агенту");
+  lines.push("- .pi/1c/{knowledge,knowledge-drafts,rules} — каркас знаний проекта (агент и OpenSpec не копируются)");
   if (knowledgeEnabled) lines.push("- .pi/1c/configuration.json + fingerprint (если ещё не инициализированы)");
   if (openSpecEnabled && !fs.existsSync(path.join(project.cwd, "openspec"))) lines.push("- OpenSpec помечен как enabled; после init будет предложен /openspec-setup");
   return lines.join("\n");
@@ -216,11 +218,24 @@ function parseInitRequest(args?: string) {
     raw,
     tokens,
     status: tokens.includes("status"),
+    knowledge: tokens.includes("knowledge"),
     advanced: tokens.includes("advanced"),
     quick: tokens.includes("quick"),
     empty: tokens.includes("empty"),
     fromIb: tokens.some((t) => t === "from-ib" || t === "from-cf" || t === "from-dt" || t.startsWith("from-cf") || t.startsWith("from-dt")),
   };
+}
+
+function knowledgeResultLine(layout: any, knowledgeEnabled: boolean) {
+  const dirs = `layout created=${layout?.created?.length ?? 0}, existing=${layout?.existing?.length ?? 0}`;
+  if (layout?.fingerprintInitialized) {
+    return `Configuration Knowledge: initialized (${layout.configuration?.fileCount ?? 0} 1C files fingerprinted); ${dirs}`;
+  }
+  if (layout?.configurationAlreadyPresent && layout?.configuration) {
+    return `Configuration Knowledge: already initialized (${layout.configuration.name} ${layout.configuration.version}); ${dirs}`;
+  }
+  if (knowledgeEnabled) return `Configuration Knowledge: layout only; fingerprint skipped; ${dirs}`;
+  return `Configuration Knowledge: layout only (fingerprint not requested); ${dirs}`;
 }
 
 export default function oneCInit(pi: ExtensionAPI): void {
@@ -241,8 +256,66 @@ export default function oneCInit(pi: ExtensionAPI): void {
           st.scaffold ? `source scaffold: ${st.scaffold.complete ? "complete" : `missing ${st.scaffold.missing.join(", ")}`}` : "source scaffold: not initialized",
           st.buildScaffold ? `build scaffold: ${st.buildScaffold.complete ? "complete" : `missing ${st.buildScaffold.missing.join(", ")}`}` : "build scaffold: not initialized",
           st.docsScaffold ? `docs scaffold: ${st.docsScaffold.complete ? "complete" : `missing ${st.docsScaffold.missing.join(", ")}`}` : "docs scaffold: not initialized",
+          st.knowledgeLayout ? `knowledge layout: ${st.knowledgeLayout.complete ? "complete" : `missing ${st.knowledgeLayout.missing.join(", ")}`}` : "knowledge layout: missing",
         ].join("\n");
         return pi.sendMessage({ customType: "pi-1c-init-status", content: text, display: true }, { triggerTurn: false });
+      }
+
+      if (requested.knowledge) {
+        const config = detectConfiguration(ctx.cwd);
+        const existing = loadConfiguration(ctx.cwd);
+        const projectName = (await askText(ctx, "Название проекта", path.basename(ctx.cwd), "Например: Valenta EXON")) ?? path.basename(ctx.cwd);
+        const configurationName = (await askText(ctx, "Название конфигурации 1С", existing?.name || config.name, "Например: 1С:ERP Управление предприятием")) ?? (existing?.name || config.name);
+        const configurationVersion = (await askText(ctx, "Версия конфигурации", existing?.version || config.version, "Например: 2.5.25.56")) ?? (existing?.version || config.version);
+        const sourceRoot = (await askText(
+          ctx,
+          "Каталог основной конфигурации",
+          existing?.sourceRoot || config.sourceRoot || "src/cf",
+          "Например: src/cf — здесь ожидается Configuration.xml",
+        )) ?? (existing?.sourceRoot || config.sourceRoot || "src/cf");
+        const willFingerprint = !existing && Boolean(configurationName && configurationVersion);
+        const preview = [
+          "# /init knowledge — только каркас знаний проекта",
+          "",
+          "Не копирует агента, OpenSpec, .dev.env и не запускает bootstrap --project.",
+          "",
+          `- project: ${projectName}`,
+          `- configuration: ${configurationName || "(пусто)"} ${configurationVersion || ""}`.trim(),
+          `- sourceRoot: ${sourceRoot}`,
+          `- fingerprint: ${existing ? "skip — configuration.json already present" : (willFingerprint ? "yes" : "skip — name/version missing")}`,
+          "",
+          "Будут созданы только недостающие каталоги:",
+          "- .pi/1c/knowledge/items/",
+          "- .pi/1c/knowledge-drafts/",
+          "- .pi/1c/rules/configuration/",
+          "- .pi/1c/rules/project/",
+          existing ? "- .pi/1c/configuration.json — already present, not overwritten" : (willFingerprint ? "- .pi/1c/configuration.json + knowledge/fingerprint.json" : "- configuration.json не создаётся без имени и версии"),
+          "- .pi/1c/project.yaml и init-state.json — только если отсутствуют",
+        ].join("\n");
+        pi.sendMessage({ customType: "pi-1c-init-knowledge-preview", content: preview, display: true }, { triggerTurn: false });
+        const apply = await ctx.ui.confirm("Посадить каркас знаний?", "Существующие drafts/items/rules не удаляются. Агент, .pi/prompts, .pi/skills и .dev.env не записываются.");
+        if (!apply) return ctx.ui.notify("Инициализация знаний отменена. Ничего не записано.", "info");
+        try {
+          const result = ensureProjectKnowledgeLayout(ctx.cwd, {
+            projectName,
+            configurationName,
+            configurationVersion,
+            sourceRoot,
+            fingerprint: willFingerprint,
+            writeManifests: true,
+          });
+          const next = [
+            "1C project knowledge layout complete.",
+            knowledgeResultLine(result, willFingerprint),
+            result.manifestsCreated.length ? `Manifests created: ${result.manifestsCreated.join(", ")}` : "Manifests: already present",
+            "Agent/OpenSpec were not copied.",
+            "Next: /learn to add facts, or /init for the full .dev.env wizard.",
+          ].join("\n");
+          pi.sendMessage({ customType: "pi-1c-init-knowledge-complete", content: next, display: true }, { triggerTurn: false });
+        } catch (error: any) {
+          ctx.ui.notify(error?.message || String(error), "error");
+        }
+        return;
       }
 
       let sourceChoice = requested.fromIb ? "dump" : (requested.empty || requested.advanced || requested.quick ? "empty" : "");
@@ -441,16 +514,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
 
       try {
         const result = applyProjectInitialization(ctx.cwd, { templateRaw, values, decisions, projectName, configurationName, configurationVersion, sourceRoot, sourceLayoutRoot, sourceScaffoldEnabled, buildScaffoldEnabled, docsScaffoldEnabled, knowledgeEnabled, openSpecEnabled });
-        let knowledgeLine = "Configuration Knowledge: disabled";
-        if (knowledgeEnabled && configurationName && configurationVersion) {
-          const existing = loadConfiguration(ctx.cwd);
-          if (!existing) {
-            const cfg = initConfiguration(ctx.cwd, { name: configurationName, version: configurationVersion, family: configurationName, sourceRoot: sourceRoot || "." });
-            knowledgeLine = `Configuration Knowledge: initialized (${cfg.fileCount} 1C files fingerprinted)`;
-          } else {
-            knowledgeLine = `Configuration Knowledge: already initialized (${existing.name} ${existing.version})`;
-          }
-        }
+        const knowledgeLine = knowledgeResultLine(result.knowledgeLayout, knowledgeEnabled);
         const next = [
           "1C project initialization complete.",
           `ENV: ${result.summary.length} upstream variables reviewed/materialized`,
@@ -469,7 +533,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("init", {
-    description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .dt: /init [empty|from-ib|advanced|quick|status]",
+    description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .dt: /init [empty|from-ib|advanced|quick|status|knowledge]",
     handler: async (args, ctx) => handleInit(args, ctx),
   });
 }

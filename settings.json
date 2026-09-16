@@ -13,7 +13,8 @@
   "packages": [
     "<path-to-pi-1c-agent>",
     "npm:pi-mcp-adapter@2.32.1",
-    "npm:pi-cursor-sdk"
+    "npm:pi-cursor-sdk",
+    "npm:pi-tool-display"
   ],
   "enableSkillCommands": false,
   "hideThinkingBlock": false

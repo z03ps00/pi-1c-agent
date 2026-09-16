@@ -24,8 +24,23 @@ test('/review-airules exists and is classified maintainer', () => {
   assert.equal(classifyCatalogSection(catalog, 'wrap'), 'settings');
   assert.equal(classifyCatalogSection(catalog, 'memory-flush'), 'settings');
   assert.equal(classifyCatalogSection(catalog, 'capture-model'), 'settings');
+  assert.equal(classifyCatalogSection(catalog, 'init-knowledge'), 'settings');
   assert.match(commands, /review-airules/);
   assert.match(commands, /maintainer/i);
+});
+
+test('/init-knowledge exists, is settings, and has no /1c-* alias', () => {
+  const root = profileRoot();
+  const promptPath = path.join(root, 'prompts', 'init-knowledge.md');
+  const aliasPath = path.join(root, 'prompts', '1c-init-knowledge.md');
+  assert.ok(fs.existsSync(promptPath), `${promptPath} missing`);
+  assert.equal(fs.existsSync(aliasPath), false, `${aliasPath} must not exist`);
+  const catalog = fs.readFileSync(path.join(root, 'prompts', 'CATALOG.md'), 'utf8');
+  assert.equal(classifyCatalogSection(catalog, 'init-knowledge'), 'settings');
+  const prompt = fs.readFileSync(promptPath, 'utf8');
+  assert.match(prompt, /ensureProjectKnowledgeLayout/);
+  assert.match(prompt, /Do \*\*not\*\* copy the agent/);
+  assert.match(prompt, /Do \*\*not\*\* run `bootstrap\.mjs --project`/);
 });
 
 test('/update-profile exists, is settings, and has no /1c-* alias', () => {

@@ -2,6 +2,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  draftsDir,
+  ensureKnowledgeDirs,
+  fingerprintPath,
+  initConfiguration,
+  itemsDir,
+  knowledgeRoot,
+  loadConfiguration,
+  rulesDir,
+} from './knowledge.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(here, '..');
@@ -512,6 +522,140 @@ function atomicWrite(file, content, mode) {
   if (mode && process.platform !== 'win32') try { fs.chmodSync(file, mode); } catch {}
 }
 
+function knowledgeLayoutDirectories(cwd) {
+  return [
+    { rel: 'knowledge', absolute: path.dirname(fingerprintPath(cwd)) },
+    { rel: 'knowledge/items', absolute: itemsDir(cwd) },
+    { rel: 'knowledge-drafts', absolute: draftsDir(cwd) },
+    { rel: 'rules/configuration', absolute: rulesDir(cwd, 'configuration') },
+    { rel: 'rules/project', absolute: rulesDir(cwd, 'project') },
+  ].map((item) => {
+    let exists = false;
+    try { exists = fs.statSync(item.absolute).isDirectory(); } catch {}
+    return { path: `.pi/1c/${item.rel}`, absolute: item.absolute, exists };
+  });
+}
+
+export function inspectKnowledgeLayout(cwd) {
+  const directories = knowledgeLayoutDirectories(cwd);
+  return {
+    root: '.pi/1c',
+    directories,
+    missing: directories.filter((x) => !x.exists).map((x) => x.path),
+    complete: directories.every((x) => x.exists),
+    configuration: loadConfiguration(cwd),
+  };
+}
+
+function writeMinimalKnowledgeManifests(cwd, {
+  projectName,
+  configurationName,
+  configurationVersion,
+  sourceRoot,
+  knowledgeEnabled,
+}) {
+  const stateDir = knowledgeRoot(cwd);
+  const projectYaml = path.join(stateDir, 'project.yaml');
+  const initState = path.join(stateDir, 'init-state.json');
+  const created = [];
+  const initializedAt = new Date().toISOString();
+  const name = projectName || path.basename(cwd);
+  if (!fs.existsSync(projectYaml)) {
+    atomicWrite(projectYaml, buildProjectYaml({
+      projectName: name,
+      configurationName: configurationName || '',
+      configurationVersion: configurationVersion || '',
+      sourceRoot: sourceRoot || '.',
+      envSummary: [],
+      initializedAt,
+      knowledgeEnabled,
+      openSpecEnabled: false,
+      sourceScaffoldEnabled: false,
+      buildScaffoldEnabled: false,
+      docsScaffoldEnabled: false,
+    }));
+    created.push('.pi/1c/project.yaml');
+  }
+  if (!fs.existsSync(initState)) {
+    atomicWrite(initState, `${JSON.stringify({
+      schemaVersion: 1,
+      initializedAt,
+      projectName: name,
+      configurationName: configurationName || '',
+      configurationVersion: configurationVersion || '',
+      sourceRoot: sourceRoot || '.',
+      knowledgeLayout: true,
+      knowledgeEnabled,
+      openSpecEnabled: false,
+      mode: 'knowledge',
+    }, null, 2)}\n`);
+    created.push('.pi/1c/init-state.json');
+  }
+  return { projectYaml, initState, created };
+}
+
+/**
+ * Plant project-local knowledge dirs (and optionally fingerprint + minimal manifests).
+ * Does not copy the agent, OpenSpec artifacts, .dev.env, or AGENTS.md.
+ */
+export function ensureProjectKnowledgeLayout(cwd, {
+  projectName,
+  configurationName,
+  configurationVersion,
+  sourceRoot = '.',
+  fingerprint = false,
+  writeManifests = true,
+} = {}) {
+  const before = inspectKnowledgeLayout(cwd);
+  const configurationAlreadyPresent = Boolean(before.configuration);
+  ensureKnowledgeDirs(cwd);
+  const after = inspectKnowledgeLayout(cwd);
+  const created = after.directories.filter((item) => !before.directories.find((x) => x.path === item.path)?.exists).map((x) => x.path);
+  const existing = after.directories.filter((item) => before.directories.find((x) => x.path === item.path)?.exists).map((x) => x.path);
+
+  let configuration = before.configuration;
+  let fingerprintInitialized = false;
+  if (fingerprint && !configurationAlreadyPresent && String(configurationName || '').trim() && String(configurationVersion || '').trim()) {
+    configuration = initConfiguration(cwd, {
+      name: configurationName,
+      version: configurationVersion,
+      family: configurationName,
+      sourceRoot: sourceRoot || '.',
+    });
+    fingerprintInitialized = true;
+  }
+
+  let manifestsCreated = [];
+  let projectYaml = path.join(knowledgeRoot(cwd), 'project.yaml');
+  let initState = path.join(knowledgeRoot(cwd), 'init-state.json');
+  if (writeManifests) {
+    const manifests = writeMinimalKnowledgeManifests(cwd, {
+      projectName,
+      configurationName: configurationName || configuration?.name,
+      configurationVersion: configurationVersion || configuration?.version,
+      sourceRoot: sourceRoot || configuration?.sourceRoot || '.',
+      knowledgeEnabled: Boolean(configuration || fingerprint),
+    });
+    projectYaml = manifests.projectYaml;
+    initState = manifests.initState;
+    manifestsCreated = manifests.created;
+  }
+
+  return {
+    root: '.pi/1c',
+    directories: after.directories,
+    created,
+    existing,
+    complete: after.complete,
+    configuration: configuration || loadConfiguration(cwd),
+    fingerprintInitialized,
+    configurationAlreadyPresent,
+    manifestsCreated,
+    projectYaml,
+    initState,
+  };
+}
+
 export function ensureGitignore(cwd) {
   const file = path.join(cwd, '.gitignore');
   const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
@@ -535,6 +679,14 @@ export function applyProjectInitialization(cwd, { templateRaw, values, decisions
   const scaffold = sourceScaffoldEnabled ? ensureSourceScaffold(cwd, layoutRoot) : inspectSourceScaffold(cwd, layoutRoot);
   const buildScaffold = buildScaffoldEnabled ? ensureBuildScaffold(cwd) : inspectBuildScaffold(cwd);
   const docsScaffold = docsScaffoldEnabled ? ensureDocsScaffold(cwd) : inspectDocsScaffold(cwd);
+  const knowledgeLayout = ensureProjectKnowledgeLayout(cwd, {
+    projectName,
+    configurationName,
+    configurationVersion,
+    sourceRoot,
+    fingerprint: knowledgeEnabled,
+    writeManifests: false,
+  });
   atomicWrite(envPath, envRaw, 0o600);
   ensureGitignore(cwd);
   atomicWrite(path.join(stateDir, 'project.yaml'), buildProjectYaml({
@@ -596,6 +748,7 @@ export function applyProjectInitialization(cwd, { templateRaw, values, decisions
     scaffold,
     buildScaffold,
     docsScaffold,
+    knowledgeLayout,
   };
 }
 
@@ -616,5 +769,7 @@ export function initStatus(cwd) {
   try { buildScaffold = inspectBuildScaffold(cwd); } catch {}
   let docsScaffold = null;
   try { docsScaffold = inspectDocsScaffold(cwd); } catch {}
-  return { example, envFile: fs.existsSync(envFile) ? envFile : null, state, audit, scaffold, buildScaffold, docsScaffold, configuredCount: Object.values(values).filter((x) => String(x).length > 0).length };
+  let knowledgeLayout = null;
+  try { knowledgeLayout = inspectKnowledgeLayout(cwd); } catch {}
+  return { example, envFile: fs.existsSync(envFile) ? envFile : null, state, audit, scaffold, buildScaffold, docsScaffold, knowledgeLayout, configuredCount: Object.values(values).filter((x) => String(x).length > 0).length };
 }

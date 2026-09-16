@@ -7,6 +7,10 @@
 
 ## Unreleased
 
+### Project knowledge layout
+- `/init` always plants `.pi/1c/{knowledge,knowledge-drafts,rules}` even when Configuration Knowledge fingerprint is off.
+- `/init knowledge` plants that tree into an existing 1C repo without copying the agent, writing `.dev.env`, or creating OpenSpec artifacts. Cursor procedure: `/init-knowledge`.
+
 ### Approval mode (`/approve`)
 - `/approve off|safe|strict|status` (no argument opens a picker) and `Ctrl+Alt+S` cycle a BUILD tool-approval gate. Footer shows `approve:off|safe|strict`. Default **off**.
 - `safe` prompts on dangerous actions (file writes, destructive bash, MCP/IB mutations). `strict` prompts on every tool call. Dialog: once / all like this (session) / deny. Without UI the would-be prompt is fail-closed.

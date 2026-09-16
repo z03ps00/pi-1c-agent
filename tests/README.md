@@ -38,6 +38,7 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | No `/help` `/plan` `/build` `/debug` prompts | `contract/command-surface` | regression | implemented |
 | Prompt titles unprefixed; no `/1c-*` prompt files | `unit/commands` + `contract/command-surface` | unit + regression | implemented |
 | `/session-rotate` opt-in, Pi-only, Settings catalog, no prompt twin | `contract/catalog` + `contract/command-surface` | regression | implemented |
+| `/init` always plants `.pi/1c` knowledge dirs; `/init knowledge` / `/init-knowledge` adopt without agent copy | `packages/pi-1c-agent/tests/project-init` + `contract/catalog` | unit + regression | implemented |
 | `/wrap` `/memory-flush` `/capture-model` package-owned, Settings catalog, no prompt twin | `contract/catalog` + `contract/command-surface` | regression | implemented |
 | `/update-profile` refreshes this profile from git remote, Settings, preserves local secrets/MCP | `unit/update-profile` + `contract/catalog` | unit + regression | implemented |
 | `/update-pi-cli` updates Pi CLI shell in npm prefix, Settings, preserves profile configs/secrets | `unit/update-pi-cli` + `contract/catalog` | unit + regression | implemented |
@@ -47,6 +48,7 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | `NOTICE` present; `settings.json` placeholder; in-repo `packages/pi-1c-agent` | `contract/notice-settings` | regression | implemented |
 | First-time `scripts/setup.mjs` resolves in-repo package path | `unit/setup` | unit | implemented |
 | Unpinned default `npm:pi-cursor-sdk` (no `@version`) | `contract/notice-settings` | regression | implemented |
+| Unpinned default `npm:pi-tool-display` (no `@version`) | `contract/notice-settings` | regression | implemented |
 | `upstream.lock.json` seeded pin | `contract/upstream-pin` | regression | implemented |
 | No foreign machine-local paths in shipped tree | `unit/paths-scan` + `contract/machine-paths` | unit + regression | implemented |
 | Lab extras present + isolated from `ai_rules_1c` | `contract/lab-extras` | regression | implemented |

@@ -51,6 +51,20 @@ test('settings.json lists unpinned npm:pi-cursor-sdk', () => {
   );
 });
 
+test('settings.json lists unpinned npm:pi-tool-display', () => {
+  const settingsPath = path.join(profileRoot(), 'settings.json');
+  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  const packages = settings.packages || [];
+  assert.ok(
+    packages.includes('npm:pi-tool-display'),
+    `${settingsPath} must list unpinned npm:pi-tool-display, got ${JSON.stringify(packages)}`,
+  );
+  assert.ok(
+    !packages.some((p) => String(p).startsWith('npm:pi-tool-display@')),
+    `${settingsPath} must not pin pi-tool-display, got ${JSON.stringify(packages)}`,
+  );
+});
+
 test('packages/pi-1c-agent ships with expected extensions', () => {
   const pkgRoot = path.join(profileRoot(), 'packages', 'pi-1c-agent');
   const pkgPath = path.join(pkgRoot, 'package.json');

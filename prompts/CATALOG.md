@@ -7,7 +7,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | Command | Purpose |
 |---|---|
 | `/commands` | This catalog: everyday first, then settings, then maintainer |
-| `/init` | One init wizard (Pi package). Step 0: empty scaffold vs dump from IB / `.cf` / `.dt` |
+| `/init` | One init wizard (Pi package). Step 0: empty scaffold vs dump from IB / `.cf` / `.dt`. Apply always plants `.pi/1c` knowledge dirs |
 | `/doctor` | Deterministic profile/package health check (Pi package) |
 | `/installtools` | Guided installer menu (asks before any MCP install) |
 | `/checkmcp` | MCP status only (repair is explicit) |
@@ -22,6 +22,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | Command | Purpose |
 |---|---|
 | `/initproject` | Alias of `/init` from-infobase (dump from IB / `.cf` / `.dt`) |
+| `/init-knowledge` | Cursor procedure: plant `.pi/1c` knowledge dirs only (Pi TUI: `/init knowledge`). Does not copy the agent |
 | `/installmcp` | First install of the purchased 1C Docker MCP bundle |
 | `/install-memory-mcp` | Opt-in paired OpenViking + Cognee memory stack (Router AI default) |
 | `/install-cognee` | Alias path: our Cognee half of `/install-memory-mcp` (not upstream Cognee) |

@@ -8,6 +8,7 @@ Source of truth: pinned upstream `.dev.env.example`. UX schema only explains var
 - `/init advanced` — review every upstream variable one by one.
 - `/init quick` — key decisions only.
 - `/init status` — deterministic status and schema-drift check.
+- `/init knowledge` — plant `.pi/1c` knowledge dirs only (no agent copy, no `.dev.env`).
 
 ## Current pinned variables (43)
 

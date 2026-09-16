@@ -40,7 +40,7 @@ node tools/install.mjs --project --with-openspec
 3. пытается read-only определить Configuration.xml / CompatibilityMode / PLATFORM_PATH / source root;
 4. спрашивает переменные последовательно и объясняет смысл каждой;
 5. показывает redacted preview;
-6. пишет `.dev.env`, `.pi/1c/project.yaml`, `.pi/1c/init-state.json` только после explicit Apply;
+6. пишет `.dev.env`, `.pi/1c/project.yaml`, `.pi/1c/init-state.json` и каркас `.pi/1c/{knowledge,knowledge-drafts,rules}` только после explicit Apply;
 7. при согласии инициализирует Configuration Knowledge fingerprint;
 8. предлагает `/openspec-setup`, если OpenSpec включён, но native Pi artifacts ещё не созданы.
 
@@ -48,6 +48,12 @@ node tools/install.mjs --project --with-openspec
 
 ```text
 /init quick
+```
+
+Только каркас знаний в уже существующий 1С-репозиторий (агент не копируется, `.dev.env` не пишется):
+
+```text
+/init knowledge
 ```
 
 Статус:

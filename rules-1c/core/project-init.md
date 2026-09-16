@@ -18,6 +18,7 @@ Written state:
 - `.gitignore` — ensures `.dev.env` is ignored;
 - `.pi/1c/project.yaml` — non-secret project/configuration/capability summary;
 - `.pi/1c/init-state.json` — non-secret initialization state;
+- `.pi/1c/{knowledge,knowledge-drafts,rules}` — project knowledge dirs (always; the agent is not copied);
 - optional standard source scaffold under the selected layout root: `cf/`, `cfe/`, `epf/`, `erf/`;
 - optional Configuration Knowledge fingerprint when explicitly enabled;
 - optional OpenSpec CLI + native Pi artifacts (`openspec/`, `.pi/skills/openspec-*`, `.pi/prompts/opsx-*.md`) when explicitly enabled;
@@ -72,6 +73,7 @@ Autodetected values are proposals, not silent irreversible decisions.
 - `/init advanced` — reviews all upstream variables one by one with human explanations.
 - `/init quick` — asks key project decisions and keeps upstream defaults for the rest.
 - `/init status` — deterministic status/schema coverage report.
+- `/init knowledge` — plant only `.pi/1c` knowledge dirs into an existing 1C repo (no agent copy, no `.dev.env` wizard, no OpenSpec). Cursor procedure: `/init-knowledge`.
 
 Defaulted/advisory values must be explained as defaults instead of being treated as mandatory input. Empty values that upstream defines as valid remain valid.
 

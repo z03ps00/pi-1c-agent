@@ -40,6 +40,16 @@ test('project init UX schema is explicit and complete', () => {
   assert.match(initExt, /Принять все предложенные/);
   assert.match(initExt, /build\/\{cf,cfe,epf,erf\}/);
   assert.match(initExt, /docs\/techtask/);
+  assert.match(initExt, /tokens\.includes\("knowledge"\)/);
+  assert.match(initExt, /\/init knowledge/);
+  const knowledgeStart = initExt.indexOf('if (requested.knowledge)');
+  assert.ok(knowledgeStart >= 0);
+  const knowledgeEnd = initExt.indexOf('let sourceChoice', knowledgeStart);
+  const knowledgeBlock = initExt.slice(knowledgeStart, knowledgeEnd);
+  assert.match(knowledgeBlock, /ensureProjectKnowledgeLayout/);
+  assert.doesNotMatch(knowledgeBlock, /runBootstrap/);
+  assert.doesNotMatch(knowledgeBlock, /applyProjectInitialization/);
+  assert.match(knowledgeBlock, /Не копирует агента/);
 });
 
 test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
@@ -68,10 +78,13 @@ test('session-rotate command and compaction hooks are registered', () => {
 test('knowledge commands pick pending drafts without /1c- names', () => {
   const src = fs.readFileSync(path.join(root, 'extensions', '1c-knowledge', 'index.ts'), 'utf8');
   assert.match(src, /registerCommand\("learn"/);
-  assert.match(src, /registerCommand\("config"/);
-  assert.match(src, /listDrafts/);
-  assert.match(src, /formatDraftChoice/);
-  assert.match(src, /ctx\.ui\.select/);
+  assert.match(src, /ctx\.ui\.select\("Learn"/);
+  assert.match(src, /"new fact\/rule"/);
+  assert.match(src, /"approve a draft"/);
+  assert.match(src, /"reject a draft"/);
+  assert.match(src, /ctx\.ui\.input/);
+  assert.match(src, /function pendingDrafts/);
+  assert.doesNotMatch(src, /listDrafts/);
   assert.doesNotMatch(src, /registerCommand\("1c-learn"/);
   assert.doesNotMatch(src, /\/1c-learn|\/1c-config/);
 });

@@ -87,6 +87,7 @@ Wizard не придумывает собственный ENV-контракт. 
 /init advanced      # пустой scaffold, все upstream ENV-переменные по одной
 /init quick         # ключевые решения, остальное оставить upstream defaults
 /init status        # deterministic status + schema drift
+/init knowledge     # только каркас .pi/1c знаний (без агента, без .dev.env)
 /init            # alias of /init
 ```
 
@@ -120,11 +121,14 @@ docs/                  # документация в git
 .gitignore                  # .dev.env, build/
 .pi/1c/project.yaml         # без секретов
 .pi/1c/init-state.json      # без секретов
+.pi/1c/knowledge/           # каркас знаний (всегда)
+.pi/1c/knowledge-drafts/
+.pi/1c/rules/
 ```
 
 На POSIX `.dev.env` получает mode `0600`. `IB_PASSWORD`, `REPOSITORY_PASSWORD`, `SUPPORT_KEY` не попадают в preview/project.yaml/init-state/knowledge/handoff. Wizard предупреждает, что обычный Pi text input не гарантирует маскирование секрета, и рекомендует использовать только DEV/TEST credentials.
 
-При желании wizard сразу инициализирует Configuration Knowledge fingerprint. OpenSpec отмечается как включённый, а если native Pi artifacts ещё отсутствуют, следующим шагом предлагается `/openspec-setup`.
+При желании wizard сразу инициализирует Configuration Knowledge fingerprint. Каркас `.pi/1c/{knowledge,knowledge-drafts,rules}` создаётся всегда, даже если fingerprint выключен. Для уже существующего 1С-репозитория без полного wizard: `/init knowledge` (Cursor: `/init-knowledge`) — без копирования агента и без `.dev.env`. OpenSpec отмечается как включённый, а если native Pi artifacts ещё отсутствуют, следующим шагом предлагается `/openspec-setup`.
 
 `/doctor project` проверяет соответствие upstream `.dev.env.example` UX-схеме и предупреждает, если проект ещё не прошёл `/init`. `/doctor` is an alias.
 

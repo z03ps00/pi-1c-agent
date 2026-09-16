@@ -24,6 +24,8 @@ import {
   redactValue,
   renderEnvFromTemplate,
   summarizeEnv,
+  ensureProjectKnowledgeLayout,
+  inspectKnowledgeLayout,
 } from '../lib/project-init.mjs';
 
 const schema = loadDevEnvSchema();
@@ -267,6 +269,74 @@ test('build and docs scaffolds create kind folders and techtask without wiping f
   const artifact = compiledArtifactPath(cwd, 'cfe', 'ShopExt', { now: new Date('2026-09-14T08:00:00') });
   assert.equal(artifact.relative, 'build/cfe/МоёРасширение_20260914.cfe'.replace('МоёРасширение', 'ShopExt'));
   assert.equal(artifact.relative, 'build/cfe/ShopExt_20260914.cfe');
+});
+
+function assertNoAgentCopy(cwd) {
+  for (const rel of ['.pi/agents', '.pi/skills', '.pi/prompts', '.pi/rules-1c', 'AGENTS.md']) {
+    assert.equal(fs.existsSync(path.join(cwd, rel)), false, rel);
+  }
+}
+
+test('full /init always plants knowledge dirs even when Knowledge Layer is off', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-init-kn-off-'));
+  const raw = template();
+  const values = Object.fromEntries(parseEnvTemplate(raw).variables.map((x) => [x.name, x.defaultValue]));
+  const result = applyProjectInitialization(cwd, {
+    templateRaw: raw,
+    values,
+    projectName: 'K',
+    configurationName: 'ERP',
+    configurationVersion: '2.5',
+    sourceRoot: 'src/cf',
+    knowledgeEnabled: false,
+    openSpecEnabled: false,
+  });
+  const layout = inspectKnowledgeLayout(cwd);
+  assert.equal(layout.complete, true);
+  assert.equal(fs.existsSync(path.join(cwd, '.pi', '1c', 'configuration.json')), false);
+  assert.equal(result.knowledgeLayout.fingerprintInitialized, false);
+  assertNoAgentCopy(cwd);
+});
+
+test('/init knowledge layout does not copy the agent or write .dev.env', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-kn-adopt-'));
+  fs.mkdirSync(path.join(cwd, 'src', 'cf'), { recursive: true });
+  fs.writeFileSync(path.join(cwd, 'src', 'cf', 'Configuration.xml'), '<?xml version="1.0"?><Configuration><Properties><Name>ERP</Name><Version>2.5.25.56</Version></Properties></Configuration>');
+  const first = ensureProjectKnowledgeLayout(cwd, {
+    projectName: 'Adopt',
+    configurationName: 'ERP',
+    configurationVersion: '2.5.25.56',
+    sourceRoot: 'src/cf',
+    fingerprint: true,
+    writeManifests: true,
+  });
+  assert.equal(first.complete, true);
+  assert.equal(first.fingerprintInitialized, true);
+  assert.equal(fs.existsSync(path.join(cwd, '.dev.env')), false);
+  assert.ok(fs.existsSync(path.join(cwd, '.pi', '1c', 'configuration.json')));
+  assert.ok(fs.existsSync(path.join(cwd, '.pi', '1c', 'project.yaml')));
+  assert.ok(fs.existsSync(path.join(cwd, '.pi', '1c', 'init-state.json')));
+  assertNoAgentCopy(cwd);
+
+  const draft = path.join(cwd, '.pi', '1c', 'knowledge-drafts', 'draft-keep.json');
+  fs.writeFileSync(draft, `${JSON.stringify({ id: 'keep-me', statement: 'keep' }, null, 2)}\n`);
+  const yamlBefore = fs.readFileSync(path.join(cwd, '.pi', '1c', 'project.yaml'), 'utf8');
+  const second = ensureProjectKnowledgeLayout(cwd, {
+    projectName: 'Adopt-overwrite',
+    configurationName: 'OTHER',
+    configurationVersion: '9.9',
+    sourceRoot: 'src/cf',
+    fingerprint: true,
+    writeManifests: true,
+  });
+  assert.equal(second.fingerprintInitialized, false);
+  assert.equal(second.configurationAlreadyPresent, true);
+  assert.equal(fs.readFileSync(draft, 'utf8').includes('keep-me'), true);
+  assert.equal(fs.readFileSync(path.join(cwd, '.pi', '1c', 'project.yaml'), 'utf8'), yamlBefore);
+  const cfg = JSON.parse(fs.readFileSync(path.join(cwd, '.pi', '1c', 'configuration.json'), 'utf8'));
+  assert.equal(cfg.name, 'ERP');
+  assert.equal(fs.existsSync(path.join(cwd, '.dev.env')), false);
+  assertNoAgentCopy(cwd);
 });
 
 

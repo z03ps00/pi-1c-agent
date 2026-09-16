@@ -13,7 +13,7 @@ This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already c
 
 1. Clone this repository into the profile directory. Set `PI_CODING_AGENT_DIR` to that clone (no trailing-space folder names).
 2. Run `node "$PI_CODING_AGENT_DIR/scripts/setup.mjs"` (Windows: `node "%PI_CODING_AGENT_DIR%\scripts\setup.mjs"`). It fills `packages[0]`, copies `auth.json` / `trust.json` from the examples if they are missing, and is safe to re-run.
-3. Optional: `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk`.
+3. Optional: `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk` and `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-tool-display`.
 4. Check with `/doctor`.
 
 **Update an existing install** when this directory is already the profile clone:
@@ -58,7 +58,7 @@ PLAN protects project code but permits planning artifacts only in `openspec/**`,
 
 ## Project initialization
 
-For a new or newly adopted repository, prefer `/init` once the project is trusted and Pi is in BUILD. First question: empty source scaffold vs dump from an existing infobase / `.cf` / `.dt`. `/initproject` is the from-IB alias. The wizard reads the pinned upstream `.dev.env.example`, reviews all discovered variables with human explanations, performs read-only autodetection first, shows a redacted preview, and only writes after explicit Apply. It installs project **data** only — the agent itself must already be present in the global profile. Selected extras (scaffold, Configuration Knowledge, OpenSpec, and lab extras Vanessa / КД / Humanizer RU) are installed on Apply, not deferred to a follow-up command. Secrets stay only in local `.dev.env`; never copy them to knowledge, AGENTS, handoffs or reports. Read `project-init.md`.
+For a new or newly adopted repository, prefer `/init` once the project is trusted and Pi is in BUILD. First question: empty source scaffold vs dump from an existing infobase / `.cf` / `.dt`. `/initproject` is the from-IB alias. To plant only `.pi/1c` knowledge dirs into an existing 1C repo (no agent copy, no `.dev.env` wizard), use `/init knowledge` (Cursor: `/init-knowledge`). The wizard reads the pinned upstream `.dev.env.example`, reviews all discovered variables with human explanations, performs read-only autodetection first, shows a redacted preview, and only writes after explicit Apply. It installs project **data** only — the agent itself must already be present in the global profile. Selected extras (scaffold, Configuration Knowledge, OpenSpec, and lab extras Vanessa / КД / Humanizer RU) are installed on Apply, not deferred to a follow-up command. Secrets stay only in local `.dev.env`; never copy them to knowledge, AGENTS, handoffs or reports. Read `project-init.md`.
 
 ## Lab extras (not ai_rules_1c)
 

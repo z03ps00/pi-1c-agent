@@ -32,7 +32,7 @@ PLAN protects project code but permits planning artifacts only in `openspec/**`,
 
 ## Project initialization
 
-For a new or newly adopted repository, prefer `/init` once the project is trusted and Pi is in BUILD. First question: empty source scaffold vs dump from an existing infobase / `.cf` / `.dt`. `/init` is an alias. The wizard reads the pinned upstream `.dev.env.example`, reviews all discovered variables with human explanations, performs read-only autodetection first, shows a redacted preview, and only writes after explicit Apply. Secrets stay only in local `.dev.env`; never copy them to knowledge, AGENTS, handoffs or reports. Read `project-init.md`.
+For a new or newly adopted repository, prefer `/init` once the project is trusted and Pi is in BUILD. First question: empty source scaffold vs dump from an existing infobase / `.cf` / `.dt`. `/init` is an alias. To plant only `.pi/1c` knowledge dirs into an existing 1C repo (no agent copy, no `.dev.env` wizard), use `/init knowledge` (Cursor: `/init-knowledge`). The wizard reads the pinned upstream `.dev.env.example`, reviews all discovered variables with human explanations, performs read-only autodetection first, shows a redacted preview, and only writes after explicit Apply. Secrets stay only in local `.dev.env`; never copy them to knowledge, AGENTS, handoffs or reports. Read `project-init.md`.
 
 ## Configuration / project knowledge
 

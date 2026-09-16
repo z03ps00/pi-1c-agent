@@ -16,7 +16,8 @@ ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the
 
 Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/installmcp`, `/installtools`, `/checkmcp`, `/review-airules`. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, and `/session-rotate` are registered by the Pi package (no matching `prompts/*.md`). See `prompts/CATALOG.md` and `/commands` (everyday, then settings, then maintainer). The `/` palette lists prompt templates and extension commands only (`enableSkillCommands: false`); skills still load on demand, they are not `/skill:name` entries. Toggle back in `/settings` if needed.
 
-- `/init` — one wizard. First question: empty scaffold vs dump from IB / `.cf` / `.dt`.
+- `/init` — one wizard. First question: empty scaffold vs dump from IB / `.cf` / `.dt`. Apply always creates `.pi/1c` knowledge dirs. `/init knowledge` plants that tree into an existing repo without copying the agent.
+- `/init-knowledge` — Cursor procedure for `/init knowledge`.
 - `/initproject` — alias of `/init` from-infobase.
 - `/doctor` — deterministic health check. LLM diagnostic is `/doctor-explain`.
 - `/review-airules` — maintainer review of `comol/ai_rules_1c` for **this profile**. `/updaterules` / `/checkupdates` stay for 1C *projects*.
@@ -56,7 +57,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
 | `prompts/` | Slash-command templates (unprefixed) |
 | `packages/pi-1c-agent/` | Pi runtime package (extensions that register `/init`, `/doctor`, `/mode`, `/anon`, `/session-rotate`, `/wrap`, `/memory-flush`, `/capture-model`). Updated with this clone |
 | `scripts/` | Host helpers (`setup.mjs` first install, `update-profile.mjs` refreshes this clone from origin, `update-pi-cli.mjs` updates the Pi CLI shell). Not Pi `tools/` — that name triggers a startup deprecation warning |
-| `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder until `scripts/setup.mjs` or `/update-profile` resolves the in-repo path; unpinned `npm:pi-cursor-sdk`) |
+| `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder until `scripts/setup.mjs` or `/update-profile` resolves the in-repo path; unpinned `npm:pi-cursor-sdk` and `npm:pi-tool-display`) |
 | `mcp.json` | Default MCP (empty optional servers) |
 | `manifest/` | Manifest resolved through `PI_PACKAGE_DIR`. Supplies `piConfig.clientUri` so OAuth client registration passes realms with a trusted-host policy (`MCP-OAUTH.md`) |
 | `NOTICE` | Upstream `comol/ai_rules_1c` terms vs this overlay; lab extras vs Humanizer_RU |
@@ -68,7 +69,7 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
 * `auth.json` — provider API keys. Copy from `auth.example.json`.
 * `trust.json` — trusted project paths. Copy from `trust.example.json`.
 * `.dev.env` — per-**project** secrets and infobase paths, never this profile.
-* `npm/` / `node_modules` / packed tarballs of Pi packages (including `pi-cursor-sdk`). Install them with `pi install`; do not vendor them here.
+* `npm/` / `node_modules` / packed tarballs of Pi packages (including `pi-cursor-sdk` and `pi-tool-display`). Install them with `pi install`; do not vendor them here.
 
 ## Deploy on another machine
 
@@ -91,9 +92,16 @@ The agent may use Docker when the engine is reachable. Confirm creates. If `dock
    Refresh later with the same command — no `settings.json` version bump. If `pi list` still shows `@jiah-liu/pi-cursor-provider`, `pi remove` that package first so only one `cursor` provider remains.
 
    A Cursor API key is optional. 1C work uses the shipped DeepSeek default until you run `/login`, choose an API key, and pick Cursor. If npm is unreachable, skip this step: `/doctor` WARNs, CORE can still pass, DeepSeek still works.
-4. Optional MCP: `/installtools` or standalone installers. Do not copy another machine’s `mcp.json` ports blindly.
-5. Check: `/doctor`.
-6. Later refresh of **this clone**: `/update-profile` (or `/update-profile status` first). First install stays a clone; this command does not create a new directory. It updates both the profile files and `packages/pi-1c-agent`. It does **not** auto-update npm — Cursor SDK refresh remains `pi install npm:pi-cursor-sdk`. To update the Pi CLI shell itself, run `/update-pi-cli` (or `/update-pi-cli status`). To switch an existing install from an old package path to the bundled copy, point `settings.json` `packages[0]` at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or replace it with the placeholder and re-run `scripts/setup.mjs`).
+4. Install OpenCode-style tool/diff rendering ([Elsin/pi-tool-display](https://github.com/Elsin/pi-tool-display)). From a neutral working directory:
+
+   ```bash
+   PI_CODING_AGENT_DIR=<clone> pi install npm:pi-tool-display
+   ```
+
+   That downloads **npm latest** at install time. Do not pin a version in git. After first Pi start, run `/tool-display preset opencode` so diffs use `auto` (split when the terminal is ≥ 120 columns, unified when narrower). Refresh later with the same `pi install` command — no `settings.json` version bump. If npm is unreachable, skip this step: native Pi `edit`/`write` keep the built-in dump, DeepSeek 1C work still proceeds.
+5. Optional MCP: `/installtools` or standalone installers. Do not copy another machine’s `mcp.json` ports blindly.
+6. Check: `/doctor`.
+7. Later refresh of **this clone**: `/update-profile` (or `/update-profile status` first). First install stays a clone; this command does not create a new directory. It updates both the profile files and `packages/pi-1c-agent`. It does **not** auto-update npm — Cursor SDK refresh remains `pi install npm:pi-cursor-sdk`; tool-display refresh remains `pi install npm:pi-tool-display`. To update the Pi CLI shell itself, run `/update-pi-cli` (or `/update-pi-cli status`). To switch an existing install from an old package path to the bundled copy, point `settings.json` `packages[0]` at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or replace it with the placeholder and re-run `scripts/setup.mjs`).
 
 ## License
 

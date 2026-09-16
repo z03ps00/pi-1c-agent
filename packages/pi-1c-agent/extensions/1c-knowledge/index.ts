@@ -12,9 +12,7 @@ import {
   disableItem,
   draftsDir,
   findItem,
-  formatDraftChoice,
   initConfiguration,
-  listDrafts,
   loadAllItems,
   loadConfiguration,
   loadDraft,
@@ -87,6 +85,36 @@ const KnowledgeParams = Type.Object({
   kinds: Type.Optional(Type.Array(Type.String())),
 });
 
+function draftChoiceLabel(draft: any): string {
+  const first = draft?.proposals?.[0]?.item ?? {};
+  const scope = first.scope || "?";
+  const kind = first.kind || "?";
+  const topic = String(first.topic || draft?.input || "draft").replace(/\s+/g, " ").trim().slice(0, 48) || "draft";
+  const id = String(draft?.id ?? "draft");
+  const short = id.length > 8 ? id.slice(-8) : id;
+  return `…${short} · ${scope}/${kind} · ${topic}`;
+}
+
+function pendingDrafts(cwd: string): any[] {
+  const dir = draftsDir(cwd);
+  if (!fs.existsSync(dir)) return [];
+  const drafts: any[] = [];
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!ent.isFile() || !ent.name.endsWith(".json")) continue;
+    try {
+      const draft = JSON.parse(fs.readFileSync(path.join(dir, ent.name), "utf8"));
+      if (!draft?.id || draft.status !== "pending") continue;
+      drafts.push(draft);
+    } catch {}
+  }
+  return drafts.sort((a, b) => {
+    const ta = Date.parse(a.createdAt || "") || 0;
+    const tb = Date.parse(b.createdAt || "") || 0;
+    if (tb !== ta) return tb - ta;
+    return String(b.id).localeCompare(String(a.id));
+  });
+}
+
 export default function oneCKnowledge(pi: ExtensionAPI): void {
   let pending: Pending | null = null;
 
@@ -114,21 +142,66 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   }
 
   async function pickPendingDraftId(ctx: any, title: string): Promise<string | null> {
-    const drafts = listDrafts(ctx.cwd, { status: "pending" });
+    const drafts = pendingDrafts(ctx.cwd);
     if (!drafts.length) {
       ctx.ui.notify("No pending knowledge drafts.", "info");
       return null;
     }
-    const labels = drafts.map((draft: any) => formatDraftChoice(draft));
+    const labels = drafts.map((draft: any) => draftChoiceLabel(draft));
     const selected = await ctx.ui.select(title, labels);
     if (!selected) return null;
-    return drafts.find((draft: any) => formatDraftChoice(draft) === selected)?.id ?? null;
+    return drafts.find((draft: any) => draftChoiceLabel(draft) === selected)?.id ?? null;
   }
 
   async function resolveDraftId(ctx: any, rawId: string, title: string): Promise<string | null> {
     const id = rawId.trim();
     if (id) return id;
     return pickPendingDraftId(ctx, title);
+  }
+
+  async function approveDraftById(ctx: any, rawId: string): Promise<void> {
+    if (!requireBuild(ctx, "/learn approve")) return;
+    const id = await resolveDraftId(ctx, rawId, "Approve knowledge draft");
+    if (!id) return;
+    try {
+      const result = applyDraft(ctx.cwd, id);
+      ctx.ui.notify(`Approved ${id}; ${result.results.length} actions applied.`, "info");
+    } catch (error: any) { ctx.ui.notify(error?.message || String(error), "error"); }
+  }
+
+  async function rejectDraftById(ctx: any, rawId: string): Promise<void> {
+    const id = await resolveDraftId(ctx, rawId, "Reject knowledge draft");
+    if (!id) return;
+    const draft = loadDraft(ctx.cwd, id);
+    if (!draft) return ctx.ui.notify(`Draft not found: ${id}`, "error");
+    draft.status = "rejected";
+    draft.rejectedAt = new Date().toISOString();
+    fs.writeFileSync(path.join(draftsDir(ctx.cwd), `${id}.json`), `${JSON.stringify(draft, null, 2)}\n`);
+    ctx.ui.notify(`Rejected ${id}.`, "info");
+  }
+
+  function startLearnAnalysis(ctx: any, input: string): void {
+    const text = input.trim();
+    if (!text) return;
+    const config = loadConfiguration(ctx.cwd);
+    const prompt = `Classify the following 1C learning input without changing canonical rules.\n\nINPUT:\n${text}\n\nConfiguration: ${config ? `${config.name} ${config.version}` : "not initialized"}\n\nDecide FACT | RULE | PREFERENCE | ASSUMPTION and scope configuration | project. Reusable behavior of the standard configuration is configuration scope. Customer/team policy is project scope. Search/read evidence when necessary; facts marked verified require evidence. Detect if this should update/replace an existing concept rather than add a duplicate.\n\nReturn exactly one section at the end:\n## Knowledge Proposals\n\n\`\`\`json\n[{"action":"add|update","targetId":"optional","kind":"fact|rule|preference|assumption","scope":"configuration|project","topic":"...","title":"...","statement":"...","confidence":"verified|high|medium|low|unknown","tags":[],"evidence":[],"appliesTo":{}}]\n\`\`\`\n\nThis creates a draft only. Do not claim it is active.`;
+    beginAnalysis(ctx, { type: "learn", input: text }, prompt);
+  }
+
+  async function pickLearnAction(ctx: any): Promise<void> {
+    const selected = await ctx.ui.select("Learn", [
+      "new fact/rule",
+      "approve a draft",
+      "reject a draft",
+    ]);
+    if (selected === "approve a draft") return approveDraftById(ctx, "");
+    if (selected === "reject a draft") return rejectDraftById(ctx, "");
+    if (selected !== "new fact/rule") return;
+    const value = await ctx.ui.input("New fact or rule", "What should be learned?");
+    if (value == null) return;
+    const trimmed = value.trim();
+    if (!trimmed) return ctx.ui.notify("No text entered; draft not created.", "info");
+    startLearnAnalysis(ctx, trimmed);
   }
 
   pi.registerTool({
@@ -224,34 +297,14 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("learn", {
-    description: "Propose a learned 1C fact/rule; approval is separate",
+    description: "Learn: new fact/rule | approve a draft | reject a draft (no arg opens picker)",
     handler: async (args, ctx) => {
       if (!requireTrusted(ctx)) return;
       const raw = args?.trim() ?? "";
-      if (raw === "approve" || raw.startsWith("approve ")) {
-        if (!requireBuild(ctx, "/learn approve")) return;
-        const id = await resolveDraftId(ctx, raw.slice("approve".length), "Approve knowledge draft");
-        if (!id) return;
-        try {
-          const result = applyDraft(ctx.cwd, id);
-          ctx.ui.notify(`Approved ${id}; ${result.results.length} actions applied.`, "info");
-        } catch (error: any) { ctx.ui.notify(error?.message || String(error), "error"); }
-        return;
-      }
-      if (raw === "reject" || raw.startsWith("reject ")) {
-        const id = await resolveDraftId(ctx, raw.slice("reject".length), "Reject knowledge draft");
-        if (!id) return;
-        const draft = loadDraft(ctx.cwd, id);
-        if (!draft) return ctx.ui.notify(`Draft not found: ${id}`, "error");
-        draft.status = "rejected";
-        draft.rejectedAt = new Date().toISOString();
-        fs.writeFileSync(path.join(draftsDir(ctx.cwd), `${id}.json`), `${JSON.stringify(draft, null, 2)}\n`);
-        return ctx.ui.notify(`Rejected ${id}.`, "info");
-      }
-      if (!raw) return ctx.ui.notify("Usage: /learn <observation/rule> | approve [draft-id] | reject [draft-id]", "info");
-      const config = loadConfiguration(ctx.cwd);
-      const prompt = `Classify the following 1C learning input without changing canonical rules.\n\nINPUT:\n${raw}\n\nConfiguration: ${config ? `${config.name} ${config.version}` : "not initialized"}\n\nDecide FACT | RULE | PREFERENCE | ASSUMPTION and scope configuration | project. Reusable behavior of the standard configuration is configuration scope. Customer/team policy is project scope. Search/read evidence when necessary; facts marked verified require evidence. Detect if this should update/replace an existing concept rather than add a duplicate.\n\nReturn exactly one section at the end:\n## Knowledge Proposals\n\n\`\`\`json\n[{"action":"add|update","targetId":"optional","kind":"fact|rule|preference|assumption","scope":"configuration|project","topic":"...","title":"...","statement":"...","confidence":"verified|high|medium|low|unknown","tags":[],"evidence":[],"appliesTo":{}}]\n\`\`\`\n\nThis creates a draft only. Do not claim it is active.`;
-      beginAnalysis(ctx, { type: "learn", input: raw }, prompt);
+      if (!raw) return pickLearnAction(ctx);
+      if (raw === "approve" || raw.startsWith("approve ")) return approveDraftById(ctx, raw.slice("approve".length));
+      if (raw === "reject" || raw.startsWith("reject ")) return rejectDraftById(ctx, raw.slice("reject".length));
+      startLearnAnalysis(ctx, raw);
     },
   });
 

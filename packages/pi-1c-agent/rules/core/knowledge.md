@@ -34,12 +34,15 @@ Project-local canonical state:
 
 Each item records `kind`, `scope`, `topic`, `statement`, `status`, `confidence`, provenance/evidence, applicability, timestamps and optional configuration fingerprint.
 
+`/init` always creates the knowledge directory tree. `/init knowledge` (Cursor: `/init-knowledge`) plants that tree into an existing 1C repo without copying the agent or writing `.dev.env`. Fingerprint/`configuration.json` still require a configuration name and version.
+
 ## PLAN / BUILD contract
 
 - PLAN may inspect source and create **draft** proposals only.
 - `/config analyze` and `/config update` are PLAN-only discovery operations.
 - `/learn` produces a draft; it never silently activates knowledge.
-- `/learn approve` and `/config apply` without an id open a pending-draft picker; an explicit id still works.
+- `/learn` with no argument opens an action picker (new fact/rule | approve a draft | reject a draft). Approve/reject then pick a pending draft; `/learn approve <id>` still works.
+- `/config apply` without an id opens a pending-draft picker; an explicit id still works.
 - Canonical apply/disable/configuration initialization requires explicit command in BUILD.
 - Drafts live under `.pi/1c/knowledge-drafts/**`, an approved planning-artifact area.
 

@@ -18,6 +18,7 @@ Written state:
 - `.gitignore` — ensures `.dev.env` and `build/` are ignored (`docs/` is tracked);
 - `.pi/1c/project.yaml` — non-secret project/configuration/capability summary;
 - `.pi/1c/init-state.json` — non-secret initialization state;
+- `.pi/1c/{knowledge,knowledge-drafts,rules}` — project knowledge dirs (always; the agent is not copied);
 - optional standard source scaffold under the selected layout root: `cf/`, `cfe/`, `epf/`, `erf/`;
 - optional compiled-artifact scaffold `build/{cf,cfe,epf,erf}` (binaries named `OriginalName_YYYYMMDD`);
 - optional `docs/` and `docs/techtask/` for documentation and raw agent TZs;
@@ -46,6 +47,7 @@ Before asking `.dev.env` variables, scan **one directory up** for sibling 1C pro
 - `/init advanced` — empty-scaffold path; reviews all upstream variables one by one with human explanations.
 - `/init quick` — key project decisions and upstream defaults for the rest.
 - `/init status` — deterministic status/schema coverage report.
+- `/init knowledge` — plant only `.pi/1c` knowledge dirs into an existing 1C repo (no agent copy, no `.dev.env` wizard, no OpenSpec). Cursor procedure: `/init-knowledge`.
 - `/init` — alias of `/init` for one release.
 
 Defaulted/advisory values must be explained as defaults instead of being treated as mandatory input. Empty values that upstream defines as valid remain valid.
