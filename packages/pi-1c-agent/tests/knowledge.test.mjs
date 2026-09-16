@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   applyDraft, auditDraft, auditKnowledge, automaticInvalidations, computeConfigurationCandidate, createDraft,
-  diffFingerprint, findItem, initConfiguration, loadConfiguration, loadAllItems, normalizeProposal, precedenceOf, queryKnowledge, versionMatches,
+  diffFingerprint, findItem, formatDraftChoice, initConfiguration, listDrafts, loadConfiguration, loadAllItems, normalizeProposal, precedenceOf, queryKnowledge, versionMatches,
 } from '../lib/knowledge.mjs';
 
 function tempProject() {
@@ -140,6 +140,25 @@ test('version update proposes invalidation for exact-bound configuration item bu
   assert.equal(invalidations.length, 1);
   assert.equal(invalidations[0].scope, 'configuration');
   assert.match(invalidations[0].reason, /version binding/i);
+});
+
+test('listDrafts returns pending drafts newest first and formatDraftChoice is stable', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, {name:'ERP', version:'2.5', sourceRoot:'src'});
+  const older = createDraft(cwd, {proposals:[{action:'add', kind:'rule', scope:'project', topic:'old-topic', statement:'Older pending', confidence:'high'}]});
+  older.createdAt = '2026-01-01T00:00:00.000Z';
+  fs.writeFileSync(path.join(cwd, '.pi', '1c', 'knowledge-drafts', `${older.id}.json`), `${JSON.stringify(older, null, 2)}\n`);
+  const newer = createDraft(cwd, {proposals:[{action:'add', kind:'rule', scope:'project', topic:'new-topic', statement:'Newer pending', confidence:'high'}]});
+  newer.createdAt = '2026-09-16T00:00:00.000Z';
+  fs.writeFileSync(path.join(cwd, '.pi', '1c', 'knowledge-drafts', `${newer.id}.json`), `${JSON.stringify(newer, null, 2)}\n`);
+  applyDraft(cwd, createDraft(cwd, {proposals:[{action:'add', kind:'fact', scope:'configuration', topic:'done', statement:'Already applied', confidence:'high'}]}).id);
+  const pending = listDrafts(cwd, { status: 'pending' });
+  assert.deepEqual(pending.map((d) => d.id), [newer.id, older.id]);
+  assert.equal(pending.every((d) => d.status === 'pending'), true);
+  const label = formatDraftChoice(newer);
+  assert.match(label, /new-topic/);
+  assert.match(label, /project\/rule/);
+  assert.ok(label.includes(newer.id.slice(-8)));
 });
 
 test('supersedes preserves history instead of deleting old knowledge', () => {

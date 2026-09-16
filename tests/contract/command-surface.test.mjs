@@ -44,3 +44,31 @@ test('no /1c-* prompt files; remaining titles are unprefixed', () => {
     );
   }
 });
+
+const FORBIDDEN_PREFIXED_COMMAND = /\/1c-(learn|config|rule|init|doctor|mode|anon|approve|wrap|agents|memory-flush|bootstrap|openspec-setup|agent-scope|session-rotate|capture-model)\b/g;
+
+function walkFiles(dir, exts, acc = []) {
+  if (!fs.existsSync(dir)) return acc;
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) walkFiles(p, exts, acc);
+    else if (exts.some((ext) => ent.name.endsWith(ext))) acc.push(p);
+  }
+  return acc;
+}
+
+test('package skills/rules/lib do not teach /1c-* command names', () => {
+  const pkg = path.join(profileRoot(), 'packages', 'pi-1c-agent');
+  const files = [
+    ...walkFiles(path.join(pkg, 'skills'), ['.md']),
+    ...walkFiles(path.join(pkg, 'rules'), ['.md']),
+    ...walkFiles(path.join(pkg, 'lib'), ['.mjs']),
+  ];
+  const hits = [];
+  for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+    const matches = text.match(FORBIDDEN_PREFIXED_COMMAND);
+    if (matches) hits.push(`${path.relative(pkg, file)}: ${[...new Set(matches)].join(', ')}`);
+  }
+  assert.deepEqual(hits, [], hits.join('\n'));
+});

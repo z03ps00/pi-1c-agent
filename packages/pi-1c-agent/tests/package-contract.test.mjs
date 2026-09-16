@@ -65,6 +65,17 @@ test('session-rotate command and compaction hooks are registered', () => {
   assert.match(src, /STATE_CUSTOM_TYPE/);
 });
 
+test('knowledge commands pick pending drafts without /1c- names', () => {
+  const src = fs.readFileSync(path.join(root, 'extensions', '1c-knowledge', 'index.ts'), 'utf8');
+  assert.match(src, /registerCommand\("learn"/);
+  assert.match(src, /registerCommand\("config"/);
+  assert.match(src, /listDrafts/);
+  assert.match(src, /formatDraftChoice/);
+  assert.match(src, /ctx\.ui\.select/);
+  assert.doesNotMatch(src, /registerCommand\("1c-learn"/);
+  assert.doesNotMatch(src, /\/1c-learn|\/1c-config/);
+});
+
 test('1c-mode docker hard-block is flag or socket detect, not unconditional', () => {
   const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
   assert.match(mode, /from "\.\.\/\.\.\/lib\/docker-policy\.mjs"/);

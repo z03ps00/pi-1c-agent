@@ -39,6 +39,7 @@ Each item records `kind`, `scope`, `topic`, `statement`, `status`, `confidence`,
 - PLAN may inspect source and create **draft** proposals only.
 - `/config analyze` and `/config update` are PLAN-only discovery operations.
 - `/learn` produces a draft; it never silently activates knowledge.
+- `/learn approve` and `/config apply` without an id open a pending-draft picker; an explicit id still works.
 - Canonical apply/disable/configuration initialization requires explicit command in BUILD.
 - Drafts live under `.pi/1c/knowledge-drafts/**`, an approved planning-artifact area.
 

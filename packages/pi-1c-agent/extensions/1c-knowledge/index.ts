@@ -12,7 +12,9 @@ import {
   disableItem,
   draftsDir,
   findItem,
+  formatDraftChoice,
   initConfiguration,
+  listDrafts,
   loadAllItems,
   loadConfiguration,
   loadDraft,
@@ -111,6 +113,24 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
     pi.sendUserMessage(prompt);
   }
 
+  async function pickPendingDraftId(ctx: any, title: string): Promise<string | null> {
+    const drafts = listDrafts(ctx.cwd, { status: "pending" });
+    if (!drafts.length) {
+      ctx.ui.notify("No pending knowledge drafts.", "info");
+      return null;
+    }
+    const labels = drafts.map((draft: any) => formatDraftChoice(draft));
+    const selected = await ctx.ui.select(title, labels);
+    if (!selected) return null;
+    return drafts.find((draft: any) => formatDraftChoice(draft) === selected)?.id ?? null;
+  }
+
+  async function resolveDraftId(ctx: any, rawId: string, title: string): Promise<string | null> {
+    const id = rawId.trim();
+    if (id) return id;
+    return pickPendingDraftId(ctx, title);
+  }
+
   pi.registerTool({
     name: "knowledge_1c",
     label: "1C Knowledge",
@@ -190,8 +210,8 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
 
       if (sub === "apply") {
         if (!requireTrusted(ctx) || !requireBuild(ctx, "/config apply")) return;
-        const draftId = rest.trim();
-        if (!draftId) return ctx.ui.notify("Usage: /config apply <draft-id>", "info");
+        const draftId = await resolveDraftId(ctx, rest, "Apply knowledge draft");
+        if (!draftId) return;
         try {
           const result = applyDraft(ctx.cwd, draftId);
           pi.sendMessage({ customType: "pi-1c-config-apply", content: `Applied ${draftId}:\n${result.results.map((r: any) => `- ${r.action}: ${r.id ?? r.version ?? ""}`).join("\n") || "- no changes"}`, display: true }, { triggerTurn: false });
@@ -208,17 +228,19 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
     handler: async (args, ctx) => {
       if (!requireTrusted(ctx)) return;
       const raw = args?.trim() ?? "";
-      if (raw.startsWith("approve ")) {
+      if (raw === "approve" || raw.startsWith("approve ")) {
         if (!requireBuild(ctx, "/learn approve")) return;
-        const id = raw.slice("approve ".length).trim();
+        const id = await resolveDraftId(ctx, raw.slice("approve".length), "Approve knowledge draft");
+        if (!id) return;
         try {
           const result = applyDraft(ctx.cwd, id);
           ctx.ui.notify(`Approved ${id}; ${result.results.length} actions applied.`, "info");
         } catch (error: any) { ctx.ui.notify(error?.message || String(error), "error"); }
         return;
       }
-      if (raw.startsWith("reject ")) {
-        const id = raw.slice("reject ".length).trim();
+      if (raw === "reject" || raw.startsWith("reject ")) {
+        const id = await resolveDraftId(ctx, raw.slice("reject".length), "Reject knowledge draft");
+        if (!id) return;
         const draft = loadDraft(ctx.cwd, id);
         if (!draft) return ctx.ui.notify(`Draft not found: ${id}`, "error");
         draft.status = "rejected";
@@ -226,7 +248,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
         fs.writeFileSync(path.join(draftsDir(ctx.cwd), `${id}.json`), `${JSON.stringify(draft, null, 2)}\n`);
         return ctx.ui.notify(`Rejected ${id}.`, "info");
       }
-      if (!raw) return ctx.ui.notify("Usage: /learn <observation/rule> | approve <draft-id> | reject <draft-id>", "info");
+      if (!raw) return ctx.ui.notify("Usage: /learn <observation/rule> | approve [draft-id] | reject [draft-id]", "info");
       const config = loadConfiguration(ctx.cwd);
       const prompt = `Classify the following 1C learning input without changing canonical rules.\n\nINPUT:\n${raw}\n\nConfiguration: ${config ? `${config.name} ${config.version}` : "not initialized"}\n\nDecide FACT | RULE | PREFERENCE | ASSUMPTION and scope configuration | project. Reusable behavior of the standard configuration is configuration scope. Customer/team policy is project scope. Search/read evidence when necessary; facts marked verified require evidence. Detect if this should update/replace an existing concept rather than add a duplicate.\n\nReturn exactly one section at the end:\n## Knowledge Proposals\n\n\`\`\`json\n[{"action":"add|update","targetId":"optional","kind":"fact|rule|preference|assumption","scope":"configuration|project","topic":"...","title":"...","statement":"...","confidence":"verified|high|medium|low|unknown","tags":[],"evidence":[],"appliesTo":{}}]\n\`\`\`\n\nThis creates a draft only. Do not claim it is active.`;
       beginAnalysis(ctx, { type: "learn", input: raw }, prompt);
@@ -248,7 +270,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
         }
         const draft = createDraft(ctx.cwd, { source: "user", input: statement, proposals: [{ action: "add", kind: "rule", scope, topic, statement, confidence: "verified", evidence: [{ type: "user", note: "explicit user rule" }] }] });
         const review = auditDraft(ctx.cwd, draft);
-        pi.sendMessage({ customType: "pi-1c-rule-draft", content: `${formatDraftSummary(draft, review)}\n\nNothing is active yet. In BUILD approve with /learn approve ${draft.id}`, display: true }, { triggerTurn: false });
+        pi.sendMessage({ customType: "pi-1c-rule-draft", content: `${formatDraftSummary(draft, review)}\n\nNothing is active yet. In BUILD approve with /learn approve (picker) or /learn approve ${draft.id}`, display: true }, { triggerTurn: false });
         return;
       }
 
@@ -301,7 +323,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
     const proposals = [...(pending.automaticProposals ?? []), ...parsed.proposals];
     const draft = createDraft(ctx.cwd, { source: pending.type === "learn" ? "user-assisted" : "analysis", input: pending.input, proposals, meta: pending.meta ?? {} });
     const review = auditDraft(ctx.cwd, draft);
-    pi.sendMessage({ customType: "pi-1c-knowledge-draft", content: `${formatDraftSummary(draft, review)}\n\nThis is only a draft. Review with /rule show ${draft.id} or /rule audit ${draft.id}. Activate only in BUILD with /learn approve ${draft.id} or /config apply ${draft.id}.`, display: true }, { triggerTurn: false });
+    pi.sendMessage({ customType: "pi-1c-knowledge-draft", content: `${formatDraftSummary(draft, review)}\n\nThis is only a draft. Review with /rule show ${draft.id} or /rule audit ${draft.id}. Activate only in BUILD with /learn approve or /config apply (picker), or /learn approve ${draft.id} / /config apply ${draft.id}.`, display: true }, { triggerTurn: false });
     pending = null;
     persistPending();
   });

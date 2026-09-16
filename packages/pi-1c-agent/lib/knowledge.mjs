@@ -260,7 +260,7 @@ export function initConfiguration(cwd, { name, version, family, sourceRoot = '.'
 
 export function computeConfigurationCandidate(cwd, { version, deep = false } = {}) {
   const config = loadConfiguration(cwd);
-  if (!config) throw new Error('configuration is not initialized; run /1c-config init in BUILD first');
+  if (!config) throw new Error('configuration is not initialized; run /config init in BUILD first');
   const sourceRoot = path.resolve(cwd, config.sourceRoot || '.');
   const scanned = scanFingerprint(sourceRoot, { deep });
   let oldIndex = {};
@@ -290,6 +290,37 @@ export function loadDraft(cwd, draftId) {
   const file = path.join(draftsDir(cwd), `${draftId}.json`);
   if (!fs.existsSync(file)) return null;
   return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+export function formatDraftChoice(draft) {
+  const first = draft?.proposals?.[0]?.item ?? {};
+  const scope = first.scope || '?';
+  const kind = first.kind || '?';
+  const topic = String(first.topic || draft?.input || 'draft').replace(/\s+/g, ' ').trim().slice(0, 48) || 'draft';
+  const id = String(draft?.id ?? 'draft');
+  const short = id.length > 8 ? id.slice(-8) : id;
+  return `…${short} · ${scope}/${kind} · ${topic}`;
+}
+
+export function listDrafts(cwd, { status } = {}) {
+  const dir = draftsDir(cwd);
+  if (!fs.existsSync(dir)) return [];
+  const drafts = [];
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!ent.isFile() || !ent.name.endsWith('.json')) continue;
+    try {
+      const draft = JSON.parse(fs.readFileSync(path.join(dir, ent.name), 'utf8'));
+      if (!draft?.id) continue;
+      if (status && draft.status !== status) continue;
+      drafts.push(draft);
+    } catch {}
+  }
+  return drafts.sort((a, b) => {
+    const ta = Date.parse(a.createdAt || '') || 0;
+    const tb = Date.parse(b.createdAt || '') || 0;
+    if (tb !== ta) return tb - ta;
+    return String(b.id).localeCompare(String(a.id));
+  });
 }
 
 function updateExistingItem(cwd, existing, patch) {

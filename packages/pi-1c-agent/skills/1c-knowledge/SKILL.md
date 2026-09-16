@@ -16,4 +16,4 @@ Precedence:
 5. assumptions;
 6. generic BASE `ai_rules_1c` rules.
 
-Never treat a draft as active knowledge. `/1c-learn` and `/1c-config analyze/update` create proposals. Canonical activation requires explicit approval in BUILD.
+Never treat a draft as active knowledge. `/learn` and `/config analyze/update` create proposals. Canonical activation requires explicit approval in BUILD: `/learn approve` or `/config apply` opens a draft picker; `/learn approve <draft-id>` still works.

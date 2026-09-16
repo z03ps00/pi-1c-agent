@@ -9,7 +9,7 @@ Use native OpenSpec support for vanilla Pi.
 
 ## Setup
 
-From the project root run the package prompt `/1c-openspec-setup`, or execute:
+From the project root run `/openspec-setup`, or execute:
 
 `node <pi-1c-agent-package>/tools/openspec-setup.mjs --install-cli`
 
