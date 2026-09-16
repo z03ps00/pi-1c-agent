@@ -1,108 +1,113 @@
-# pi-1c-agent — Pi 1C profile
+# pi-1c-agent
 
-Git-tracked Pi 1C agent profile (`PI_CODING_AGENT_DIR`): rules, agents, skills, prompts, MCP settings, and the `packages/pi-1c-agent` runtime. Clone it onto Windows, Linux, or macOS. It does not require folders from another PC.
+Агент-профиль для [Pi](https://github.com/badlogic/pi-mono), заточенный под разработку на **1С:Предприятие**. Работает в Pi и в Cursor.
 
-**Agent header:** `AGENTS.md` § *This profile: install or update*. Fresh machine → `scripts/setup.mjs`. Existing clone → `/update-profile`. Do the matching path; do not only describe it.
+Вы пишете код в расширении, агент знает, что нельзя создавать объекты в основной конфигурации. Вы спрашиваете про регистр — агент сначала лезет в MCP за метаданными, а не выдумывает имена реквизитов. Вы открываете сессию — агент стартует в режиме «только чтение» и не трогает ваш проект, пока вы не переключите его в BUILD.
 
-## Dual host (Pi vs Cursor)
+Это не выгрузка конфигурации, не готовая база и не ещё один набор промптов. Это правила, команды, скиллы и runtime-пакет, которые превращают голого агента в инструмент, понимающий контекст 1С.
 
-ASK/PLAN/BUILD and ANON tool gates exist in **Pi** (`1c-mode`). Cursor loads the same `AGENTS.md` but does **not** enforce the write-block or anonymous denials. `/init` TUI is Pi-only; in Cursor follow `rules-1c/core/project-init.md` as the procedure. Catalog is `/commands` (not Cursor `/help`). `/session-rotate` is an **opt-in Pi-only** alternative to in-place compaction (handoff → new session → continue). It is **off** by default, does not change `settings.json` compaction, and does **not** activate under Cursor. Session capture (`/wrap`) **distills** a dialog into Cognee + OpenViking — never a raw transcript. In **Pi**, idle capture is **on by default** (toggle `/wrap auto off|on`); `/wrap` is the manual reserve. Idle capture is Pi-only (Cursor: `/wrap` only). `/memory-flush` replays `state/agent-memory/pending`. `/capture-model` chooses the distiller (`off` / `stack` / `ollama` / `routerai` / `chat`). Anon and ASK/PLAN still block every write even with automatic capture on.
+## Что это даёт на практике
 
-**BREAKING (Pi startup):** a new session starts in **ASK** (read-only), not BUILD. Pin BUILD with `--1c-mode build` or `PI_1C_DEFAULT_MODE=build`. `/mode ask|plan|build`; `Ctrl+Alt+P` cycles BUILD → PLAN → ASK.
+**Три режима вместо одного.** ASK — задаёте вопросы, агент читает код и документацию, но ничего не пишет. PLAN — агент исследует задачу и готовит план с файлами и рисками; код не трогает. BUILD — агент реализует. Переключение: `/mode ask|plan|build` или `Ctrl+Alt+P`. Новая сессия стартует в ASK — это защита от случайных правок, а не ограничение.
 
-**Anonymous session (Pi):** `/anon 1|2|3|off`, `Ctrl+Alt+A`. Blocks Cognee/OpenViking writes (and reads from level 2) plus `$PI_CODING_AGENT_DIR/state/agent-memory/pending/**`. Level 3 also blocks project `handoffs/**`; a fully empty transcript needs `--no-session`. Footer shows `anon:off|1|2|3`.
+**Инициализация проекта одной командой.** `/init` спрашивает: пустой каркас или выгрузка из существующей ИБ / `.cf` / `.dt`. Создаёт структуру каталогов (`src/cf`, `src/cfe`, `build/`), файл `.dev.env` с переменными платформы и ИБ (пароли остаются только в нём), подключает слой знаний конфигурации `.pi/1c`. Если рядом лежат другие 1С-проекты — подхватит из них общий PREFIX, DEVELOPER, PLATFORM_PATH и не будет спрашивать второй раз. `/init knowledge` сажает только дерево знаний в уже существующий репозиторий, не копируя агента.
 
-## Commands
+**MCP подключается по желанию, а не из коробки.** По умолчанию `mcp.json` пустой: ни Cognee, ни OpenViking, ни портов 1С. Подключение — `/installtools` или отдельные установщики. Не надо копировать чужой конфиг с портами чужой машины.
 
-Canonical names have **no** `1c-` prefix: `/init`, `/initproject`, `/doctor`, `/installmcp`, `/installtools`, `/checkmcp`, `/review-airules`. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, and `/session-rotate` are registered by the Pi package (no matching `prompts/*.md`). See `prompts/CATALOG.md` and `/commands` (everyday, then settings, then maintainer). The `/` palette lists prompt templates and extension commands only (`enableSkillCommands: false`); skills still load on demand, they are not `/skill:name` entries. Toggle back in `/settings` if needed.
+**Память и анонимность.** Агент может записывать решения и контекст в Cognee / OpenViking (если подключены). `/anon 1|2|3|off` отключает запись, чтение или и то и другое — для работы с чужим кодом или демонстрации. `/approve off|safe|strict` ставит подтверждение на опасные действия в BUILD: запись файлов, деструктивный bash, MCP-мутации.
 
-- `/init` — one wizard. First question: empty scaffold vs dump from IB / `.cf` / `.dt`. Apply always creates `.pi/1c` knowledge dirs. `/init knowledge` plants that tree into an existing repo without copying the agent.
-- `/init-knowledge` — Cursor procedure for `/init knowledge`.
-- `/initproject` — alias of `/init` from-infobase.
-- `/doctor` — deterministic health check. LLM diagnostic is `/doctor-explain`.
-- `/review-airules` — maintainer review of `comol/ai_rules_1c` for **this profile**. `/updaterules` / `/checkupdates` stay for 1C *projects*.
-- `/update-profile` — refresh **this profile** from the clone’s git remote (`origin`). Not `/updaterules`. Preserves `auth.json`, `trust.json`, opted-in MCP servers, and a local `pi-1c-agent` path. If the placeholder is still present, points `packages[0]` at the in-repo `packages/pi-1c-agent`. Does not run `pi install`.
-- `/update-pi-cli` — update the **Pi CLI shell** (`@earendil-works/pi-coding-agent`) in its npm prefix to the latest version. Preserves `settings.json`, `mcp.json`, and secrets.
-- `/session-rotate` — opt-in Pi-only session rotation at a context threshold (default off, 85%). Reuses the `handoff` skill format. Does not change `settings.json` compaction defaults.
-- `/wrap` — capture this dialog now (manual reserve). `/wrap auto on|off` toggles Pi idle capture (default **on** in Pi). Distills; does not store raw transcripts in memory. `/wrap archive` opts in to a redacted OpenViking transcript **document**.
-- `/memory-flush` — replay pending Cognee/OpenViking records; report confirmed / still-pending / duplicate-skipped.
-- `/capture-model` — distiller: `status | off | stack | ollama <model> | routerai <model> | chat` (default `stack`).
+**Vanessa, Конвертация данных, Humanizer — как опции.** Скиллы для Vanessa Automation (сценарные тесты через MCP), КД 2 / КД 3 (правила конвертации через MCP Toolkit по HTTP) и Humanizer RU (редактура русского текста) — бета, в отдельных каталогах. `/init` спрашивает про них; молчание = нет. Они не часть `comol/ai_rules_1c` и ставятся отдельно.
 
-## Lab extras (beta)
+## Примеры
 
-Vanessa Automation scenarios, Конвертация данных 2/3 (via MCP Toolkit HTTP), and Humanizer RU are **author lab extras**, not `comol/ai_rules_1c`. Vanessa/KD/toolkit are beta and may change. `humanizer-ru` is a snapshot of Comol [`Humanizer_RU`](https://github.com/comol/Humanizer_RU) plus this author’s `knowledge/` overlay — not the English `humanizer` skill and not `/review-airules`.
+**Начать новый проект 1С:**
+```
+/mode build
+/init
+```
+Мастер спросит: пустой каркас или выгрузка? Какая платформа, какой префикс, нужны ли Vanessa / КД? Соберёт `.dev.env`, создаст каталоги, опционально скачает конфигурацию из ИБ.
 
-Skills live in this profile (`skills/vanessa-mcp`, `kd2-rules`, `kd31-rules`, `1c-mcp-toolkit`, `humanizer-ru`). `/init` asks Vanessa / KD / Humanizer; silence is No. Apply writes **project data** (dirs and `.dev.env` keys for Vanessa/KD) or a **preference flag** (Humanizer) — not a follow-up skill copy into the 1C project. Declined extras can be enabled later (`/install-vanessa-mcp`, extras re-ask, first-use consent) without a full re-init.
+**Разобраться в чужом коде, не трогая его:**
+```
+/mode ask
+```
+Спрашиваете — агент читает исходники, вызывает MCP для метаданных, объясняет. Файлы не меняются.
 
-Vanessa MCP is a **separate** opt-in family (`mcp.optional/vanessa.json`, `${VANESSA_MCP_URL}`). `recommended` does not preselect it. Toolkit ports and Humanizer are never MCP servers. Refresh extras from the author’s working tree into `$PI_CODING_AGENT_DIR/skills/` and append `LAB-EXTRAS.md` — do not touch `UPSTREAM-REGISTER.md` / `upstream.lock.json`.
+**Спланировать доработку:**
+```
+/mode plan
+```
+Агент исследует задачу, выбирает целевой контейнер (расширение или основную конфигурацию по правилам из `rules-1c/`), пишет план с файлами и рисками. Когда план готов — предлагает перейти в BUILD.
 
-## MCP (opt-in)
+**Проверить, что профиль стоит правильно:**
+```
+/doctor
+```
+Проверяет пути, пакеты, `settings.json`, MCP. Если что-то не так — говорит, что именно. `/doctor-explain` — разбор от модели.
 
-Default `mcp.json` does not register Cognee, OpenViking, 1C ports 8002–8008, or Vanessa. Ask at `/installtools` or `/install-memory-mcp` (our OpenViking + Cognee pair; not the upstream Cognee installer). Fragments: `mcp.optional/`. Stack: `mcp.optional/memory-stack/`. Example merge: `mcp.example.json` (knowledge + memory + 1C bundle only — Vanessa is not in that example). `notifyOnStartupConnect` is `false`. `/checkmcp` is status-only; repair is explicit. Absent Vanessa = `not configured`.
+**Обновить профиль или Pi CLI:**
+```
+/update-profile
+/update-pi-cli
+```
+Первая команда обновляет этот клон с `origin`, не затирая секреты и выбранные MCP. Вторая — обновляет оболочку Pi в npm-префиксе.
 
-External OAuth servers (`auth: "oauth"`, Keycloak-style realms): recipe plus the trusted-host, loopback-callback, scope and `/reload` pitfalls — [`MCP-OAUTH.md`](MCP-OAUTH.md).
+## Установка
 
-## Docker
+Профиль работает на Windows, Linux и macOS. Каталог — там, куда клонируете; чужих путей не требует.
 
-The agent may use Docker when the engine is reachable. Confirm creates. If `docker ps` fails, print host commands once (no loop). Lab-only hard-block: `PI_1C_BLOCK_DOCKER=1`. `~/mcp-ctl.sh` / `~/mcp-host.sh` are this lab’s helpers, not the Windows Docker Desktop path.
+1. Клонируйте репозиторий. Задайте `PI_CODING_AGENT_DIR` (без пробела в конце имени папки):
 
-## What is inside
+   ```bash
+   git clone https://github.com/z03ps00/pi-1c-agent.git ~/pi-1c-agent
+   export PI_CODING_AGENT_DIR=~/pi-1c-agent
+   ```
 
-| Path | Purpose |
-|---|---|
-| `AGENTS.md` | Overlay (ASK/PLAN/BUILD/ANON, MCP opt-in, Docker, memory) |
-| `rules-1c/` | Adapted 1C rules + `AGENTS-UPSTREAM.md` + `core/` |
-| `agents/` | Subagent prompts |
-| `skills/` | Profile skills |
-| `prompts/` | Slash-command templates (unprefixed) |
-| `packages/pi-1c-agent/` | Pi runtime package (extensions that register `/init`, `/doctor`, `/mode`, `/anon`, `/session-rotate`, `/wrap`, `/memory-flush`, `/capture-model`). Updated with this clone |
-| `scripts/` | Host helpers (`setup.mjs` first install, `update-profile.mjs` refreshes this clone from origin, `update-pi-cli.mjs` updates the Pi CLI shell). Not Pi `tools/` — that name triggers a startup deprecation warning |
-| `settings.json` | Theme, default model, package list (`<path-to-pi-1c-agent>` placeholder until `scripts/setup.mjs` or `/update-profile` resolves the in-repo path; unpinned `npm:pi-cursor-sdk` and `npm:pi-tool-display`) |
-| `mcp.json` | Default MCP (empty optional servers) |
-| `manifest/` | Manifest resolved through `PI_PACKAGE_DIR`. Supplies `piConfig.clientUri` so OAuth client registration passes realms with a trusted-host policy (`MCP-OAUTH.md`) |
-| `NOTICE` | Upstream `comol/ai_rules_1c` terms vs this overlay; lab extras vs Humanizer_RU |
-| `upstream.lock.json`, `UPSTREAM-REGISTER.md` | Comol pin and apply register |
-| `LAB-EXTRAS.md`, `lab-extras.lock.json` | Lab extras snapshot (not the airules pin) |
-
-## What is not in git
-
-* `auth.json` — provider API keys. Copy from `auth.example.json`.
-* `trust.json` — trusted project paths. Copy from `trust.example.json`.
-* `.dev.env` — per-**project** secrets and infobase paths, never this profile.
-* `npm/` / `node_modules` / packed tarballs of Pi packages (including `pi-cursor-sdk` and `pi-tool-display`). Install them with `pi install`; do not vendor them here.
-
-## Deploy on another machine
-
-1. Clone into the profile directory. Set `PI_CODING_AGENT_DIR` to that clone (no trailing-space folder names).
-2. Run first-time setup (resolves `packages/pi-1c-agent` in `settings.json`; copies `auth.json` / `trust.json` from the examples if they are missing):
+2. Первый запуск (прописывает пакет в `settings.json`, копирует примеры `auth.json` / `trust.json`):
 
    ```bash
    node "$PI_CODING_AGENT_DIR/scripts/setup.mjs"
    ```
 
-   On Windows: `node "%PI_CODING_AGENT_DIR%\scripts\setup.mjs"`. Re-running is safe. If `settings.json` already has a different local `pi-1c-agent` path, that path is kept.
-3. Install the Cursor SDK provider ([fitchmultz/pi-cursor-sdk](https://github.com/fitchmultz/pi-cursor-sdk)). Needs **Node.js 22.19+** and **Pi 0.84.0 or later**. From a neutral working directory:
+   Windows: `node "%PI_CODING_AGENT_DIR%\scripts\setup.mjs"`. Повторный запуск безопасен.
+
+3. По желанию — провайдер Cursor SDK и отрисовка инструментов:
 
    ```bash
    PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk
-   ```
-
-   That downloads **npm latest** at install time. Do not pin a version in git. Maintainers who explicitly want git HEAD may use `pi install https://github.com/fitchmultz/pi-cursor-sdk`; that is not the default.
-
-   Refresh later with the same command — no `settings.json` version bump. If `pi list` still shows `@jiah-liu/pi-cursor-provider`, `pi remove` that package first so only one `cursor` provider remains.
-
-   A Cursor API key is optional. 1C work uses the shipped DeepSeek default until you run `/login`, choose an API key, and pick Cursor. If npm is unreachable, skip this step: `/doctor` WARNs, CORE can still pass, DeepSeek still works.
-4. Install OpenCode-style tool/diff rendering ([Elsin/pi-tool-display](https://github.com/Elsin/pi-tool-display)). From a neutral working directory:
-
-   ```bash
    PI_CODING_AGENT_DIR=<clone> pi install npm:pi-tool-display
    ```
 
-   That downloads **npm latest** at install time. Do not pin a version in git. After first Pi start, run `/tool-display preset opencode` so diffs use `auto` (split when the terminal is ≥ 120 columns, unified when narrower). Refresh later with the same `pi install` command — no `settings.json` version bump. If npm is unreachable, skip this step: native Pi `edit`/`write` keep the built-in dump, DeepSeek 1C work still proceeds.
-5. Optional MCP: `/installtools` or standalone installers. Do not copy another machine’s `mcp.json` ports blindly.
-6. Check: `/doctor`.
-7. Later refresh of **this clone**: `/update-profile` (or `/update-profile status` first). First install stays a clone; this command does not create a new directory. It updates both the profile files and `packages/pi-1c-agent`. It does **not** auto-update npm — Cursor SDK refresh remains `pi install npm:pi-cursor-sdk`; tool-display refresh remains `pi install npm:pi-tool-display`. To update the Pi CLI shell itself, run `/update-pi-cli` (or `/update-pi-cli status`). To switch an existing install from an old package path to the bundled copy, point `settings.json` `packages[0]` at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or replace it with the placeholder and re-run `scripts/setup.mjs`).
+   Без них `/doctor` даст WARN, а работа на DeepSeek (дефолт) остаётся возможной.
 
-## License
+4. MCP: `/installtools`. Не копируйте чужой `mcp.json`.
+5. Проверка: `/doctor`.
+6. Обновление: `/update-profile` (профиль), `/update-pi-cli` (оболочка Pi).
 
-See `NOTICE`. Upstream pin: `comol/ai_rules_1c` SHA in `upstream.lock.json`.
+Секреты — только локально: `auth.json`, `trust.json`. Пароли ИБ — в `.dev.env` **проекта**, не в этом репозитории.
+
+Подробности для агента: [`AGENTS.md`](AGENTS.md). OAuth MCP: [`MCP-OAUTH.md`](MCP-OAUTH.md).
+
+## Что внутри
+
+| Путь | Что делает |
+|---|---|
+| `AGENTS.md` | Главные правила агента: режимы, MCP, Docker, память |
+| `rules-1c/` | Адаптированные правила 1С (upstream `comol/ai_rules_1c` + оверлей) |
+| `agents/`, `skills/`, `prompts/` | Субагенты, скиллы, шаблоны команд |
+| `packages/pi-1c-agent/` | Runtime: `/init`, `/doctor`, `/mode`, `/anon`, `/wrap`, `/session-rotate` |
+| `scripts/` | Установка, обновление, проверка перед публикацией |
+| `mcp.json`, `mcp.optional/` | Пустой дефолт + фрагменты для подключения серверов |
+
+## Лицензия и благодарности
+
+Оригинальная работа — [MIT](LICENSE).
+
+Сторонний материал оставлен в дереве и не перелицензируется. Спасибо авторам:
+
+- [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c) — правила 1С (условия — в README upstream);
+- [Desko77/cursor-1c-skills](https://github.com/Desko77/cursor-1c-skills) — MIT, основа lab extras;
+- [comol/Humanizer_RU](https://github.com/comol/Humanizer_RU) — MIT;
+- Vanessa Automation (Pr-Mex), neurofish `client_mcp.cfe`, ROCTUP `MCP_Toolkit.epf` — сторонние продукты, на которые опираются extras.
+
+Полная граница лицензий: [`NOTICE`](NOTICE).
