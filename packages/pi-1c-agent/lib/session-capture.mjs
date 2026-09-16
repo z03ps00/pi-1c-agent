@@ -1,7 +1,9 @@
 import { redact } from './redact.mjs';
 import { buildIdempotencyKey, contentHash, mintCorrelationId } from './memory-key.mjs';
-import { prepareWrite, writePaired } from './memory-write.mjs';
+import { halfConfirmed, prepareWrite, writePaired } from './memory-write.mjs';
 import { queuePendingRecord } from './memory-reconcile.mjs';
+
+export { distillWithProvider, parseDistillPayload } from './distill-provider.mjs';
 
 export const CAPTURE_STATE_TYPE = 'pi-1c-session-capture-state';
 export const DISTILLER_MODES = Object.freeze(['off', 'stack', 'ollama', 'routerai', 'chat']);
@@ -89,6 +91,56 @@ export function footerCaptureLabel(state, host = 'pi') {
   return s.idleEnabled ? `capture:on/${s.distiller.mode}` : `capture:off/${s.distiller.mode}`;
 }
 
+/** Pi event ctx has getContextUsage but not newSession (command-only). */
+export function detectCaptureHost(ctx) {
+  if (!ctx || typeof ctx !== 'object') return 'cursor';
+  if (typeof ctx.getContextUsage === 'function' || typeof ctx.newSession === 'function') return 'pi';
+  return 'cursor';
+}
+
+/**
+ * Unwrap Pi SessionEntry envelopes so distillHeuristic sees tool/input/content.
+ * Already-flat test rows pass through unchanged.
+ */
+export function flattenSessionEntries(entries) {
+  const out = [];
+  for (const raw of Array.isArray(entries) ? entries : []) {
+    if (!raw || typeof raw !== 'object') continue;
+    const inner = raw.message && typeof raw.message === 'object' && !Array.isArray(raw.message)
+      ? raw.message
+      : raw;
+    const contentParts = Array.isArray(inner.content) ? inner.content : [];
+    const textFromParts = contentParts
+      .filter((x) => x && x.type === 'text')
+      .map((x) => String(x.text ?? ''))
+      .filter(Boolean)
+      .join('\n');
+    const content = typeof inner.content === 'string'
+      ? inner.content
+      : (textFromParts || (typeof raw.content === 'string' ? raw.content : '') || String(inner.text || raw.text || ''));
+    const tool = inner.toolName || inner.name || inner.tool || raw.toolName || raw.name || raw.tool || '';
+    const input = inner.input || inner.args || inner.arguments || raw.input || raw.args || {};
+    out.push({
+      type: raw.type || inner.type || inner.role,
+      role: inner.role || raw.role || raw.type,
+      tool,
+      input,
+      content,
+    });
+    for (const part of contentParts) {
+      if (!part || part.type !== 'toolCall') continue;
+      out.push({
+        type: 'toolCall',
+        role: inner.role || raw.role || 'assistant',
+        tool: part.name || part.toolName || part.tool || '',
+        input: part.arguments || part.args || part.input || {},
+        content: '',
+      });
+    }
+  }
+  return out;
+}
+
 export function emptyDistill() {
   return {
     task: '',
@@ -135,7 +187,7 @@ export function distillHeuristic(entries = []) {
     for (const line of text.split(/\r?\n/)) {
       if (/decision:/i.test(line)) pushUnique(distilled.locked_decisions, line.replace(/^.*decision:\s*/i, '').trim());
       if (/next steps?:/i.test(line)) pushUnique(distilled.unresolved, line.replace(/^.*next steps?:\s*/i, '').trim());
-      if (/verified|verification:/i.test(line)) pushUnique(distilled.verification, line.replace(/^.*(?:verified|verification:)\s*/i, '').trim());
+      if (/verification:/i.test(line)) pushUnique(distilled.verification, line.replace(/^.*verification:\s*/i, '').trim());
     }
   }
   distilled.artifacts = [...distilled.files];
@@ -238,6 +290,8 @@ export async function captureSession({
   profileDir,
   correlationId,
   rawTranscript,
+  sleep,
+  verify,
 } = {}) {
   if ((Number(anonLevel) || 0) >= 1) {
     return { status: 'skipped', reason: 'anonymous', memory: 'Memory: skipped — anonymous', wrotePending: false };
@@ -294,10 +348,14 @@ export async function captureSession({
     agent,
     date,
     cwd,
+    sessionId,
+    correlationId: correlation_id,
     existsByKey,
     remember,
     recall,
     queuePending: profileDir ? (record) => queuePendingRecord(profileDir, record) : undefined,
+    sleep,
+    verify,
   });
 
   let archived = false;
@@ -312,6 +370,7 @@ export async function captureSession({
         cwd,
         target: 'knowledge',
         correlationId: correlation_id,
+        sessionId: `${sessionId || 'unknown'}-transcript`,
       });
       if (prep.ok) {
         await remember({ ...prep.record, kind: 'raw-transcript-document' });
@@ -320,9 +379,9 @@ export async function captureSession({
     }
   }
 
-  const recorded = paired.fact?.recorded || paired.report?.recorded;
+  const recorded = halfConfirmed(paired.fact) && halfConfirmed(paired.report);
   return {
-    status: recorded ? 'recorded' : (paired.fact?.status === 'duplicate' ? 'duplicate' : 'UNCONFIRMED'),
+    status: recorded ? 'recorded' : 'UNCONFIRMED',
     correlation_id: paired.correlation_id || correlation_id,
     fallback,
     archived,
@@ -331,6 +390,19 @@ export async function captureSession({
     report: paired.report,
     wrotePending: paired.fact?.status === 'UNCONFIRMED' || paired.report?.status === 'UNCONFIRMED',
   };
+}
+
+export function formatWrapNotify(result) {
+  const id = result?.correlation_id || '';
+  if (result?.status === 'skipped') {
+    return result.reason === 'anonymous' ? 'Memory: skipped — anonymous' : `wrap: ${result.reason || 'skipped'}`;
+  }
+  if (result?.status === 'recorded') return `wrap: recorded (${id})`;
+  const factOk = halfConfirmed(result?.fact);
+  const reportOk = halfConfirmed(result?.report);
+  if (reportOk && !factOk) return `wrap: report recorded, fact pending (${id})`;
+  if (factOk && !reportOk) return `wrap: fact recorded, report pending (${id})`;
+  return `wrap: UNCONFIRMED (${id})`;
 }
 
 export function captureDoesNotTouchMainChat() {

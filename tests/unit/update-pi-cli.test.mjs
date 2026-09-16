@@ -57,15 +57,15 @@ test('compareSemver: standard, patch, minor, major, v-prefix', () => {
 test('findPrefixFromPackagePath: resolves Unix and Windows layouts', () => {
   assert.equal(
     findPrefixFromPackagePath(
-      '/mnt/vol_328/Pi/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js',
+      '/opt/pi/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js',
     ),
-    '/mnt/vol_328/Pi',
+    '/opt/pi',
   );
   assert.equal(
     findPrefixFromPackagePath(
-      'C:\\Users\\app\\AppData\\Roaming\\npm\\node_modules\\@earendil-works\\pi-coding-agent\\dist\\bundle\\cli.js',
+      'C:\\ProgramData\\npm\\node_modules\\@earendil-works\\pi-coding-agent\\dist\\bundle\\cli.js',
     ),
-    'C:/Users/app/AppData/Roaming/npm',
+    'C:/ProgramData/npm',
   );
   assert.equal(
     findPrefixFromPackagePath(

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseIdempotencyKey } from './memory-key.mjs';
 import { redact } from './redact.mjs';
 import { writeWithVerify } from './memory-write.mjs';
 
@@ -42,6 +43,9 @@ export function parsePendingRecord(text, filePath = '') {
     date: meta.date || '',
     scope: meta.scope || '',
     correlation_id: meta.correlation_id || '',
+    content_hash: meta.content_hash || '',
+    uri: meta.uri || '',
+    task: meta.task || '',
     content: redacted.text,
     kinds: redacted.kinds,
   };
@@ -65,6 +69,9 @@ export function serializePendingRecord(record) {
     `date: ${record.date || ''}`,
     `scope: ${record.scope || ''}`,
     `correlation_id: ${record.correlation_id || ''}`,
+    `content_hash: ${record.content_hash || ''}`,
+    `uri: ${record.uri || ''}`,
+    `task: ${record.task || ''}`,
     '---',
     '',
     redacted.text,
@@ -85,10 +92,25 @@ export function listPendingRecords(profileDir) {
     });
 }
 
+function safeFilePart(value, max) {
+  return String(value ?? '')
+    .replace(/[^A-Za-z0-9._=-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, max);
+}
+
+/** Filename is unique per target + content_hash; same key+target overwrites. */
+export function pendingRecordFileName(record) {
+  const parsed = parseIdempotencyKey(record?.idempotency_key);
+  const task = safeFilePart(record?.task || parsed.task, 40) || 'pending';
+  const target = safeFilePart(record?.target || 'memory', 16) || 'memory';
+  const hash = safeFilePart(record?.content_hash || parsed.content_hash, 16) || 'pending';
+  return `${task}-${target}-${hash}.md`;
+}
+
 export function queuePendingRecord(profileDir, record) {
   const dirs = ensureMemoryStateDirs(profileDir);
-  const safe = String(record.idempotency_key || Date.now()).replace(/[^A-Za-z0-9._=-]+/g, '_').slice(0, 80);
-  const filePath = path.join(dirs.pending, `${safe || 'pending'}.md`);
+  const filePath = path.join(dirs.pending, pendingRecordFileName(record));
   fs.writeFileSync(filePath, serializePendingRecord({ ...record, status: record.status || 'UNCONFIRMED' }));
   return filePath;
 }

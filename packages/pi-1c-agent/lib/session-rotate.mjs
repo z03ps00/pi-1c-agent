@@ -83,6 +83,25 @@ export function shouldRotateOnIdle({ enabled, percent, thresholdPercent, already
   return n >= Number(thresholdPercent);
 }
 
+export function shouldArmMidTurnRotation({
+  enabled,
+  percent,
+  thresholdPercent,
+  isIdle = false,
+  handoffPending = false,
+  rotating = false,
+} = {}) {
+  if (!enabled || isIdle || handoffPending || rotating) return false;
+  if (percent === null || percent === undefined) return false;
+  const n = Number(percent);
+  if (!Number.isFinite(n)) return false;
+  return n >= Number(thresholdPercent);
+}
+
+export function midTurnBlockReason(percent, thresholdPercent) {
+  return `session-rotate: context ${percent}% >= ${thresholdPercent}% — winding down this turn to rotate into a fresh session. Stop calling tools and end your turn; a handoff will be written and the task continues in a new session.`;
+}
+
 export function shouldCancelCompact({ enabled, reason, isIdle, alreadyCancelledForRotation = false } = {}) {
   if (!enabled) return false;
   if (alreadyCancelledForRotation) return false;

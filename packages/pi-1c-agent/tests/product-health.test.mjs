@@ -15,11 +15,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('machine-local scanner catches DevopsMoments and other absolute roots', () => {
+test('machine-local scanner catches a leftover Windows root and other absolute roots', () => {
   const stain = 'Devops' + 'Moments';
   assert.ok(findMachineLocalPathHits(`C:/${stain}/pi-agents`).includes(stain));
-  assert.ok(findMachineLocalPathHits('See /home/pavel/.pi/packages/x').includes('absolute-linux-home'));
-  assert.ok(findMachineLocalPathHits('required: /mnt/vol_328/work').includes('volume-mount'));
+  assert.ok(findMachineLocalPathHits('See /home/someone/.pi/packages/x').includes('absolute-linux-home'));
+  assert.ok(findMachineLocalPathHits('required: /mnt/vol_001/work').includes('volume-mount'));
   assert.deepEqual(findMachineLocalPathHits('Use $PI_CODING_AGENT_DIR and relative prompts/'), []);
 });
 

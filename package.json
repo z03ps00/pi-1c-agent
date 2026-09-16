@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/run-all.mjs"
+    "test": "node tests/run-all.mjs",
+    "scan:public": "node scripts/scan-public-tree.mjs"
   },
   "engines": {
     "node": ">=18"

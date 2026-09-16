@@ -221,13 +221,13 @@ test('sibling scan proposes shared PREFIX/DEVELOPER/PLATFORM and never copies se
   const b = path.join(parent, 'proj-b');
   const current = path.join(parent, 'proj-new');
   for (const d of [a, b, current]) fs.mkdirSync(d);
-  fs.writeFileSync(path.join(a, '.dev.env'), 'PREFIX=ФСК_\nDEVELOPER=Almaz\nPLATFORM_PATH=/opt/1cv8/x86_64/8.3.27\nIB_PASSWORD=secret-a\nINFOBASE_PATH=/tmp/base-a\n');
-  fs.writeFileSync(path.join(b, '.dev.env'), 'PREFIX=ФСК_\nDEVELOPER=Almaz\nPLATFORM_PATH=/opt/1cv8/x86_64/8.3.27\nIB_PASSWORD=secret-b\n');
+  fs.writeFileSync(path.join(a, '.dev.env'), 'PREFIX=ФСК_\nDEVELOPER=Dev\nPLATFORM_PATH=/opt/1cv8/x86_64/8.3.27\nIB_PASSWORD=secret-a\nINFOBASE_PATH=/tmp/base-a\n');
+  fs.writeFileSync(path.join(b, '.dev.env'), 'PREFIX=ФСК_\nDEVELOPER=Dev\nPLATFORM_PATH=/opt/1cv8/x86_64/8.3.27\nIB_PASSWORD=secret-b\n');
   fs.writeFileSync(path.join(current, '.dev.env.example'), 'PREFIX=\n');
   const scan = collectSiblingSharedEnv(current);
   const byName = Object.fromEntries(scan.suggestions.map((s) => [s.name, s]));
   assert.equal(byName.PREFIX.value, 'ФСК_');
-  assert.equal(byName.DEVELOPER.value, 'Almaz');
+  assert.equal(byName.DEVELOPER.value, 'Dev');
   assert.equal(byName.PLATFORM_PATH.value, '/opt/1cv8/x86_64/8.3.27');
   assert.equal(byName.IB_PASSWORD, undefined);
   assert.equal(byName.INFOBASE_PATH, undefined);

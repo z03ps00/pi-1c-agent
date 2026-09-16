@@ -40,7 +40,7 @@ test('scanMachineLocalPaths skips .example files', async () => {
   const { withTempDir } = await import('../lib/fsutil.mjs');
   await withTempDir(async (dir) => {
     const example = path.join(dir, 'machine.example.md');
-    fs.writeFileSync(example, '/home/pavel/secret/\n');
+    fs.writeFileSync(example, '/home/<user>/secret/\n');
     const hits = scanMachineLocalPaths([example], { ignoreRoots: [] });
     assert.deepEqual(hits, []);
   });

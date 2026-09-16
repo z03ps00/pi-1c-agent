@@ -17,8 +17,43 @@ import {
   shouldRotateOnIdle,
   statusText,
 } from "../../lib/session-rotate.mjs";
+import * as rotateLib from "../../lib/session-rotate.mjs";
 
 type RotateState = { enabled: boolean; thresholdPercent: number };
+
+function callRotateLib<T>(name: string, args: unknown[]): T | undefined {
+  const fn = (rotateLib as Record<string, unknown>)[name];
+  if (typeof fn !== "function") return undefined;
+  try {
+    return (fn as (...a: unknown[]) => T)(...args);
+  } catch {
+    return undefined;
+  }
+}
+
+function armMidTurnRotation(opts: {
+  enabled: boolean;
+  percent: number | null;
+  thresholdPercent: number;
+  isIdle: boolean;
+  handoffPending: boolean;
+  rotating: boolean;
+}): boolean {
+  const viaLib = callRotateLib<boolean>("shouldArmMidTurnRotation", [opts]);
+  if (typeof viaLib === "boolean") return viaLib;
+  const { enabled, percent, thresholdPercent, isIdle, handoffPending, rotating } = opts;
+  if (!enabled || isIdle || handoffPending || rotating) return false;
+  if (percent === null || percent === undefined) return false;
+  const n = Number(percent);
+  if (!Number.isFinite(n)) return false;
+  return n >= Number(thresholdPercent);
+}
+
+function midTurnReason(percent: unknown, thresholdPercent: unknown): string {
+  const viaLib = callRotateLib<string>("midTurnBlockReason", [percent, thresholdPercent]);
+  if (typeof viaLib === "string" && viaLib) return viaLib;
+  return `session-rotate: context ${percent}% >= ${thresholdPercent}% — winding down this turn to rotate into a fresh session. Stop calling tools and end your turn; a handoff will be written and the task continues in a new session.`;
+}
 
 export default function sessionRotateExtension(pi: ExtensionAPI): void {
   let state: RotateState = restoreStateFromEntries([]);
@@ -26,6 +61,7 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
   let overflowPending = false;
   let handoffPendingPath: string | null = null;
   let rotating = false;
+  let midTurnNotified = false;
 
   function persist(): void {
     pi.appendEntry(STATE_CUSTOM_TYPE, { state });
@@ -45,6 +81,7 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
       ctx.ui.notify("session-rotate: cannot create handoffs directory, aborting rotation", "error");
       cancelledForRotation = false;
       overflowPending = false;
+      midTurnNotified = false;
       return;
     }
     handoffPendingPath = target;
@@ -72,12 +109,14 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
       cancelledForRotation = false;
       overflowPending = false;
       rotating = false;
+      midTurnNotified = false;
       return;
     }
     if (typeof ctx.newSession !== "function") {
       ctx.ui.notify("session-rotate: newSession is not available on this host (Pi-only)", "warning");
       handoffPendingPath = null;
       cancelledForRotation = false;
+      midTurnNotified = false;
       return;
     }
     rotating = true;
@@ -105,6 +144,7 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
     overflowPending = false;
     cancelledForRotation = false;
     rotating = false;
+    midTurnNotified = false;
     if (result?.cancelled) {
       ctx.ui.notify("session-rotate: new session was cancelled", "warning");
     }
@@ -162,7 +202,32 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
     overflowPending = false;
     handoffPendingPath = null;
     rotating = false;
+    midTurnNotified = false;
     updateStatus(ctx);
+  });
+
+  pi.on("tool_call", async (_event, ctx) => {
+    try {
+      if (rotating || handoffPendingPath) return;
+      const usage = ctx.getContextUsage?.();
+      const percent = usage?.percent ?? null;
+      const isIdle = typeof ctx.isIdle === "function" ? ctx.isIdle() : false;
+      if (!armMidTurnRotation({
+        enabled: state.enabled,
+        percent,
+        thresholdPercent: state.thresholdPercent,
+        isIdle,
+        handoffPending: Boolean(handoffPendingPath),
+        rotating,
+      })) return;
+      if (!midTurnNotified) {
+        ctx.ui.notify(`session-rotate: threshold reached mid-turn (${percent}%), rotating`, "warning");
+        midTurnNotified = true;
+      }
+      return { block: true, terminate: true, reason: midTurnReason(percent, state.thresholdPercent) };
+    } catch {
+      return;
+    }
   });
 
   pi.on("session_before_compact", async (event, ctx) => {

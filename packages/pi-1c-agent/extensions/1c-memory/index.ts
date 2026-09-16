@@ -16,6 +16,7 @@ import {
   restoreCaptureState,
   shouldIdleCapture,
 } from "../../lib/session-capture.mjs";
+import * as captureLib from "../../lib/session-capture.mjs";
 import {
   formatReconcileReport,
   reconcilePending,
@@ -26,8 +27,21 @@ import { createMcpAdapters, probeMemoryServers } from "../../lib/memory-mcp.mjs"
 type CaptureState = ReturnType<typeof restoreCaptureState>;
 type Shared = typeof globalThis & { __PI_1C_MODE__?: string };
 
+function callCaptureLib<T>(name: string, args: unknown[]): T | undefined {
+  const fn = (captureLib as Record<string, unknown>)[name];
+  if (typeof fn !== "function") return undefined;
+  try {
+    return (fn as (...a: unknown[]) => T)(...args);
+  } catch {
+    return undefined;
+  }
+}
+
 function hostOf(ctx: ExtensionContext): "pi" | "cursor" {
-  return typeof (ctx as { newSession?: unknown }).newSession === "function" ? "pi" : "cursor";
+  const viaLib = callCaptureLib<"pi" | "cursor">("detectCaptureHost", [ctx]);
+  if (viaLib === "pi" || viaLib === "cursor") return viaLib;
+  const c = ctx as { newSession?: unknown; getContextUsage?: unknown };
+  return typeof c.getContextUsage === "function" || typeof c.newSession === "function" ? "pi" : "cursor";
 }
 
 function currentMode(): string {
@@ -59,17 +73,44 @@ function sessionEntries(ctx: ExtensionContext): any[] {
 }
 
 function flattenEntries(entries: any[]): any[] {
-  return entries.map((e) => ({
-    type: e?.type || e?.role,
-    role: e?.role || e?.type,
-    tool: e?.toolName || e?.name || e?.tool,
-    input: e?.input || e?.args || {},
-    content: typeof e?.content === "string"
-      ? e.content
-      : Array.isArray(e?.content)
-        ? e.content.filter((x: any) => x?.type === "text").map((x: any) => x.text).join("\n")
-        : e?.text || "",
-  }));
+  const viaLib = callCaptureLib<any[]>("flattenSessionEntries", [entries]);
+  if (Array.isArray(viaLib)) return viaLib;
+  const out: any[] = [];
+  for (const raw of Array.isArray(entries) ? entries : []) {
+    if (!raw || typeof raw !== "object") continue;
+    const inner = raw.message && typeof raw.message === "object" && !Array.isArray(raw.message)
+      ? raw.message
+      : raw;
+    const contentParts = Array.isArray(inner.content) ? inner.content : [];
+    const textFromParts = contentParts
+      .filter((x: any) => x && x.type === "text")
+      .map((x: any) => String(x.text ?? ""))
+      .filter(Boolean)
+      .join("\n");
+    const content = typeof inner.content === "string"
+      ? inner.content
+      : (textFromParts || (typeof raw.content === "string" ? raw.content : "") || String(inner.text || raw.text || ""));
+    const tool = inner.toolName || inner.name || inner.tool || raw.toolName || raw.name || raw.tool || "";
+    const input = inner.input || inner.args || inner.arguments || raw.input || raw.args || {};
+    out.push({
+      type: raw.type || inner.type || inner.role,
+      role: inner.role || raw.role || raw.type,
+      tool,
+      input,
+      content,
+    });
+    for (const part of contentParts) {
+      if (!part || part.type !== "toolCall") continue;
+      out.push({
+        type: "toolCall",
+        role: inner.role || raw.role || "assistant",
+        tool: part.name || part.toolName || part.tool || "",
+        input: part.arguments || part.args || part.input || {},
+        content: "",
+      });
+    }
+  }
+  return out;
 }
 
 export default function memoryExtension(pi: ExtensionAPI): void {
@@ -89,6 +130,20 @@ export default function memoryExtension(pi: ExtensionAPI): void {
 
   function adapters() {
     return createMcpAdapters();
+  }
+
+  async function stackDistill(opts: { mode?: string; entries?: unknown } = {}): Promise<unknown> {
+    const fn = (captureLib as Record<string, unknown>).distillWithProvider;
+    if (typeof fn !== "function") return null;
+    try {
+      return await (fn as (args: unknown) => Promise<unknown>)({
+        ...opts,
+        model: state.distiller.model,
+        profileDir: profileDir(),
+      });
+    } catch {
+      return null;
+    }
   }
 
   async function probeAndReconcile(ctx: ExtensionContext): Promise<string> {
@@ -125,21 +180,25 @@ export default function memoryExtension(pi: ExtensionAPI): void {
       anonLevel,
       archiveTranscript: opts.archive === true || state.archiveTranscript,
       distillerMode: state.distiller.mode,
+      distillWithProvider: stackDistill,
       profileDir: profileDir(),
       correlationId: sessionCorrelation,
       ...adapters(),
     });
     if (opts.idle) return;
     if (result.status === "skipped") {
-      ctx.ui.notify(result.reason === "anonymous" ? "Memory: skipped — anonymous" : `wrap: ${result.reason}`, "info");
+      const skipped = callCaptureLib<string>("formatWrapNotify", [result])
+        ?? (result.reason === "anonymous" ? "Memory: skipped — anonymous" : `wrap: ${result.reason}`);
+      ctx.ui.notify(skipped, "info");
       return;
     }
-    ctx.ui.notify(
+    const viaLib = callCaptureLib<string>("formatWrapNotify", [result]);
+    const message = viaLib || (
       result.status === "recorded"
         ? `wrap: recorded (${result.correlation_id})`
-        : `wrap: ${result.status}`,
-      result.status === "recorded" ? "info" : "warning",
+        : `wrap: ${result.status}`
     );
+    ctx.ui.notify(message, result.status === "recorded" ? "info" : "warning");
   }
 
   pi.registerCommand("memory-flush", {

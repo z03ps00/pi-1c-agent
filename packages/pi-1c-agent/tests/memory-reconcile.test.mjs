@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   formatReconcileReport,
   listPendingRecords,
+  pendingRecordFileName,
   queuePendingRecord,
   reconcilePending,
   serializePendingRecord,
@@ -140,6 +141,35 @@ test('existing approve-mode pending record is drainable by the reconcile path', 
   assert.equal(summary.confirmed, 1);
   assert.equal(listPendingRecords(profile).length, 0);
   assert.ok(fs.existsSync(path.join(profile, 'state', 'agent-memory', 'done', '20260915-approve-mode.md')));
+});
+
+test('paired pending filenames stay unique by target and hash', () => {
+  const profile = tempProfile();
+  const longSession = 'session-0123456789abcdef0123456789abcdef01234567';
+  const fact = {
+    idempotency_key: `task=${longSession}; agent=pi-1c-agent; date=2026-09-16; content_hash=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
+    target: 'memory',
+    content: 'TYPE: session_capture',
+    task: longSession,
+    content_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  };
+  const report = {
+    idempotency_key: `task=${longSession}; agent=pi-1c-agent; date=2026-09-16; content_hash=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`,
+    target: 'knowledge',
+    content: '## Session capture',
+    task: longSession,
+    content_hash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  };
+  const a = queuePendingRecord(profile, fact);
+  const b = queuePendingRecord(profile, report);
+  assert.notEqual(path.basename(a), path.basename(b));
+  const names = fs.readdirSync(path.join(profile, 'state', 'agent-memory', 'pending'));
+  assert.equal(names.length, 2);
+  const again = queuePendingRecord(profile, fact);
+  assert.equal(path.basename(again), path.basename(a));
+  assert.equal(fs.readdirSync(path.join(profile, 'state', 'agent-memory', 'pending')).length, 2);
+  assert.match(pendingRecordFileName(fact), /memory-aaaaaaaaaaaaaaaa/);
+  assert.match(pendingRecordFileName(report), /knowledge-bbbbbbbbbbbbbbbb/);
 });
 
 test('pending serialization is redacted', () => {

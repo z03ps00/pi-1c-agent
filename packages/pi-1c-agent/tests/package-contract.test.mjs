@@ -61,6 +61,13 @@ test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
   assert.doesNotMatch(src, /registerCommand\("1c-wrap"/);
   assert.match(src, /agent_settled/);
   assert.doesNotMatch(src, /pi\.sendUserMessage|sendUserMessage\(/);
+  assert.doesNotMatch(src, /import\s*\{[^}]*flattenSessionEntries/);
+  assert.doesNotMatch(src, /import\s*\{[^}]*distillWithProvider/);
+  assert.doesNotMatch(src, /import\s*\{[^}]*formatWrapNotify/);
+  assert.match(src, /distillWithProvider/);
+  assert.match(src, /formatWrapNotify/);
+  assert.match(src, /getContextUsage/);
+  assert.match(src, /typeof fn !== "function"/);
 });
 
 test('session-rotate command and compaction hooks are registered', () => {
@@ -69,6 +76,10 @@ test('session-rotate command and compaction hooks are registered', () => {
   assert.doesNotMatch(src, /registerCommand\("1c-session-rotate"/);
   assert.match(src, /session_before_compact/);
   assert.match(src, /agent_settled/);
+  assert.match(src, /"tool_call"/);
+  assert.match(src, /terminate: true/);
+  assert.doesNotMatch(src, /import\s*\{[^}]*shouldArmMidTurnRotation/);
+  assert.match(src, /typeof fn !== "function"/);
   assert.match(src, /newSession/);
   assert.match(src, /parentSession/);
   assert.match(src, /sendUserMessage/);

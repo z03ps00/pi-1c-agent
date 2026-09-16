@@ -69,7 +69,7 @@ Check it without a browser (expect `pi http://localhost <profile dir>`):
 
 ```powershell
 $env:PI_PACKAGE_DIR="$env:PI_CODING_AGENT_DIR\manifest"
-node -e "const m=await import('file:///C:/DevopsMoments/pi-agents/config-1c/npm/node_modules/pi-mcp-adapter/dist/agent-dir.js');console.log(m.getAppName(),m.getAppClientUri(),m.getAgentDir())"
+node -e "const m=await import('file:///' + process.env.PI_CODING_AGENT_DIR.replace(/\\\\/g,'/') + '/npm/node_modules/pi-mcp-adapter/dist/agent-dir.js');console.log(m.getAppName(),m.getAppClientUri(),m.getAgentDir())"
 ```
 
 Keep `piConfig.name` out of that manifest: the adapter resolves its agent dir from

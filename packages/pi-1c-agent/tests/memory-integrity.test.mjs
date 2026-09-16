@@ -52,9 +52,9 @@ test('content hash is after redaction and key is stable', () => {
 });
 
 test('project-id ignores trailing space and bind-mount prefix', () => {
-  const a = deriveProjectId({ cwd: '/mnt/vol_328/work_folder/projects_code/1c-pi-profile ' });
-  const b = deriveProjectId({ cwd: '/mnt/vol_238_ssd/data/projects_code/1c-pi-profile ' });
-  const c = deriveProjectId({ cwd: '/mnt/vol_238_ssd/data/projects_code/1c-pi-profile' });
+  const a = deriveProjectId({ cwd: '/tmp/work/projects_code/1c-pi-profile ' });
+  const b = deriveProjectId({ cwd: '/var/data/projects_code/1c-pi-profile ' });
+  const c = deriveProjectId({ cwd: '/var/data/projects_code/1c-pi-profile' });
   assert.equal(a, b);
   assert.equal(b, c);
   assert.equal(a, '1c-pi-profile');
@@ -81,6 +81,7 @@ test('verify-after-write confirms or queues UNCONFIRMED', async () => {
     remember: async () => ({ ok: true }),
     recall: async () => false,
     queuePending: (r) => queued.push(r),
+    sleep: async () => {},
   });
   assert.equal(failed.status, 'UNCONFIRMED');
   assert.equal(queued.length, 1);
@@ -92,6 +93,23 @@ test('verify-after-write confirms or queues UNCONFIRMED', async () => {
     recall: async () => true,
   });
   assert.equal(dup.status, 'duplicate');
+});
+
+test('first-miss then hit recall becomes recorded', async () => {
+  const prep = prepareWrite({ content: 'fact: retry', task: 't', agent: 'pi', date: '2026-09-16', cwd: '/tmp/demo' });
+  let calls = 0;
+  const result = await writeWithVerify({
+    record: prep.record,
+    existsByKey: async () => false,
+    remember: async () => ({ ok: true }),
+    recall: async () => {
+      calls += 1;
+      return calls >= 2;
+    },
+    sleep: async () => {},
+  });
+  assert.equal(result.status, 'recorded');
+  assert.equal(calls, 2);
 });
 
 test('unredactable secret blocks prepareWrite', () => {

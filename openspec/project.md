@@ -1,6 +1,6 @@
 # Project Context
 
-This is the personal Pi 1C agent profile (`PI_CODING_AGENT_DIR`), not a 1C
+This is the Pi 1C agent profile (`PI_CODING_AGENT_DIR`), not a 1C
 configuration dump. There is no `Configuration.xml` here.
 
 ## Profile

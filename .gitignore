@@ -42,11 +42,19 @@ pi-1c-agent-upstream/
 
 # --- Pi session/bootstrap state ---
 .pi/**
-!.pi/prompts/
-!.pi/prompts/opsx-*.md
-!.pi/skills/
-!.pi/skills/openspec-*/
-!.pi/skills/openspec-*/**
+
+# --- Development-process artifacts (local only; not published) ---
+openspec/changes/
+handoffs/
+state/agent-memory/pending/**
+!state/agent-memory/pending/.gitkeep
+state/agent-memory/done/**
+!state/agent-memory/done/.gitkeep
+.cursor/plans/
+.cursor/commands/opsx-*
+.cursor/skills/openspec-*/
+.pi/prompts/opsx-*
+.pi/skills/openspec-*/
 
 # --- Misc ---
 *.log

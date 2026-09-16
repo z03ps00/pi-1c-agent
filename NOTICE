@@ -1,25 +1,56 @@
 NOTICE
 
-This Pi 1C profile vendors and adapts material from comol/ai_rules_1c
-(https://github.com/comol/ai_rules_1c). The pin is recorded in upstream.lock.json
-and the human register is UPSTREAM-REGISTER.md.
+Licensing boundary
+------------------
 
-Upstream terms are those stated in that repository’s README (currently informal
-wording on GitHub; not a named OSI license). This overlay — Pi PLAN/BUILD,
-command catalog, MCP opt-in, Docker policy, `/review-airules` — is separate
-from the upstream 1C coding ruleset.
+The MIT License in `LICENSE` covers the original work of the pi-1c-agent
+authors: the Pi overlay (modes, commands, MCP opt-in, Docker policy,
+session/memory tooling), `packages/pi-1c-agent`, host scripts, and this
+profile’s own prompts, agents, and skills that were written here.
 
-This file does not invent a license. Redistributing a full vendored upstream
-snapshot must also follow any package UPSTREAM-LICENSE-NOTICE shipped with
-pi-1c-agent.
+Adapted and vendored third-party material is kept in this tree so the
+agent stays usable. It is **not** re-licensed as MIT by this project.
+Those parts keep the terms of their original authors. Thank you to
+everyone whose work this profile builds on.
 
-Lab extras in this profile (`skills/vanessa-mcp`, `kd2-rules`, `kd31-rules`,
-`1c-mcp-toolkit`) are author-owned beta snapshots. They adapt third-party MIT
-skill text (Desko77/cursor-1c-skills) and depend at runtime on third-party
-products: Vanessa Automation (Pr-Mex), neurofish client MCP (`client_mcp.cfe`),
-and ROCTUP MCP_Toolkit.epf. They are not `comol/ai_rules_1c`.
+Upstream 1C rules
+-----------------
+
+This profile vendors and adapts material from comol/ai_rules_1c
+(https://github.com/comol/ai_rules_1c). The pin is recorded in
+`upstream.lock.json` and the human register is `UPSTREAM-REGISTER.md`.
+
+Upstream terms are those stated in that repository’s README (currently
+informal wording on GitHub; not a named OSI license). This overlay — Pi
+PLAN/BUILD, command catalog, MCP opt-in, Docker policy, `/review-airules`
+— is separate from the upstream 1C coding ruleset.
+
+Redistributing a full vendored upstream snapshot must also follow any
+package `UPSTREAM-LICENSE-NOTICE` shipped with pi-1c-agent.
+
+Lab extras and third-party skills
+---------------------------------
+
+Lab extras in this profile (`skills/vanessa-mcp`, `kd2-rules`,
+`kd31-rules`, `1c-mcp-toolkit`) are author-owned beta snapshots. They
+adapt third-party MIT skill text from Desko77/cursor-1c-skills
+(https://github.com/Desko77/cursor-1c-skills) and depend at runtime on
+third-party products that are **referenced, not vendored**:
+
+- Vanessa Automation (Pr-Mex)
+- neurofish client MCP (`client_mcp.cfe`)
+- ROCTUP MCP_Toolkit.epf
+
+They are not `comol/ai_rules_1c`.
 
 `skills/humanizer-ru` is a snapshot of Comol Humanizer_RU
-(https://github.com/comol/Humanizer_RU, MIT) plus this author’s knowledge/
-overlay. It is not the English humanizer skill and is not synced via
-/review-airules.
+(https://github.com/comol/Humanizer_RU, MIT) plus this author’s
+knowledge/overlay. It is not the English humanizer skill and is not
+synced via `/review-airules`.
+
+Thanks
+------
+
+Thanks to Comol (`comol/ai_rules_1c`, `comol/Humanizer_RU`), Desko77
+(`cursor-1c-skills`), Pr-Mex (Vanessa Automation), neurofish, and ROCTUP
+for the work this profile relies on.

@@ -7,6 +7,17 @@
 
 ## Unreleased
 
+### Session capture
+- Pi idle/footer no longer treats event context as Cursor: host is Pi when `getContextUsage` or `newSession` is a function. Footer shows `capture:on/stack` (default) instead of `capture:manual`.
+- Distill unwraps nested Pi `message` / `toolCall` entries so a real `write`/`edit` counts as substantial and idle `/wrap` can persist.
+- Cognee `remember` sends `{ data, dataset_name: main_dataset }` with `TYPE: session_capture`. The report is an OpenViking **document** at `viking://resources/session-captures/<project>/<session>.md` (`write`, not `remember`).
+- HTTP adapter initializes the MCP session (plus `notifications/initialized`) before `tools/call` and increments JSON-RPC ids. A `File not found` read is not a verify hit just because the URI is echoed.
+- Verify-after-write retries recall/document read with backoff; Cognee verify uses `CHUNKS` by `correlation_id`. Mutating MCP calls use a 30s timeout. `recorded` only when **both** halves confirm.
+- `/wrap` notify names the pending half when only the document or only the fact landed. One `correlation_id` is shared by fact, report, and notify.
+- Pending filenames include target + content hash so a paired fact and report cannot overwrite each other.
+- Default `stack` distiller calls Router AI when a key is present; without a key it falls back to heuristic immediately instead of waiting on Ollama. Heuristic verification requires a `verification:` label.
+- Flatten and `distillWithProvider` are called through a namespace import with an inline fallback (same jiti CJS interop as session-rotate).
+
 ### Project knowledge layout
 - `/init` always plants `.pi/1c/{knowledge,knowledge-drafts,rules}` even when Configuration Knowledge fingerprint is off.
 - `/init knowledge` plants that tree into an existing 1C repo without copying the agent, writing `.dev.env`, or creating OpenSpec artifacts. Cursor procedure: `/init-knowledge`.
@@ -19,6 +30,8 @@
 ### Session rotation (opt-in)
 - `/session-rotate on|off|status|<percent>` replaces in-place compaction with a handoff plus a fresh session when context usage reaches a threshold. Default **off**, threshold **85** (range 50–95).
 - Idle check uses `agent_settled`; `session_before_compact` with `reason === "threshold"` is cancelled once while idle. Overflow and manual `/compact` still run.
+- Mid-turn guard: when the threshold is crossed during a long turn, `tool_call` blocks further tools with `terminate: true` so the turn settles and rotation runs before Pi's ~94% overflow compaction. The handoff-writing turn is never blocked. Actual `newSession` still happens at idle.
+- The mid-turn helpers are called through a namespace import with an inline fallback. Pi loads extensions via jiti (CJS interop); a named import of a newly added `.mjs` export was `undefined` and crashed every `tool_call` with `shouldArmMidTurnRotation is not a function`.
 - New session records `parentSession` and continues from `handoffs/handoff-<timestamp>.md` using the existing handoff format.
 
 ## 0.6.1

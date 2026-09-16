@@ -51,6 +51,7 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | Unpinned default `npm:pi-tool-display` (no `@version`) | `contract/notice-settings` | regression | implemented |
 | `upstream.lock.json` seeded pin | `contract/upstream-pin` | regression | implemented |
 | No foreign machine-local paths in shipped tree | `unit/paths-scan` + `contract/machine-paths` | unit + regression | implemented |
+| Public tree has no secrets, identity, or dev artifacts | `contract/public-scan` | regression | implemented |
 | Lab extras present + isolated from `ai_rules_1c` | `contract/lab-extras` | regression | implemented |
 | Memory stack portable (no lab compose, fragments, opt-in) | `contract/memory-stack` | regression | implemented |
 | PLAN permits only planning artifacts, protects project code | `scenario/plan-only` | scenario (static) | implemented |

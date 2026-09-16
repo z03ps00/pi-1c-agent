@@ -2,6 +2,53 @@ import { hasUnredactableSecret, redact } from './redact.mjs';
 import { buildIdempotencyKey, contentHash, mintCorrelationId } from './memory-key.mjs';
 import { deriveProjectId } from './project-id.mjs';
 
+export const VERIFY_RETRY = Object.freeze({
+  attempts: 4,
+  delaysMs: Object.freeze([500, 1500, 4000]),
+});
+
+export const MEMORY_VERIFY_RETRY = Object.freeze({
+  attempts: 4,
+  delaysMs: Object.freeze([2000, 6000, 12000]),
+});
+
+export function halfConfirmed(half) {
+  return Boolean(half?.recorded) || half?.status === 'duplicate';
+}
+
+export function defaultSleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Number(ms) || 0));
+}
+
+export function safeUriSegment(value) {
+  return String(value ?? 'unknown')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+export function sessionCaptureDocumentUri(projectId, sessionId) {
+  return `viking://resources/session-captures/${safeUriSegment(projectId)}/${safeUriSegment(sessionId)}.md`;
+}
+
+export async function recallWithRetry(recall, record, {
+  attempts = VERIFY_RETRY.attempts,
+  delaysMs = VERIFY_RETRY.delaysMs,
+  sleep = defaultSleep,
+} = {}) {
+  const n = Math.max(1, Number(attempts) || 1);
+  for (let i = 0; i < n; i += 1) {
+    try {
+      if (typeof recall === 'function' && await recall(record)) return true;
+    } catch {
+      // retry
+    }
+    if (i < n - 1) await sleep(delaysMs[i] ?? delaysMs[delaysMs.length - 1] ?? 0);
+  }
+  return false;
+}
+
 export function formatMemoryStatus({ recalled = 0, saved = 0, unconfirmed = 0, anonymous = false, nothingToSave = false } = {}) {
   if (anonymous) return 'Memory: skipped — anonymous';
   const recallPart = recalled > 0 ? `recalled ${recalled}` : 'nothing relevant';
@@ -21,6 +68,8 @@ export function prepareWrite({
   cwd,
   target = 'memory',
   correlationId,
+  uri,
+  sessionId,
 } = {}) {
   const redacted = redact(content);
   if (hasUnredactableSecret(redacted.text)) {
@@ -29,12 +78,18 @@ export function prepareWrite({
   const hash = contentHash(redacted.text);
   const idempotency_key = buildIdempotencyKey({ task, agent, date, contentHash: hash });
   const projectId = deriveProjectId({ cwd, basename: scope });
+  const stored = redacted.text.includes(idempotency_key)
+    ? redacted.text
+    : `idempotency_key: ${idempotency_key}\n\n${redacted.text}`;
+  const documentUri = target === 'knowledge'
+    ? (uri || (sessionId ? sessionCaptureDocumentUri(projectId, sessionId) : ''))
+    : '';
   return {
     ok: true,
     record: {
       idempotency_key,
       content_hash: hash,
-      content: redacted.text,
+      content: stored,
       kinds: redacted.kinds,
       target,
       scope: `project:${projectId}`,
@@ -43,6 +98,8 @@ export function prepareWrite({
       task: String(task ?? '').trim() || 'unknown',
       agent: String(agent ?? '').trim() || 'unknown',
       date: String(date ?? '').trim() || new Date().toISOString().slice(0, 10),
+      uri: documentUri || undefined,
+      session_id: sessionId || undefined,
     },
   };
 }
@@ -53,10 +110,12 @@ export async function writeWithVerify({
   remember,
   recall,
   queuePending,
+  sleep,
+  verify,
 } = {}) {
   if (!record) return { status: 'blocked', recorded: false, reason: 'no record' };
   if (typeof existsByKey === 'function') {
-    const existing = await existsByKey(record.idempotency_key);
+    const existing = await existsByKey(record);
     if (existing) return { status: 'duplicate', recorded: false, existing: true };
   }
   let wrote = { ok: false };
@@ -69,12 +128,12 @@ export async function writeWithVerify({
     if (typeof queuePending === 'function') queuePending(record);
     return { status: 'UNCONFIRMED', recorded: false };
   }
-  let found = false;
-  try {
-    found = typeof recall === 'function' ? Boolean(await recall(record.idempotency_key)) : false;
-  } catch {
-    found = false;
-  }
+  const memoryVerify = record.target === 'memory';
+  const found = await recallWithRetry(recall, record, {
+    attempts: verify?.attempts ?? (memoryVerify ? MEMORY_VERIFY_RETRY.attempts : VERIFY_RETRY.attempts),
+    delaysMs: verify?.delaysMs ?? (memoryVerify ? MEMORY_VERIFY_RETRY.delaysMs : VERIFY_RETRY.delaysMs),
+    sleep: typeof sleep === 'function' ? sleep : defaultSleep,
+  });
   if (!found) {
     if (typeof queuePending === 'function') queuePending(record);
     return { status: 'UNCONFIRMED', recorded: false };
@@ -89,18 +148,42 @@ export async function writePaired({
   agent,
   date,
   cwd,
+  sessionId,
+  uri,
+  correlationId,
   existsByKey,
   remember,
   recall,
   queuePending,
+  sleep,
+  verify,
 } = {}) {
-  const correlation_id = mintCorrelationId();
-  const factPrep = prepareWrite({ content: fact, task, agent, date, cwd, target: 'memory', correlationId: correlation_id });
-  const reportPrep = prepareWrite({ content: report, task, agent, date, cwd, target: 'knowledge', correlationId: correlation_id });
+  const correlation_id = correlationId || mintCorrelationId();
+  const factPrep = prepareWrite({
+    content: fact,
+    task,
+    agent,
+    date,
+    cwd,
+    target: 'memory',
+    correlationId: correlation_id,
+    sessionId,
+  });
+  const reportPrep = prepareWrite({
+    content: report,
+    task,
+    agent,
+    date,
+    cwd,
+    target: 'knowledge',
+    correlationId: correlation_id,
+    sessionId,
+    uri,
+  });
   if (!factPrep.ok || !reportPrep.ok) {
     return { ok: false, reason: factPrep.reason || reportPrep.reason };
   }
-  const adapters = { existsByKey, remember, recall, queuePending };
+  const adapters = { existsByKey, remember, recall, queuePending, sleep, verify };
   const factResult = await writeWithVerify({ record: factPrep.record, ...adapters });
   const reportResult = await writeWithVerify({ record: reportPrep.record, ...adapters });
   return {
@@ -108,5 +191,7 @@ export async function writePaired({
     correlation_id,
     fact: factResult,
     report: reportResult,
+    factRecord: factPrep.record,
+    reportRecord: reportPrep.record,
   };
 }

@@ -18,6 +18,8 @@ import {
   parseSessionRotateArgs,
   restoreStateFromEntries,
   rotationNewSessionOptions,
+  midTurnBlockReason,
+  shouldArmMidTurnRotation,
   shouldCancelCompact,
   shouldDeferRotationAfterOverflow,
   shouldRotateOnIdle,
@@ -129,6 +131,24 @@ test('null context percent does not rotate; percent at/above threshold does', ()
   assert.equal(shouldRotateOnIdle({ enabled, percent: 84, thresholdPercent }), false);
   assert.equal(shouldRotateOnIdle({ enabled, percent: 85, thresholdPercent }), true);
   assert.equal(shouldRotateOnIdle({ enabled, percent: 90, thresholdPercent, alreadyRotating: true }), false);
+});
+
+test('mid-turn guard arms only when enabled, streaming, and at/above threshold', () => {
+  const thresholdPercent = 85;
+  const base = { enabled: true, percent: 90, thresholdPercent, isIdle: false, handoffPending: false, rotating: false };
+  assert.equal(shouldArmMidTurnRotation({ ...base, enabled: false }), false);
+  assert.equal(shouldArmMidTurnRotation({ ...base, isIdle: true }), false);
+  assert.equal(shouldArmMidTurnRotation({ ...base, handoffPending: true }), false);
+  assert.equal(shouldArmMidTurnRotation({ ...base, rotating: true }), false);
+  assert.equal(shouldArmMidTurnRotation({ ...base, percent: null }), false);
+  assert.equal(shouldArmMidTurnRotation({ ...base, percent: undefined }), false);
+  assert.equal(shouldArmMidTurnRotation({ ...base, percent: 84 }), false);
+  assert.equal(shouldArmMidTurnRotation(base), true);
+  assert.equal(shouldArmMidTurnRotation({ ...base, percent: 85 }), true);
+  const reason = midTurnBlockReason(90, 85);
+  assert.match(reason, /90%/);
+  assert.match(reason, /85%/);
+  assert.match(reason, /new session/);
 });
 
 test('footer label and cursor status wording', () => {
