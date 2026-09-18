@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { auditKnowledge, loadConfiguration } from '../lib/knowledge.mjs';
 import { auditDevEnvSchema, initStatus, locateDevEnvExample } from '../lib/project-init.mjs';
 import { dockerPolicyLabel } from '../lib/docker-policy.mjs';
+import { MIN_NODE_VERSION, nodeMeetsMinimum } from '../lib/node-runtime.mjs';
 import {
   bootstrapWritesOptionalMcp,
   inspectMcpJsonFile,
@@ -58,6 +59,8 @@ function commandVersion(cmd) {
 const packageJson = JSON.parse(read(path.join(packageRoot, 'package.json')));
 const extList = packageJson?.pi?.extensions ?? [];
 add('package version', packageJson.version === '0.6.1', true, packageJson.version);
+add(`Node >=${MIN_NODE_VERSION}`, nodeMeetsMinimum(), true, process.version);
+add('Pi peer ranges bounded', Object.values(packageJson.peerDependencies || {}).every((range) => range && range !== '*'), true, JSON.stringify(packageJson.peerDependencies));
 add('1C PLAN/BUILD extension', exists(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) && extList.includes('extensions/1c-mode/index.ts'));
 add('1C subagent extension', exists(path.join(packageRoot, 'extensions', '1c-subagents', 'index.ts')) && extList.includes('extensions/1c-subagents/index.ts'));
 add('1C admin extension', exists(path.join(packageRoot, 'extensions', '1c-admin', 'index.ts')) && extList.includes('extensions/1c-admin/index.ts'));

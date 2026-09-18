@@ -10,6 +10,7 @@ export const MCP_MUTATE_TIMEOUT_MS = 30000;
 
 const MUTATE_TOOLS = new Set(['remember', 'write', 'add_resource', 'edit', 'forget']);
 const sessions = new Map();
+const initPromises = new Map();
 let rpcId = 1;
 
 function nextRpcId() {
@@ -115,8 +116,7 @@ async function postMcp(url, payload, fetchImpl, timeoutMs, sessionId) {
   });
 }
 
-async function ensureMcpSession(url, fetchImpl, timeoutMs) {
-  if (sessions.has(url)) return sessions.get(url);
+async function initializeMcpSession(url, fetchImpl, timeoutMs) {
   const res = await postMcp(url, {
     jsonrpc: '2.0',
     id: nextRpcId(),
@@ -150,6 +150,23 @@ async function ensureMcpSession(url, fetchImpl, timeoutMs) {
     // notification is best-effort
   }
   return sessionId || '';
+}
+
+export async function ensureMcpSession(url, fetchImpl, timeoutMs) {
+  if (sessions.has(url)) return sessions.get(url);
+  let pending = initPromises.get(url);
+  if (!pending) {
+    pending = initializeMcpSession(url, fetchImpl, timeoutMs)
+      .finally(() => initPromises.delete(url));
+    initPromises.set(url, pending);
+  }
+  return pending;
+}
+
+export function resetMcpSessionsForTests() {
+  sessions.clear();
+  initPromises.clear();
+  rpcId = 1;
 }
 
 export async function mcpToolCall({

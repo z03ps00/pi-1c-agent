@@ -16,3 +16,10 @@ test('malformed handoff is rejected', () => {
   assert.equal(r.ok, false);
   assert.ok(r.errors.some((x) => x.includes('artifacts')));
 });
+
+test('handoff-like labels in the body do not steal the last valid envelope', () => {
+  const output = `Mention ## Upstream Handoff in prose.\n\n## Upstream Handoff\n\n\`\`\`json\n{"task":"first","artifacts":[],"findings":[],"public_surface":[],"locked_decisions":[],"constraints":[],"unresolved":[],"verification":[]}\n\`\`\`\n\n## Handoff v2\n\n\`\`\`json\n{"schema":2,"task":"second","artifacts":[],"findings":[],"public_surface":[],"locked_decisions":[],"constraints":[],"unresolved":[],"verification":["ok"]}\n\`\`\``;
+  const r = parseUpstreamHandoff(output);
+  assert.equal(r.ok, true);
+  assert.equal(r.handoff.task, 'second');
+});

@@ -70,17 +70,42 @@ export function validateWorkflow(workflow) {
   return { ok: errors.length === 0, errors };
 }
 
-export function loadWorkflows(packageRoot) {
+const workflowCache = new Map();
+
+export function workflowStamp(packageRoot) {
   const dir = path.join(packageRoot, 'workflows');
-  if (!fs.existsSync(dir)) return new Map();
-  const map = new Map();
-  for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) {
+  if (!fs.existsSync(dir)) return `${packageRoot}:missing`;
+  return fs.readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort().map((name) => {
     const file = path.join(dir, name);
-    const workflow = parseWorkflowYaml(fs.readFileSync(file, 'utf8'), file);
-    if (map.has(workflow.name)) throw new Error(`duplicate workflow '${workflow.name}'`);
-    map.set(workflow.name, workflow);
+    try {
+      const st = fs.statSync(file);
+      return `${name}:${st.mtimeMs}:${st.size}`;
+    } catch {
+      return `${name}:gone`;
+    }
+  }).join('|');
+}
+
+export function loadWorkflows(packageRoot) {
+  const stamp = workflowStamp(packageRoot);
+  const cached = workflowCache.get(packageRoot);
+  if (cached && cached.stamp === stamp) return cached.map;
+  const dir = path.join(packageRoot, 'workflows');
+  const map = new Map();
+  if (fs.existsSync(dir)) {
+    for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.yaml')).sort()) {
+      const file = path.join(dir, name);
+      const workflow = parseWorkflowYaml(fs.readFileSync(file, 'utf8'), file);
+      if (map.has(workflow.name)) throw new Error(`duplicate workflow '${workflow.name}'`);
+      map.set(workflow.name, workflow);
+    }
   }
+  workflowCache.set(packageRoot, { stamp, map });
   return map;
+}
+
+export function resetWorkflowCacheForTests() {
+  workflowCache.clear();
 }
 
 export function combineParallelHandoffs(results) {

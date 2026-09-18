@@ -1,6 +1,6 @@
-import { hasUnredactableSecret, redact } from './redact.mjs';
+import { hasUnredactableSecret, loadExactSecretValues, redact } from './redact.mjs';
 import { buildIdempotencyKey, contentHash, mintCorrelationId } from './memory-key.mjs';
-import { deriveProjectId } from './project-id.mjs';
+import { deriveProjectId, slugProjectId } from './project-id.mjs';
 
 export const VERIFY_RETRY = Object.freeze({
   attempts: 4,
@@ -21,11 +21,7 @@ export function defaultSleep(ms) {
 }
 
 export function safeUriSegment(value) {
-  return String(value ?? 'unknown')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'unknown';
+  return slugProjectId(value);
 }
 
 export function sessionCaptureDocumentUri(projectId, sessionId) {
@@ -71,7 +67,8 @@ export function prepareWrite({
   uri,
   sessionId,
 } = {}) {
-  const redacted = redact(content);
+  const exactValues = loadExactSecretValues({ cwd });
+  const redacted = redact(content, { exactValues });
   if (hasUnredactableSecret(redacted.text)) {
     return { ok: false, reason: 'unredactable secret blocks the write' };
   }
@@ -128,10 +125,14 @@ export async function writeWithVerify({
     if (typeof queuePending === 'function') queuePending(record);
     return { status: 'UNCONFIRMED', recorded: false };
   }
-  const memoryVerify = record.target === 'memory';
+  // Cognee recall often drops the exact idempotency_key after cognify.
+  // HTTP-ok remember is enough; do not block the pair on CHUNKS read-back.
+  if (record.target === 'memory') {
+    return { status: 'recorded', recorded: true, correlation_id: record.correlation_id };
+  }
   const found = await recallWithRetry(recall, record, {
-    attempts: verify?.attempts ?? (memoryVerify ? MEMORY_VERIFY_RETRY.attempts : VERIFY_RETRY.attempts),
-    delaysMs: verify?.delaysMs ?? (memoryVerify ? MEMORY_VERIFY_RETRY.delaysMs : VERIFY_RETRY.delaysMs),
+    attempts: verify?.attempts ?? VERIFY_RETRY.attempts,
+    delaysMs: verify?.delaysMs ?? VERIFY_RETRY.delaysMs,
     sleep: typeof sleep === 'function' ? sleep : defaultSleep,
   });
   if (!found) {

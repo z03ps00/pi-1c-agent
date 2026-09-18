@@ -16,6 +16,7 @@ import {
   isProfileRoot,
   resolveProfileRoot,
 } from './update-profile.mjs';
+import { assertNodeVersion } from '../packages/pi-1c-agent/lib/node-runtime.mjs';
 
 const AUTH_EXAMPLE = 'auth.example.json';
 const TRUST_EXAMPLE = 'trust.example.json';
@@ -84,6 +85,14 @@ export function run(opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
   const loadedRoot = opts.loadedRoot ?? shippedRootFromScript();
   const profileDir = resolveProfileRoot({ env, cwd, loadedRoot });
+
+  const node = assertNodeVersion();
+  if (!node.ok) {
+    return finish({
+      state: 'node-too-old',
+      message: node.message,
+    });
+  }
 
   if (!profileDir || !isProfileRoot(profileDir)) {
     return finish({

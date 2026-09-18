@@ -1,0 +1,21 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  stress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19"
+      - run: npm test
+        working-directory: packages/pi-1c-agent
+      - run: npm run test:stress
+        working-directory: packages/pi-1c-agent
+        env:
+          PI_1C_STRESS: "1"

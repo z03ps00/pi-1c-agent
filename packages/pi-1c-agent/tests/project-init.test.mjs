@@ -18,6 +18,7 @@ import {
   effectiveVariableMeta,
   inferSourceLayoutRoot,
   inspectSourceScaffold,
+  knowledgeIdentity,
   loadDevEnvSchema,
   parseEnvTemplate,
   parseEnvValues,
@@ -39,6 +40,15 @@ const explicitDefaults = {
 function template() {
   return schema.variables.map((v, i) => `# ${i + 1}. ${v.title}\n${v.name}=${explicitDefaults[v.name] ?? ''}`).join('\n\n') + '\n';
 }
+
+test('knowledgeIdentity is ready only when both name and version are non-empty', () => {
+  assert.deepEqual(knowledgeIdentity('', ''), { name: '', version: '', ready: false });
+  assert.deepEqual(knowledgeIdentity('  ', '\t'), { name: '', version: '', ready: false });
+  assert.deepEqual(knowledgeIdentity('ERP', ''), { name: 'ERP', version: '', ready: false });
+  assert.deepEqual(knowledgeIdentity('', '2.5.25.56'), { name: '', version: '2.5.25.56', ready: false });
+  assert.deepEqual(knowledgeIdentity('  ERP  ', ' 2.5.25.56 '), { name: 'ERP', version: '2.5.25.56', ready: true });
+  assert.deepEqual(knowledgeIdentity(undefined, null), { name: '', version: '', ready: false });
+});
 
 test('UX schema covers exactly the 43 upstream variables planned for v0.6.x', () => {
   assert.equal(schema.variables.length, 43);
@@ -114,6 +124,7 @@ test('project initialization writes .dev.env but never leaks secret values to ma
   assert.match(yaml, /variableCount: 43/);
   assert.match(fs.readFileSync(path.join(cwd, '.gitignore'), 'utf8'), /^\.dev\.env$/m);
   assert.match(fs.readFileSync(path.join(cwd, '.gitignore'), 'utf8'), /^build\/$/m);
+  assert.equal(fs.readFileSync(path.join(cwd, '.pi', '1c', 'project-id'), 'utf8').trim(), 'test');
   if (process.platform !== 'win32') assert.equal(fs.statSync(result.envPath).mode & 0o777, 0o600);
 });
 
@@ -316,6 +327,7 @@ test('/init knowledge layout does not copy the agent or write .dev.env', () => {
   assert.ok(fs.existsSync(path.join(cwd, '.pi', '1c', 'configuration.json')));
   assert.ok(fs.existsSync(path.join(cwd, '.pi', '1c', 'project.yaml')));
   assert.ok(fs.existsSync(path.join(cwd, '.pi', '1c', 'init-state.json')));
+  assert.equal(fs.readFileSync(path.join(cwd, '.pi', '1c', 'project-id'), 'utf8').trim(), 'adopt');
   assertNoAgentCopy(cwd);
 
   const draft = path.join(cwd, '.pi', '1c', 'knowledge-drafts', 'draft-keep.json');

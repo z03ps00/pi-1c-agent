@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hasUnredactableSecret, redact } from '../lib/redact.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { hasUnredactableSecret, loadExactSecretValues, redact } from '../lib/redact.mjs';
 import { buildIdempotencyKey, contentHash } from '../lib/memory-key.mjs';
-import { deriveProjectId, normalizeWorkspacePath } from '../lib/project-id.mjs';
-import { formatMemoryStatus, prepareWrite, writeWithVerify } from '../lib/memory-write.mjs';
+import { deriveProjectId, normalizeWorkspacePath, slugProjectId, writeProjectIdMarker } from '../lib/project-id.mjs';
+import { formatMemoryStatus, prepareWrite, sessionCaptureDocumentUri, writeWithVerify } from '../lib/memory-write.mjs';
 import {
   ANON_KNOWLEDGE_READ_TOOLS,
   ANON_MEMORY_READ_TOOLS,
@@ -60,17 +63,34 @@ test('project-id ignores trailing space and bind-mount prefix', () => {
   assert.equal(a, '1c-pi-profile');
   assert.equal(normalizeWorkspacePath('/tmp/foo '), '/tmp/foo');
   assert.equal(deriveProjectId({ gitRemote: 'git@github.com:acme/demo.git' }), 'acme/demo');
-  assert.equal(deriveProjectId({ marker: 'My Project ' }), 'my project');
+  assert.equal(deriveProjectId({ marker: 'My Project ' }), 'my-project');
+});
+
+test('cyrillic folder names slug instead of collapsing to unknown', () => {
+  const cwd = '/mnt/vol/data/projects_code/Тестирование открытие форм пользователей по истории';
+  const id = deriveProjectId({ cwd });
+  assert.equal(id.startsWith('testirovanie-otkrytie-form'), true);
+  assert.notEqual(id, 'unknown');
+  assert.match(sessionCaptureDocumentUri(id, 'sess-1'), /session-captures\/testirovanie-otkrytie-form/);
+  assert.match(sessionCaptureDocumentUri(id, 'sess-1'), /\/sess-1\.md$/);
+  assert.equal(slugProjectId(''), 'unknown');
+  assert.match(slugProjectId('项目名称'), /^p-[0-9a-f]{8}$/);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-pid-'));
+  const wrote = writeProjectIdMarker(tmp, 'Тестирование форм');
+  assert.equal(wrote.created, true);
+  assert.equal(deriveProjectId({ cwd: tmp }), wrote.id);
+  assert.equal(writeProjectIdMarker(tmp, 'Other').created, false);
 });
 
 test('verify-after-write confirms or queues UNCONFIRMED', async () => {
   const prep = prepareWrite({ content: 'fact: ok', task: 't', agent: 'pi', date: '2026-09-16', cwd: '/tmp/demo' });
   assert.equal(prep.ok, true);
+  assert.equal(prep.record.target, 'memory');
   const confirmed = await writeWithVerify({
     record: prep.record,
     existsByKey: async () => false,
     remember: async () => ({ ok: true }),
-    recall: async () => true,
+    recall: async () => false,
   });
   assert.equal(confirmed.status, 'recorded');
 
@@ -78,13 +98,23 @@ test('verify-after-write confirms or queues UNCONFIRMED', async () => {
   const failed = await writeWithVerify({
     record: prep.record,
     existsByKey: async () => false,
-    remember: async () => ({ ok: true }),
-    recall: async () => false,
+    remember: async () => ({ ok: false }),
+    recall: async () => true,
     queuePending: (r) => queued.push(r),
     sleep: async () => {},
   });
   assert.equal(failed.status, 'UNCONFIRMED');
   assert.equal(queued.length, 1);
+
+  const knowledge = await writeWithVerify({
+    record: { ...prep.record, target: 'knowledge' },
+    existsByKey: async () => false,
+    remember: async () => ({ ok: true }),
+    recall: async () => false,
+    queuePending: (r) => queued.push(r),
+    sleep: async () => {},
+  });
+  assert.equal(knowledge.status, 'UNCONFIRMED');
 
   const dup = await writeWithVerify({
     record: prep.record,
@@ -96,7 +126,14 @@ test('verify-after-write confirms or queues UNCONFIRMED', async () => {
 });
 
 test('first-miss then hit recall becomes recorded', async () => {
-  const prep = prepareWrite({ content: 'fact: retry', task: 't', agent: 'pi', date: '2026-09-16', cwd: '/tmp/demo' });
+  const prep = prepareWrite({
+    content: 'report: retry',
+    task: 't',
+    agent: 'pi',
+    date: '2026-09-16',
+    cwd: '/tmp/demo',
+    target: 'knowledge',
+  });
   let calls = 0;
   const result = await writeWithVerify({
     record: prep.record,
@@ -115,6 +152,18 @@ test('first-miss then hit recall becomes recorded', async () => {
 test('unredactable secret blocks prepareWrite', () => {
   const blocked = prepareWrite({ content: '-----BEGIN PRIVATE KEY-----\nMIIB', task: 't', agent: 'pi' });
   assert.equal(blocked.ok, false);
+});
+
+test('exact .dev.env values are redacted even with unusual quoting', () => {
+  const secrets = loadExactSecretValues({ envText: 'ERP_PROD_CREDENTIAL="s3cret value with spaces"\n' });
+  const out = redact('use ERP_PROD_CREDENTIAL = "s3cret value with spaces" in report', { exactValues: secrets });
+  assert.doesNotMatch(out.text, /s3cret value with spaces/);
+  assert.match(out.text, /\[REDACTED:secret_value\]/);
+});
+
+test('known token is fully redacted', () => {
+  const out = redact('token sk-abcdefghijklmnopqrstuvwxyz012345');
+  assert.doesNotMatch(out.text, /sk-abcdefghijklmnopqrstuvwxyz012345/);
 });
 
 test('unified Memory status line', () => {

@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 const RULES = [
   {
     kind: 'private_key',
@@ -41,9 +44,54 @@ const LEFTOVER = [
   /\b(?:sk-|rk-|ghp_|gho_|github_pat_|xox[baprs]-)[A-Za-z0-9_-]{16,}\b/,
 ];
 
-export function redact(text) {
+const SKIP_EXACT_VALUES = new Set(['', 'true', 'false', 'yes', 'no', 'on', 'off', '0', '1', 'utf-8', 'utf8']);
+const SECRET_KEY_RE = /password|passwd|secret|token|key|authorization|cookie|credential|dsn/i;
+
+export function parseEnvSecretValues(text) {
+  const values = [];
+  for (const line of String(text ?? '').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const idx = trimmed.indexOf('=');
+    if (idx < 1) continue;
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!value || SKIP_EXACT_VALUES.has(value.toLowerCase())) continue;
+    if (SECRET_KEY_RE.test(key) || value.length >= 6) values.push(value);
+  }
+  return [...new Set(values)].sort((a, b) => b.length - a.length);
+}
+
+export function loadExactSecretValues({ cwd, envText } = {}) {
+  if (typeof envText === 'string') return parseEnvSecretValues(envText);
+  let cur = path.resolve(String(cwd || process.cwd()));
+  while (true) {
+    const file = path.join(cur, '.dev.env');
+    try {
+      if (fs.existsSync(file)) return parseEnvSecretValues(fs.readFileSync(file, 'utf8'));
+    } catch {
+      return [];
+    }
+    const parent = path.dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  return [];
+}
+
+export function redact(text, { exactValues = [] } = {}) {
   let out = String(text ?? '');
   const kinds = [];
+  const extras = [...exactValues].filter(Boolean).sort((a, b) => String(b).length - String(a).length);
+  for (const value of extras) {
+    if (!value || SKIP_EXACT_VALUES.has(String(value).toLowerCase())) continue;
+    if (!out.includes(value)) continue;
+    out = out.split(value).join('[REDACTED:secret_value]');
+    if (!kinds.includes('secret_value')) kinds.push('secret_value');
+  }
   for (const rule of RULES) {
     const next = out.replace(rule.re, `[REDACTED:${rule.kind}]`);
     if (next !== out && !kinds.includes(rule.kind)) kinds.push(rule.kind);

@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { combineParallelHandoffs, loadWorkflows, parseWorkflowYaml, validateWorkflow, verifyWorkflowHandoff } from '../lib/workflows.mjs';
+import { combineParallelHandoffs, loadWorkflows, parseWorkflowYaml, resetWorkflowCacheForTests, validateWorkflow, verifyWorkflowHandoff } from '../lib/workflows.mjs';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -44,4 +46,19 @@ test('verification gate requires explicit verification evidence', () => {
   assert.equal(verifyWorkflowHandoff({handoff:{verification:[]}}).ok, false);
   const ok = verifyWorkflowHandoff({handoff:{verification:['syntaxcheck PASS']}});
   assert.equal(ok.ok, true);
+});
+
+test('edited workflow file is reloaded on next load', () => {
+  resetWorkflowCacheForTests();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-wf-'));
+  fs.mkdirSync(path.join(dir, 'workflows'));
+  const file = path.join(dir, 'workflows', 'demo.yaml');
+  fs.writeFileSync(file, 'name: demo\nstages:\n  - 1c-explorer\n');
+  const first = loadWorkflows(dir);
+  assert.equal(first.get('demo').stages.length, 1);
+  fs.writeFileSync(file, 'name: demo\nstages:\n  - 1c-explorer\n  - 1c-analytic\n');
+  const then = fs.statSync(file).mtimeMs;
+  fs.utimesSync(file, then / 1000 + 1, then / 1000 + 1);
+  const second = loadWorkflows(dir);
+  assert.equal(second.get('demo').stages.length, 2);
 });

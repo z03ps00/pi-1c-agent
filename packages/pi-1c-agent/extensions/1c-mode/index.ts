@@ -15,6 +15,7 @@ import { evaluatePlanMcpToolCall, evaluatePlanToolCall, getPlanVisibleTools } fr
 import { acceptPlan, enterBuild, enterPlan, executePlan, extractPlanArtifact, initialModeState } from "../../lib/plan-state.mjs";
 import * as planStateLib from "../../lib/plan-state.mjs";
 import * as planPolicyLib from "../../lib/plan-policy.mjs";
+import { set1cMode } from "../../lib/mode-state.mjs";
 
 type OneCMode = "plan" | "build" | "ask";
 type OneCPhase = "build-idle" | "plan-draft" | "plan-ready" | "ask-idle" | "build-executing";
@@ -264,7 +265,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   pi.registerFlag("approve", { description: "Approval mode: off, safe (dangerous actions), or strict (every tool)", type: "string" });
 
   function publishSharedState(): void {
-    shared.__PI_1C_MODE__ = state.mode;
+    set1cMode(state.mode);
     shared.__PI_1C_PHASE__ = state.phase;
     shared.__PI_1C_PLAN_ID__ = state.plan?.id;
   }

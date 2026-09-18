@@ -85,6 +85,7 @@ test('wrap writes paired records with one correlation_id and no raw transcript',
   const knowledge = remembered.find((r) => r.target === 'knowledge');
   assert.match(knowledge.uri, /viking:\/\/resources\/session-captures\/demo\/abc\.md/);
   assert.match(remembered.find((r) => r.target === 'memory').content, /TYPE: session_capture/);
+  assert.match(remembered.find((r) => r.target === 'memory').content, /SCOPE: project:demo/);
 });
 
 test('trivial session writes nothing', async () => {
@@ -316,7 +317,7 @@ test('report-only confirm is UNCONFIRMED with an honest notify', async () => {
     cwd: '/tmp/demo',
     correlationId: 'corr-shared',
     distillerMode: 'off',
-    remember: async () => ({ ok: true }),
+    remember: async (record) => ({ ok: record.target === 'knowledge' }),
     recall: async (record) => record.target === 'knowledge',
     existsByKey: async () => false,
     sleep: async () => {},
@@ -415,6 +416,19 @@ test('heuristic ignores incidental verification prose', () => {
   assert.ok(labeled.verification.some((item) => /unit tests pass/i.test(item)));
 });
 
+test('MCP skill verification prose is not substantial and last user line wins as task', () => {
+  const dumped = 'before the first call in the session to any MCP tool whose parameter names are not obvious from a short routine call (in particular every tool listed under *Parameter-rich tools — read the doc first* in `mcp-1c-tools/SKILL.md`), open the corresponding `docs/<server>.md`. Skipping this check and calling with a guessed parameter name is a defect.';
+  const distilled = distillHeuristic([
+    { role: 'user', content: 'first question' },
+    { role: 'user', content: 'продолжи меня спрашивать' },
+    { tool: 'read', input: { path: 'lib/x.mjs' } },
+    { role: 'assistant', content: `verification: ${dumped}` },
+  ]);
+  assert.equal(distilled.task, 'продолжи меня спрашивать');
+  assert.equal(distilled.verification.length, 0);
+  assert.equal(isSubstantial(distilled), false);
+});
+
 test('stack mode calls the provider and empty/error falls back', async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {
@@ -478,12 +492,11 @@ test('stack mode calls the provider and empty/error falls back', async () => {
   const empty = parseDistillPayload('not json');
   assert.equal(empty, null);
 
-  assert.equal(resolveStackProvider({ mode: 'stack', env: { ROUTERAI_API_KEY: '' } }), null);
-  const skipped = await distillWithProvider({
+  assert.equal(resolveStackProvider({ mode: 'stack', env: { ROUTERAI_API_KEY: '' } }).kind, 'ollama');
+  await assert.rejects(() => distillWithProvider({
     mode: 'stack',
     entries: substantialEntries,
-    fetchImpl: async () => { throw new Error('must not call ollama'); },
+    fetchImpl: async () => { throw new Error('ollama down'); },
     env: { ROUTERAI_API_KEY: '' },
-  });
-  assert.equal(skipped, null);
+  }), /ollama down|stack provider/);
 });

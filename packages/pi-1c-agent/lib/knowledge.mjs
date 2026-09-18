@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { emitDiagnostic } from './diagnostics.mjs';
 
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 export const ITEM_KINDS = new Set(['fact', 'rule', 'preference', 'assumption']);
@@ -17,6 +18,8 @@ export function fingerprintPath(cwd) { return path.join(knowledgeRoot(cwd), 'kno
 export function draftsDir(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge-drafts'); }
 export function itemsDir(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge', 'items'); }
 export function rulesDir(cwd, scope) { return path.join(knowledgeRoot(cwd), 'rules', scope); }
+export function knowledgeLockPath(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge.lock'); }
+export function committedSnapshotPath(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge', 'committed.json'); }
 
 export function ensureKnowledgeDirs(cwd) {
   for (const dir of [
@@ -61,6 +64,79 @@ function atomicWriteJson(file, value) {
   const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;
   fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`);
   fs.renameSync(tmp, file);
+}
+
+function sleepSync(ms) {
+  const buf = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.wait(buf, 0, 0, Math.max(1, Number(ms) || 1));
+}
+
+export function knowledgeRevision(cwd) {
+  const committed = readCommittedSnapshot(cwd);
+  if (committed && Number.isFinite(Number(committed.revision))) return Number(committed.revision);
+  const config = (() => {
+    try { return loadConfiguration(cwd); } catch { return null; }
+  })();
+  return Number(config?.revision) || 0;
+}
+
+export function readCommittedSnapshot(cwd) {
+  const file = committedSnapshotPath(cwd);
+  if (!fs.existsSync(file)) return null;
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+}
+
+export function writeCommittedSnapshot(cwd, { revision, items = [], configuration = null }) {
+  const snapshot = {
+    schema: 1,
+    revision: Number(revision) || 0,
+    updatedAt: now(),
+    configuration: configuration || loadConfiguration(cwd),
+    items: (items || []).map((item) => {
+      const copy = { ...item };
+      delete copy._file;
+      return copy;
+    }),
+  };
+  atomicWriteJson(committedSnapshotPath(cwd), snapshot);
+  return snapshot;
+}
+
+export function acquireKnowledgeLock(cwd, { staleMs = 30_000, timeoutMs = 5_000 } = {}) {
+  const dir = knowledgeLockPath(cwd);
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
+  const started = Date.now();
+  while (true) {
+    try {
+      fs.mkdirSync(dir);
+      fs.writeFileSync(path.join(dir, 'owner'), `${process.pid} ${Date.now()}\n`);
+      return dir;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      try {
+        const st = fs.statSync(dir);
+        if (Date.now() - st.mtimeMs > staleMs) fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // retry
+      }
+      if (Date.now() - started > timeoutMs) throw new Error('knowledge lock timeout');
+      sleepSync(20);
+    }
+  }
+}
+
+export function releaseKnowledgeLock(cwd) {
+  const dir = knowledgeLockPath(cwd);
+  try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+}
+
+export function withKnowledgeLock(cwd, fn) {
+  acquireKnowledgeLock(cwd);
+  try {
+    return fn();
+  } finally {
+    releaseKnowledgeLock(cwd);
+  }
 }
 
 export function precedenceOf(item) {
@@ -176,13 +252,21 @@ function readJsonFiles(dir) {
   return out;
 }
 
-export function loadAllItems(cwd) {
+function scanAllItems(cwd) {
   const records = [
     ...readJsonFiles(itemsDir(cwd)),
     ...readJsonFiles(rulesDir(cwd, 'configuration')),
     ...readJsonFiles(rulesDir(cwd, 'project')),
   ];
   return records.map((r) => ({ ...r.value, _file: r.file }));
+}
+
+export function loadAllItems(cwd) {
+  const committed = readCommittedSnapshot(cwd);
+  if (committed && Array.isArray(committed.items)) {
+    return committed.items.map((item) => ({ ...item, _file: canonicalItemPath(cwd, item) }));
+  }
+  return scanAllItems(cwd);
 }
 
 export function findItem(cwd, id) {
@@ -243,6 +327,7 @@ export function initConfiguration(cwd, { name, version, family, sourceRoot = '.'
   const scanned = scanFingerprint(absRoot, { deep });
   const config = {
     schemaVersion: 1,
+    revision: 0,
     name: name.trim(),
     family: (family || name).trim(),
     version: version.trim(),
@@ -255,6 +340,7 @@ export function initConfiguration(cwd, { name, version, family, sourceRoot = '.'
   };
   atomicWriteJson(configurationPath(cwd), config);
   atomicWriteJson(fingerprintPath(cwd), scanned.index);
+  writeCommittedSnapshot(cwd, { revision: 0, items: [], configuration: config });
   return config;
 }
 
@@ -376,10 +462,21 @@ export function auditDraft(cwd, draftOrId) {
   return { ok: errors.length === 0, errors, warnings };
 }
 
-export function applyDraft(cwd, draftId) {
+export function applyDraft(cwd, draftId, { expectedRevision } = {}) {
+  return withKnowledgeLock(cwd, () => applyDraftLocked(cwd, draftId, { expectedRevision }));
+}
+
+function applyDraftLocked(cwd, draftId, { expectedRevision } = {}) {
   const draft = loadDraft(cwd, draftId);
   if (!draft) throw new Error(`draft not found: ${draftId}`);
   if (draft.status === 'applied') return { draft, results: [], alreadyApplied: true };
+  const currentRevision = knowledgeRevision(cwd);
+  if (expectedRevision !== undefined && expectedRevision !== null && Number(expectedRevision) !== currentRevision) {
+    emitDiagnostic('knowledge.revision.conflict', { expected: expectedRevision, current: currentRevision, draftId });
+    const err = new Error(`knowledge.revision.conflict: expected ${expectedRevision}, current ${currentRevision}`);
+    err.code = 'knowledge.revision.conflict';
+    throw err;
+  }
   const preflight = auditDraft(cwd, draft);
   if (!preflight.ok) throw new Error(`draft preflight failed: ${preflight.errors.join('; ')}`);
   const results = [];
@@ -436,7 +533,13 @@ export function applyDraft(cwd, draftId) {
   draft.status = 'applied';
   draft.appliedAt = now();
   atomicWriteJson(path.join(draftsDir(cwd), `${draftId}.json`), draft);
-  return { draft, results, alreadyApplied: false };
+  const configuration = loadConfiguration(cwd) || {};
+  const nextRevision = currentRevision + 1;
+  configuration.revision = nextRevision;
+  configuration.updatedAt = now();
+  atomicWriteJson(configurationPath(cwd), configuration);
+  writeCommittedSnapshot(cwd, { revision: nextRevision, items: scanAllItems(cwd), configuration });
+  return { draft, results, alreadyApplied: false, revision: nextRevision };
 }
 
 export function disableItem(cwd, id, reason = 'disabled by user') {

@@ -8,9 +8,17 @@ import {
   formatReconcileReport,
   listPendingRecords,
   pendingRecordFileName,
+  queueItemCounts,
   queuePendingRecord,
   reconcilePending,
+  reclaimStaleClaims,
+  runStartupReconcile,
   serializePendingRecord,
+  shouldSkipStartupReconcile,
+  tryClaim,
+  resolveMemoryStateRoots,
+  ensureMemoryStateDirs,
+  originalPendingName,
 } from '../lib/memory-reconcile.mjs';
 
 const profilePending = path.resolve(
@@ -180,4 +188,75 @@ test('pending serialization is redacted', () => {
     content: 'password=secret',
   });
   assert.doesNotMatch(text, /password=secret/);
+});
+
+test('sixteen workers claim one pending file once', async () => {
+  const { spawn } = await import('node:child_process');
+  const profile = tempProfile();
+  const file = queuePendingRecord(profile, {
+    idempotency_key: 'task=race; agent=pi; date=2026-09-18; content_hash=racehash',
+    target: 'memory',
+    content: 'fact: one',
+  });
+  const worker = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'helpers', 'claim-worker.mjs');
+  const procs = Array.from({ length: 16 }, () => spawn(process.execPath, [worker, file, profile], { encoding: 'utf8' }));
+  const codes = await Promise.all(procs.map((p) => new Promise((resolve) => p.on('close', resolve))));
+  assert.equal(codes.filter((c) => c === 0).length, 1);
+  assert.equal(codes.filter((c) => c === 2).length, 15);
+});
+
+test('stale processing claim is reclaimed after TTL', () => {
+  const profile = tempProfile();
+  const dirs = ensureMemoryStateDirs(profile);
+  const pending = queuePendingRecord(profile, {
+    idempotency_key: 'task=stale; agent=pi; date=2026-09-18; content_hash=stalehash',
+    target: 'memory',
+    content: 'fact: stale',
+  });
+  const claimed = tryClaim(pending, dirs.processing, { pid: 1, now: 1 });
+  assert.ok(claimed);
+  assert.equal(listPendingRecords(profile).length, 0);
+  const n = reclaimStaleClaims(profile, { now: 1 + 400_000, ttlMs: 300_000 });
+  assert.equal(n, 1);
+  assert.equal(listPendingRecords(profile).length, 1);
+});
+
+test('transient remote failure returns the record to pending', async () => {
+  const profile = tempProfile();
+  queuePendingRecord(profile, {
+    idempotency_key: 'task=fail; agent=pi; date=2026-09-18; content_hash=failhash',
+    target: 'memory',
+    content: 'fact: retry',
+  });
+  const summary = await reconcilePending({
+    profileDir: profile,
+    serversReachable: { memory: true },
+    existsByKey: async () => false,
+    remember: async () => ({ ok: false }),
+    recall: async () => false,
+  });
+  assert.equal(summary.pending, 1);
+  assert.equal(listPendingRecords(profile).length, 1);
+  const counts = queueItemCounts(profile);
+  assert.equal(counts.pending + counts.processing + counts.done + counts.failed, 1);
+});
+
+test('child env skips startup reconcile and failures emit diagnostics', async () => {
+  const { resetDiagnostics, diagnosticEvents } = await import('../lib/diagnostics.mjs');
+  resetDiagnostics();
+  assert.equal(shouldSkipStartupReconcile({ PI_1C_CHILD_PROCESS: '1' }), true);
+  const skipped = await runStartupReconcile({ env: { PI_1C_DISABLE_STARTUP_RECONCILE: '1' } });
+  assert.equal(skipped.skipped, true);
+  const profile = tempProfile();
+  queuePendingRecord(profile, {
+    idempotency_key: 'task=boom; agent=pi; date=2026-09-18; content_hash=boomhash',
+    target: 'memory',
+    content: 'fact: boom',
+  });
+  await assert.rejects(() => runStartupReconcile({
+    profileDir: profile,
+    env: {},
+    probe: async () => { throw new Error('probe down'); },
+  }));
+  assert.ok(diagnosticEvents().some((e) => e.code === 'memory.lifecycle.probe.failed'));
 });

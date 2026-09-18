@@ -116,7 +116,8 @@ export function resolveStackProvider({ mode = 'stack', model = '', profileDir, e
   if (routerKey) {
     return { kind: 'routerai', endpoint: `${routerEndpoint}/chat/completions`, model: routerModel, apiKey: routerKey };
   }
-  return null;
+  // stack without RouterAI: try local Ollama rather than silent heuristic.
+  return { kind: 'ollama', endpoint: `http://${ollamaHost}:${ollamaPort}/v1/chat/completions`, model: ollamaModel, apiKey: '' };
 }
 
 export function parseDistillPayload(text) {

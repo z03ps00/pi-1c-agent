@@ -7,6 +7,6 @@
     "scan:public": "node scripts/scan-public-tree.mjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.19.0"
   }
 }

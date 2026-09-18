@@ -7,6 +7,16 @@
 
 ## Unreleased
 
+### BREAKING: fail-closed 1C mode
+- Missing or malformed `__PI_1C_MODE__` now resolves to **ASK**, not BUILD. Mutations require an explicit BUILD mode. Duplicate `currentMode()` helpers were removed in favor of `lib/mode-state.mjs`.
+
+### Multi-agent runtime hardening
+- Memory pending queue uses atomic `rename` claims (`processing/` + `failed/`), TTL reclaim, and parent-only startup reconcile.
+- Child JSON transport flushes a final frame without newline, caps stdout/stderr, and reports structured exit metadata.
+- Process-wide `PI_1C_MAX_SUBAGENTS` budget; MCP agents are side-effect classified (unknown MCP cannot run beside other mutators unless `mcpReadOnly: true`).
+- MCP session initialize is single-flight; knowledge apply is revision/lock guarded; `.dev.env` values are exact-redacted before remote memory writes.
+- GitHub Actions CI (Linux/Windows, Node 22.19 / 22) plus a nightly stress job.
+
 ### Session capture
 - Pi idle/footer no longer treats event context as Cursor: host is Pi when `getContextUsage` or `newSession` is a function. Footer shows `capture:on/stack` (default) instead of `capture:manual`.
 - Distill unwraps nested Pi `message` / `toolCall` entries so a real `write`/`edit` counts as substantial and idle `/wrap` can persist.

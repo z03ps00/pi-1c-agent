@@ -19,19 +19,14 @@ import {
   parseKnowledgeProposals,
   queryKnowledge,
 } from "../../lib/knowledge.mjs";
+import { current1cMode, requireBuild as assertBuild } from "../../lib/mode-state.mjs";
 
-type OneCMode = "plan" | "build";
-type SharedState = typeof globalThis & { __PI_1C_MODE__?: OneCMode };
 type Pending = {
   type: "learn" | "config-analyze" | "config-update";
   input: string;
   meta?: any;
   automaticProposals?: any[];
 };
-
-function currentMode(): OneCMode {
-  return (globalThis as SharedState).__PI_1C_MODE__ === "plan" ? "plan" : "build";
-}
 
 function assistantText(message: any): string {
   if (!message || message.role !== "assistant") return "";
@@ -129,9 +124,13 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   }
 
   function requireBuild(ctx: any, action: string): boolean {
-    if (currentMode() === "build") return true;
-    ctx.ui.notify(`${action} changes canonical knowledge/configuration state and requires BUILD. PLAN may create proposals/drafts only.`, "error");
-    return false;
+    try {
+      assertBuild(action);
+      return true;
+    } catch {
+      ctx.ui.notify(`${action} changes canonical knowledge/configuration state and requires BUILD. PLAN may create proposals/drafts only.`, "error");
+      return false;
+    }
   }
 
   function beginAnalysis(ctx: any, next: Pending, prompt: string): void {
@@ -248,7 +247,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
 
       if (sub === "analyze") {
         if (!requireTrusted(ctx)) return;
-        if (currentMode() !== "plan") return ctx.ui.notify("/config analyze is PLAN-only. Switch with /mode plan so discovery cannot mutate project code.", "error");
+        if (current1cMode() !== "plan") return ctx.ui.notify("/config analyze is PLAN-only. Switch with /mode plan so discovery cannot mutate project code.", "error");
         const config = loadConfiguration(ctx.cwd);
         const focus = rest || "architecture, metadata, common modules, integrations, patterns and project-significant constraints";
         const prompt = `Perform a PLAN-only analysis of this 1C configuration and prepare reusable configuration knowledge.\n\nConfiguration: ${config ? `${config.name} ${config.version}; sourceRoot=${config.sourceRoot}` : "not initialized yet"}\nFocus: ${focus}\n\nUse read-only 1C subagents where useful: explorer, analytic, architect. Distinguish facts from policies/preferences/assumptions. Facts require evidence paths; do not mark confidence=verified without evidence. Customer-specific policies belong to project scope, reusable configuration behavior belongs to configuration scope.\n\nReturn the normal complete PLAN sections required by 1C PLAN mode. Then append exactly:\n\n## Knowledge Proposals\n\n\`\`\`json\n[\n  {\n    "action":"add",\n    "kind":"fact|rule|preference|assumption",\n    "scope":"configuration|project",\n    "topic":"stable topic key",\n    "title":"short title",\n    "statement":"atomic reusable statement",\n    "confidence":"verified|high|medium|low|unknown",\n    "tags":[],\n    "evidence":[{"type":"source","path":"relative/path","line":1,"note":"why this proves the statement"}],\n    "appliesTo":{"subsystems":[],"objects":[],"paths":[]}\n  }\n]\n\`\`\`\n\nDo not activate knowledge; this output becomes a draft requiring approval in BUILD.`;
@@ -258,7 +257,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
 
       if (sub === "update") {
         if (!requireTrusted(ctx)) return;
-        if (currentMode() !== "plan") return ctx.ui.notify("/config update is PLAN-only for discovery. Apply the resulting draft later in BUILD.", "error");
+        if (current1cMode() !== "plan") return ctx.ui.notify("/config update is PLAN-only for discovery. Apply the resulting draft later in BUILD.", "error");
         const [versionMaybe, focusMaybe] = parseDoubleColon(rest);
         try {
           const current = loadConfiguration(ctx.cwd);

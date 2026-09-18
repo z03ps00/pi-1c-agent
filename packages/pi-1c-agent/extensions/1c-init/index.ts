@@ -14,6 +14,7 @@ import {
   ensureProjectKnowledgeLayout,
   inferSourceLayoutRoot,
   initStatus,
+  knowledgeIdentity,
   inspectSourceScaffold,
   inspectBuildScaffold,
   inspectDocsScaffold,
@@ -25,15 +26,10 @@ import {
   summarizeEnv,
 } from "../../lib/project-init.mjs";
 import { loadConfiguration } from "../../lib/knowledge.mjs";
+import { requireBuild as assertBuild } from "../../lib/mode-state.mjs";
 
-type OneCMode = "plan" | "build";
-type SharedState = typeof globalThis & { __PI_1C_MODE__?: OneCMode };
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const schema = loadDevEnvSchema();
-
-function currentMode(): OneCMode {
-  return (globalThis as SharedState).__PI_1C_MODE__ === "plan" ? "plan" : "build";
-}
 
 function trusted(ctx: any): boolean {
   return typeof ctx.isProjectTrusted === "function" ? ctx.isProjectTrusted() : false;
@@ -242,7 +238,11 @@ export default function oneCInit(pi: ExtensionAPI): void {
   async function handleInit(args: string | undefined, ctx: any, aliasName?: string) {
       if (aliasName) ctx.ui.notify(`/${aliasName} is an alias of /init`, "info");
       if (!trusted(ctx)) return ctx.ui.notify("/init is project-scoped and requires a trusted project.", "error");
-      if (currentMode() !== "build") return ctx.ui.notify("/init writes .dev.env and project state. Switch to BUILD first. PLAN remains read-only for project initialization.", "error");
+      try {
+        assertBuild("/init");
+      } catch {
+        return ctx.ui.notify("/init writes .dev.env and project state. Switch to BUILD first. PLAN remains read-only for project initialization.", "error");
+      }
 
       const requested = parseInitRequest(args);
       if (requested.status) {
@@ -372,8 +372,8 @@ export default function oneCInit(pi: ExtensionAPI): void {
       const decisions: Record<string, any> = {};
 
       const projectName = (await askText(ctx, "Название проекта", path.basename(ctx.cwd), "Например: Valenta EXON")) ?? path.basename(ctx.cwd);
-      const configurationName = (await askText(ctx, "Название конфигурации 1С", config.name, "Например: 1С:ERP Управление предприятием")) ?? config.name;
-      const configurationVersion = (await askText(ctx, "Версия конфигурации", config.version, "Например: 2.5.25.56")) ?? config.version;
+      let configurationName = (await askText(ctx, "Название конфигурации 1С", config.name, "Например: 1С:ERP Управление предприятием")) ?? config.name;
+      let configurationVersion = (await askText(ctx, "Версия конфигурации", config.version, "Например: 2.5.25.56")) ?? config.version;
 
       const detectedLayoutRoot = inferSourceLayoutRoot(ctx.cwd, config.sourceRoot || ".");
       const sourceLayoutRoot = (await askText(
@@ -480,13 +480,31 @@ export default function oneCInit(pi: ExtensionAPI): void {
       }
 
       let knowledgeEnabled = await ctx.ui.confirm("Configuration Knowledge Layer", "Инициализировать fingerprint/knowledge layer для этой конфигурации после подтверждения?");
+      if (knowledgeEnabled && !knowledgeIdentity(configurationName, configurationVersion).ready) {
+        const FILL = "Указать название и версию сейчас";
+        const SKIP = "Продолжить без Knowledge Layer";
+        const picked = await ctx.ui.select("Configuration Knowledge требует название и версию конфигурации", [FILL, SKIP]);
+        if (!picked) return ctx.ui.notify("Инициализация отменена. Проект не изменён.", "info");
+        if (picked === FILL) {
+          if (!knowledgeIdentity(configurationName, configurationVersion).name) {
+            const entered = await askText(ctx, "Название конфигурации 1С", "", "Например: 1С:ERP Управление предприятием", false);
+            if (entered == null) return ctx.ui.notify("Инициализация отменена. Проект не изменён.", "info");
+            configurationName = entered;
+          }
+          if (!knowledgeIdentity(configurationName, configurationVersion).version) {
+            const entered = await askText(ctx, "Версия конфигурации", "", "Например: 2.5.25.56", false);
+            if (entered == null) return ctx.ui.notify("Инициализация отменена. Проект не изменён.", "info");
+            configurationVersion = entered;
+          }
+        }
+        if (!knowledgeIdentity(configurationName, configurationVersion).ready) {
+          knowledgeEnabled = false;
+          ctx.ui.notify("Configuration Knowledge отключён для этой инициализации — название или версия не заполнены. Остальные ответы сохранены.", "info");
+        }
+      }
       const openSpecEnabled = await ctx.ui.confirm("OpenSpec", "Используется OpenSpec в этом проекте? Если да и artifacts ещё нет, после инициализации будет предложена /openspec-setup.");
 
       if (knowledgeEnabled) {
-        if (!configurationName || !configurationVersion) {
-          ctx.ui.notify("Configuration Knowledge требует название и версию конфигурации. Заполните их или повторите /init с отключённым Knowledge Layer.", "error");
-          return;
-        }
         const sourceAbs = path.resolve(ctx.cwd, sourceRoot || ".");
         const scaffoldCfAbs = path.resolve(ctx.cwd, sourceLayoutRoot || "src", "cf");
         const sourceWillBeCreated = sourceScaffoldEnabled && sourceAbs === scaffoldCfAbs;

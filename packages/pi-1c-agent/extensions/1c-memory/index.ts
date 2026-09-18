@@ -21,11 +21,13 @@ import {
   formatReconcileReport,
   reconcilePending,
   resolveMemoryStateRoots,
+  shouldSkipStartupReconcile,
 } from "../../lib/memory-reconcile.mjs";
 import { createMcpAdapters, probeMemoryServers } from "../../lib/memory-mcp.mjs";
+import { emitDiagnostic } from "../../lib/diagnostics.mjs";
+import { current1cMode, isBuildMode } from "../../lib/mode-state.mjs";
 
 type CaptureState = ReturnType<typeof restoreCaptureState>;
-type Shared = typeof globalThis & { __PI_1C_MODE__?: string };
 
 function callCaptureLib<T>(name: string, args: unknown[]): T | undefined {
   const fn = (captureLib as Record<string, unknown>)[name];
@@ -42,10 +44,6 @@ function hostOf(ctx: ExtensionContext): "pi" | "cursor" {
   if (viaLib === "pi" || viaLib === "cursor") return viaLib;
   const c = ctx as { newSession?: unknown; getContextUsage?: unknown };
   return typeof c.getContextUsage === "function" || typeof c.newSession === "function" ? "pi" : "cursor";
-}
-
-function currentMode(): string {
-  return (globalThis as Shared).__PI_1C_MODE__ || "build";
 }
 
 function restoreAnonLevel(entries: unknown[]): number {
@@ -117,6 +115,7 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   let state: CaptureState = restoreCaptureState([]);
   let sessionCorrelation = "";
   let captureInFlight = false;
+  let lifecycle: Promise<string> | null = null;
 
   function persist(): void {
     pi.appendEntry(CAPTURE_STATE_TYPE, { state });
@@ -147,11 +146,21 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   }
 
   async function probeAndReconcile(ctx: ExtensionContext): Promise<string> {
+    if (shouldSkipStartupReconcile()) {
+      emitDiagnostic("memory.lifecycle.probe.skipped", { reason: "child-process" });
+      return "memory-flush: skipped — child process";
+    }
+    if (!isBuildMode()) {
+      emitDiagnostic("memory.lifecycle.probe.skipped", { reason: "not-build", mode: current1cMode() });
+      return "memory-flush: skipped — BUILD required";
+    }
     const anonLevel = restoreAnonLevel(sessionEntries(ctx));
     try {
       const roots = resolveMemoryStateRoots(profileDir());
       fs.mkdirSync(roots.done, { recursive: true });
       fs.mkdirSync(roots.pending, { recursive: true });
+      fs.mkdirSync(roots.processing, { recursive: true });
+      fs.mkdirSync(roots.failed, { recursive: true });
     } catch {
       // ignore
     }
@@ -165,11 +174,26 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     return formatReconcileReport(summary);
   }
 
+  async function runLifecycle(ctx: ExtensionContext): Promise<string> {
+    if (lifecycle) return lifecycle;
+    lifecycle = (async () => {
+      try {
+        return await probeAndReconcile(ctx);
+      } catch (error: any) {
+        emitDiagnostic("memory.lifecycle.probe.failed", { reason: error?.message || String(error) });
+        return `memory-flush: probe failed (${error?.message || String(error)})`;
+      } finally {
+        lifecycle = null;
+      }
+    })();
+    return lifecycle;
+  }
+
   async function runCapture(ctx: ExtensionContext, opts: { archive?: boolean; idle?: boolean } = {}): Promise<void> {
     const contract = captureDoesNotTouchMainChat();
     if (contract.injectsIntoMainChat) return;
     const entries = flattenEntries(sessionEntries(ctx));
-    const mode = currentMode();
+    const mode = current1cMode();
     const anonLevel = restoreAnonLevel(sessionEntries(ctx));
     if (!sessionCorrelation) sessionCorrelation = `${sessionIdOf(ctx)}`;
     const result = await captureSession({
@@ -204,7 +228,7 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   pi.registerCommand("memory-flush", {
     description: "Replay pending Cognee/OpenViking records: /memory-flush",
     handler: async (_args, ctx) => {
-      const report = await probeAndReconcile(ctx);
+      const report = await runLifecycle(ctx);
       ctx.ui.notify(report, "info");
     },
   });
@@ -257,7 +281,8 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     state = restoreCaptureState(ctx.sessionManager.getEntries());
     sessionCorrelation = sessionIdOf(ctx);
     updateStatus(ctx);
-    void probeAndReconcile(ctx).catch(() => {});
+    const report = await runLifecycle(ctx);
+    if (report && !report.includes("skipped")) ctx.ui.notify(report, "info");
   });
 
   pi.on("agent_settled", async (_event, ctx) => {
@@ -270,7 +295,7 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     if (!shouldIdleCapture({
       host: "pi",
       idleEnabled: state.idleEnabled,
-      mode: currentMode(),
+      mode: current1cMode(),
       anonLevel: restoreAnonLevel(sessionEntries(ctx)),
       substantial,
     })) {

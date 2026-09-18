@@ -12,6 +12,7 @@ import {
   loadConfiguration,
   rulesDir,
 } from './knowledge.mjs';
+import { writeProjectIdMarker } from './project-id.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(here, '..');
@@ -23,6 +24,17 @@ export const BUILD_LAYOUT_ROOT = 'build';
 export const DOCS_LAYOUT_ROOT = 'docs';
 export const DOCS_TECHTASK_DIR = 'techtask';
 export const COMPILED_KIND_EXT = Object.freeze({ cf: 'cf', cfe: 'cfe', epf: 'epf', erf: 'erf' });
+
+/** Fingerprint/knowledge init needs a non-empty configuration name and version. */
+export function knowledgeIdentity(name, version) {
+  const trimmedName = String(name ?? '').trim();
+  const trimmedVersion = String(version ?? '').trim();
+  return {
+    name: trimmedName,
+    version: trimmedVersion,
+    ready: Boolean(trimmedName && trimmedVersion),
+  };
+}
 
 function projectRelative(cwd, absolute) {
   const rel = path.relative(cwd, absolute);
@@ -591,6 +603,7 @@ function writeMinimalKnowledgeManifests(cwd, {
     }, null, 2)}\n`);
     created.push('.pi/1c/init-state.json');
   }
+  writeProjectIdMarker(cwd, name);
   return { projectYaml, initState, created };
 }
 
@@ -703,6 +716,7 @@ export function applyProjectInitialization(cwd, { templateRaw, values, decisions
     buildScaffoldEnabled,
     docsScaffoldEnabled,
   }));
+  writeProjectIdMarker(cwd, projectName);
   atomicWrite(path.join(stateDir, 'init-state.json'), `${JSON.stringify({
     schemaVersion: 1,
     initializedAt,

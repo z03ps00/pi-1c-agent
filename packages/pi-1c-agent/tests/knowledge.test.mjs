@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   applyDraft, auditDraft, auditKnowledge, automaticInvalidations, computeConfigurationCandidate, createDraft,
-  diffFingerprint, findItem, formatDraftChoice, initConfiguration, listDrafts, loadConfiguration, loadAllItems, normalizeProposal, precedenceOf, queryKnowledge, versionMatches,
+  diffFingerprint, findItem, formatDraftChoice, initConfiguration, knowledgeRevision, listDrafts, loadAllItems, loadConfiguration, normalizeProposal, precedenceOf, queryKnowledge, versionMatches, writeCanonicalItem,
 } from '../lib/knowledge.mjs';
 
 function tempProject() {
@@ -170,4 +171,50 @@ test('supersedes preserves history instead of deleting old knowledge', () => {
   applyDraft(cwd, d2.id);
   assert.equal(findItem(cwd, 'configuration.rule.old').status, 'superseded');
   assert.equal(findItem(cwd, 'configuration.rule.new').status, 'active');
+});
+
+test('concurrent apply of the same revision commits one and conflicts the other', async () => {
+  const { spawn } = await import('node:child_process');
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5', sourceRoot: 'src' });
+  const a = createDraft(cwd, { proposals: [{ action: 'add', kind: 'rule', scope: 'project', topic: 'one', statement: 'Policy one', confidence: 'high' }] });
+  const b = createDraft(cwd, { proposals: [{ action: 'add', kind: 'rule', scope: 'project', topic: 'two', statement: 'Policy two', confidence: 'high' }] });
+  assert.equal(knowledgeRevision(cwd), 0);
+  const worker = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'helpers', 'apply-worker.mjs');
+  const procs = [a.id, b.id].map((id) => spawn(process.execPath, [worker, cwd, id, '0'], { encoding: 'utf8' }));
+  const exits = await Promise.all(procs.map((p) => new Promise((resolve) => {
+    let out = '';
+    p.stdout.on('data', (d) => { out += d; });
+    p.on('close', (code) => resolve({ code, out }));
+  })));
+  const oks = exits.filter((x) => x.code === 0);
+  const conflicts = exits.filter((x) => x.code !== 0);
+  assert.equal(oks.length, 1);
+  assert.equal(conflicts.length, 1);
+  assert.match(conflicts[0].out, /conflict/);
+  assert.equal(knowledgeRevision(cwd), 1);
+});
+
+test('reader during apply sees a consistent snapshot', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5', sourceRoot: 'src' });
+  const draft = createDraft(cwd, { proposals: [{ action: 'add', kind: 'rule', scope: 'project', topic: 'snap', statement: 'Snapshot rule', confidence: 'high' }] });
+  applyDraft(cwd, draft.id);
+  const before = loadAllItems(cwd).map((x) => x.id).sort();
+  writeCanonicalItem(cwd, {
+    id: 'project.rule.ghost',
+    kind: 'rule',
+    scope: 'project',
+    topic: 'ghost',
+    statement: 'Not in snapshot yet',
+    status: 'active',
+    confidence: 'high',
+    priority: 0,
+    provenance: { source: 'test', evidence: [] },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  const during = loadAllItems(cwd).map((x) => x.id).sort();
+  assert.deepEqual(during, before);
+  assert.equal(during.includes('project.rule.ghost'), false);
 });

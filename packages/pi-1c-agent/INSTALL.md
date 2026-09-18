@@ -1,6 +1,8 @@
 # INSTALL — Pi 1C Agent v0.6.1
 
-Использовать только с vanilla Pi.
+Использовать только с vanilla Pi. Нужен **Node >=22.19.0**.
+
+Operational notes for multi-agent/memory: `docs/multiagent-operations.md`.
 
 ## Full install
 

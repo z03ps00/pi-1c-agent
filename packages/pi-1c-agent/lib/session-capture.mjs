@@ -2,6 +2,7 @@ import { redact } from './redact.mjs';
 import { buildIdempotencyKey, contentHash, mintCorrelationId } from './memory-key.mjs';
 import { halfConfirmed, prepareWrite, writePaired } from './memory-write.mjs';
 import { queuePendingRecord } from './memory-reconcile.mjs';
+import { deriveProjectId } from './project-id.mjs';
 
 export { distillWithProvider, parseDistillPayload } from './distill-provider.mjs';
 
@@ -160,8 +161,19 @@ export function emptyDistill() {
 export function isSubstantial(distilled) {
   if (!distilled) return false;
   // Durable signals only. `tools` alone (e.g. a read-only Q&A) is NOT substantial.
-  const durable = ['files', 'locked_decisions', 'verification', 'unresolved', 'findings', 'public_surface', 'constraints', 'artifacts'];
-  return durable.some((key) => Array.isArray(distilled[key]) && distilled[key].length > 0);
+  // Boilerplate `verification:` from skills/AGENTS must not trigger a wrap.
+  const durable = ['files', 'locked_decisions', 'unresolved', 'findings', 'public_surface', 'constraints', 'artifacts'];
+  if (durable.some((key) => Array.isArray(distilled[key]) && distilled[key].length > 0)) return true;
+  const verification = (distilled.verification || []).filter((item) => !isBoilerplateVerification(item));
+  return verification.length > 0;
+}
+
+/** Skill/AGENTS dump, not a task-level verification item. */
+export function isBoilerplateVerification(text) {
+  const s = String(text ?? '').trim();
+  if (!s) return true;
+  if (s.length > 240) return true;
+  return /docs\/<server>|parameter-rich|parameter names are not obvious|mcp-1c-tools|1c-graph-metadata-mcp|skipping this check/i.test(s);
 }
 
 function pushUnique(list, value) {
@@ -181,13 +193,16 @@ export function distillHeuristic(entries = []) {
     if (filePath && /write|edit|delete/.test(String(tool))) pushUnique(distilled.files, filePath);
     const text = String(entry?.content || entry?.text || entry?.message || '');
     if (!text) continue;
-    if (!distilled.task && (type === 'user' || entry?.role === 'user')) {
+    if (type === 'user' || entry?.role === 'user') {
       distilled.task = text.split(/\r?\n/, 1)[0].slice(0, 200);
     }
     for (const line of text.split(/\r?\n/)) {
       if (/decision:/i.test(line)) pushUnique(distilled.locked_decisions, line.replace(/^.*decision:\s*/i, '').trim());
       if (/next steps?:/i.test(line)) pushUnique(distilled.unresolved, line.replace(/^.*next steps?:\s*/i, '').trim());
-      if (/verification:/i.test(line)) pushUnique(distilled.verification, line.replace(/^.*verification:\s*/i, '').trim());
+      if (/verification:/i.test(line)) {
+        const item = line.replace(/^.*verification:\s*/i, '').trim();
+        if (!isBoilerplateVerification(item)) pushUnique(distilled.verification, item);
+      }
     }
   }
   distilled.artifacts = [...distilled.files];
@@ -196,10 +211,14 @@ export function distillHeuristic(entries = []) {
 
 export function formatFact(distilled, extras = {}) {
   const d = distilled || emptyDistill();
+  const distiller = extras.fallback
+    ? `heuristic-fallback${extras.distillerMode === 'stack' ? ' (stack unavailable)' : ''}`
+    : (extras.distiller || 'heuristic');
   const lines = [
     `TYPE: session_capture`,
+    extras.scope ? `SCOPE: ${extras.scope}` : '',
     extras.correlation_id ? `CORRELATION_ID: ${extras.correlation_id}` : '',
-    extras.fallback ? 'DISTILLER: heuristic-fallback' : `DISTILLER: ${extras.distiller || 'heuristic'}`,
+    `DISTILLER: ${distiller}`,
     `SUBJECT: ${d.task || 'session'}`,
     `DECISIONS: ${(d.locked_decisions || []).join('; ') || 'none'}`,
     `FILES: ${(d.files || []).join(', ') || 'none'}`,
@@ -339,7 +358,14 @@ export async function captureSession({
   }
 
   const correlation_id = correlationId || mintCorrelationId();
-  const fact = formatFact(distilled, { correlation_id, fallback, distiller: used });
+  const scope = `project:${deriveProjectId({ cwd })}`;
+  const fact = formatFact(distilled, {
+    correlation_id,
+    fallback,
+    distiller: used,
+    distillerMode,
+    scope,
+  });
   const report = formatReport(distilled, { correlation_id, fallback, distiller: used });
   const paired = await writePaired({
     fact,

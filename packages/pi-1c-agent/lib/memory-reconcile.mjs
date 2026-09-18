@@ -3,21 +3,40 @@ import path from 'node:path';
 import { parseIdempotencyKey } from './memory-key.mjs';
 import { redact } from './redact.mjs';
 import { writeWithVerify } from './memory-write.mjs';
+import { emitDiagnostic } from './diagnostics.mjs';
+
+export const DEFAULT_CLAIM_TTL_SEC = 300;
+export const MAX_RECONCILE_ATTEMPTS = 5;
 
 export function resolveMemoryStateRoots(profileDir) {
   const root = path.resolve(String(profileDir ?? '').trim() || process.env.PI_CODING_AGENT_DIR || process.cwd());
+  const base = path.join(root, 'state', 'agent-memory');
   return {
     root,
-    pending: path.join(root, 'state', 'agent-memory', 'pending'),
-    done: path.join(root, 'state', 'agent-memory', 'done'),
+    pending: path.join(base, 'pending'),
+    processing: path.join(base, 'processing'),
+    done: path.join(base, 'done'),
+    failed: path.join(base, 'failed'),
   };
 }
 
 export function ensureMemoryStateDirs(profileDir) {
   const dirs = resolveMemoryStateRoots(profileDir);
   fs.mkdirSync(dirs.pending, { recursive: true });
+  fs.mkdirSync(dirs.processing, { recursive: true });
   fs.mkdirSync(dirs.done, { recursive: true });
+  fs.mkdirSync(dirs.failed, { recursive: true });
   return dirs;
+}
+
+export function claimTtlMs(env = process.env) {
+  const n = Number(env.PI_1C_MEMORY_CLAIM_TTL_SEC ?? DEFAULT_CLAIM_TTL_SEC);
+  const sec = Number.isFinite(n) && n > 0 ? n : DEFAULT_CLAIM_TTL_SEC;
+  return sec * 1000;
+}
+
+export function shouldSkipStartupReconcile(env = process.env) {
+  return env.PI_1C_CHILD_PROCESS === '1' || env.PI_1C_DISABLE_STARTUP_RECONCILE === '1';
 }
 
 export function parsePendingRecord(text, filePath = '') {
@@ -46,6 +65,7 @@ export function parsePendingRecord(text, filePath = '') {
     content_hash: meta.content_hash || '',
     uri: meta.uri || '',
     task: meta.task || '',
+    attempts: Number(meta.attempts) || 0,
     content: redacted.text,
     kinds: redacted.kinds,
   };
@@ -72,6 +92,7 @@ export function serializePendingRecord(record) {
     `content_hash: ${record.content_hash || ''}`,
     `uri: ${record.uri || ''}`,
     `task: ${record.task || ''}`,
+    `attempts: ${Number(record.attempts) || 0}`,
     '---',
     '',
     redacted.text,
@@ -80,16 +101,85 @@ export function serializePendingRecord(record) {
   return lines.join('\n');
 }
 
-export function listPendingRecords(profileDir) {
-  const { pending } = resolveMemoryStateRoots(profileDir);
-  if (!fs.existsSync(pending)) return [];
-  return fs.readdirSync(pending)
-    .filter((name) => name.endsWith('.md') || name.endsWith('.json'))
+function listDirRecords(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.md') || name.endsWith('.json') || /\.(?:md|json)\.\d+\.\d+$/.test(name))
     .sort()
     .map((name) => {
-      const filePath = path.join(pending, name);
-      return parsePendingRecord(fs.readFileSync(filePath, 'utf8'), filePath);
-    });
+      const filePath = path.join(dir, name);
+      try {
+        return parsePendingRecord(fs.readFileSync(filePath, 'utf8'), filePath);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+export function listPendingRecords(profileDir) {
+  const { pending } = resolveMemoryStateRoots(profileDir);
+  return listDirRecords(pending);
+}
+
+export function originalPendingName(filePath) {
+  const base = path.basename(String(filePath || ''));
+  const m = base.match(/^(.*\.(?:md|json))\.\d+\.\d+$/);
+  return m ? m[1] : base;
+}
+
+function claimedAtFromName(filePath) {
+  const m = path.basename(String(filePath || '')).match(/\.(\d+)\.(\d+)$/);
+  if (!m) return 0;
+  return Number(m[2]) || 0;
+}
+
+export function tryClaim(pendingFile, processingDir, { pid = process.pid, now = Date.now() } = {}) {
+  if (!pendingFile || !processingDir) return null;
+  fs.mkdirSync(processingDir, { recursive: true });
+  const claimed = path.join(processingDir, `${path.basename(pendingFile)}.${pid}.${now}`);
+  try {
+    fs.renameSync(pendingFile, claimed);
+    return claimed;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+export function reclaimStaleClaims(profileDir, { now = Date.now(), ttlMs = claimTtlMs() } = {}) {
+  const dirs = ensureMemoryStateDirs(profileDir);
+  let reclaimed = 0;
+  if (!fs.existsSync(dirs.processing)) return reclaimed;
+  for (const name of fs.readdirSync(dirs.processing)) {
+    const src = path.join(dirs.processing, name);
+    const claimedAt = claimedAtFromName(src) || (() => {
+      try { return fs.statSync(src).mtimeMs; } catch { return 0; }
+    })();
+    if (!claimedAt || now - claimedAt < ttlMs) continue;
+    const dest = path.join(dirs.pending, originalPendingName(src));
+    try {
+      fs.renameSync(src, dest);
+      reclaimed += 1;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+  return reclaimed;
+}
+
+export function migrateLegacyPending(profileDir) {
+  const dirs = ensureMemoryStateDirs(profileDir);
+  // Legacy records already live in pending/*.md; ensure sibling dirs exist and
+  // rewrite any file that is missing attempts metadata so the claim protocol can own it.
+  let migrated = 0;
+  for (const record of listPendingRecords(profileDir)) {
+    if (record.attempts === 0 && !/attempts:/.test(fs.readFileSync(record.filePath, 'utf8'))) {
+      fs.writeFileSync(record.filePath, serializePendingRecord(record));
+      migrated += 1;
+    }
+  }
+  return { migrated, pending: dirs.pending };
 }
 
 function safeFilePart(value, max) {
@@ -115,15 +205,42 @@ export function queuePendingRecord(profileDir, record) {
   return filePath;
 }
 
+function moveRecord(src, destDir, record, status) {
+  if (!src || !fs.existsSync(src)) return null;
+  fs.mkdirSync(destDir, { recursive: true });
+  const dest = path.join(destDir, originalPendingName(src));
+  const body = serializePendingRecord({ ...record, status, filePath: dest });
+  fs.writeFileSync(dest, body);
+  try { fs.unlinkSync(src); } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  return dest;
+}
+
 export function markPendingConfirmed(profileDir, record) {
   const dirs = ensureMemoryStateDirs(profileDir);
-  const src = record.filePath;
-  if (!src || !fs.existsSync(src)) return null;
-  const dest = path.join(dirs.done, path.basename(src));
-  const confirmed = serializePendingRecord({ ...record, status: 'confirmed' });
-  fs.writeFileSync(dest, confirmed);
-  fs.unlinkSync(src);
-  return dest;
+  return moveRecord(record.filePath, dirs.done, record, 'confirmed');
+}
+
+export function returnClaimToPending(profileDir, record) {
+  const dirs = ensureMemoryStateDirs(profileDir);
+  return moveRecord(record.filePath, dirs.pending, record, record.status || 'UNCONFIRMED');
+}
+
+export function markPendingFailed(profileDir, record) {
+  const dirs = ensureMemoryStateDirs(profileDir);
+  return moveRecord(record.filePath, dirs.failed, record, 'failed');
+}
+
+export function queueItemCounts(profileDir) {
+  const dirs = resolveMemoryStateRoots(profileDir);
+  const count = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => !n.startsWith('.')).length : 0);
+  return {
+    pending: count(dirs.pending),
+    processing: count(dirs.processing),
+    done: count(dirs.done),
+    failed: count(dirs.failed),
+  };
 }
 
 export async function reconcilePending({
@@ -138,6 +255,7 @@ export async function reconcilePending({
     confirmed: 0,
     pending: 0,
     duplicateSkipped: 0,
+    failed: 0,
     skippedAnonymous: false,
     offline: false,
     reportedOnce: '',
@@ -148,6 +266,8 @@ export async function reconcilePending({
     summary.reportedOnce = 'reconciliation skipped — anonymous';
     return summary;
   }
+  migrateLegacyPending(profileDir);
+  reclaimStaleClaims(profileDir);
   const records = listPendingRecords(profileDir);
   if (records.length === 0) return summary;
 
@@ -159,32 +279,68 @@ export async function reconcilePending({
     return summary;
   }
 
+  const dirs = ensureMemoryStateDirs(profileDir);
   for (const record of records) {
     if (!reachable(record.target || 'memory')) {
       summary.pending += 1;
       if (!summary.reportedOnce) summary.reportedOnce = `target ${record.target} unreachable; left pending`;
       continue;
     }
-    const result = await writeWithVerify({
-      record,
-      existsByKey,
-      remember,
-      recall,
-      queuePending: () => {},
-    });
-    if (result.status === 'duplicate') {
-      markPendingConfirmed(profileDir, record);
-      summary.duplicateSkipped += 1;
-      continue;
+    const claimed = tryClaim(record.filePath, dirs.processing);
+    if (!claimed) continue;
+    const owned = { ...record, filePath: claimed, attempts: (Number(record.attempts) || 0) + 1 };
+    try {
+      const result = await writeWithVerify({
+        record: owned,
+        existsByKey,
+        remember,
+        recall,
+        queuePending: () => {},
+      });
+      if (result.status === 'duplicate') {
+        markPendingConfirmed(profileDir, owned);
+        summary.duplicateSkipped += 1;
+        continue;
+      }
+      if (result.recorded) {
+        markPendingConfirmed(profileDir, owned);
+        summary.confirmed += 1;
+        continue;
+      }
+      if (owned.attempts >= MAX_RECONCILE_ATTEMPTS) {
+        markPendingFailed(profileDir, owned);
+        summary.failed += 1;
+        emitDiagnostic('memory.reconcile.partial', { reason: 'max-attempts', file: originalPendingName(claimed) });
+        continue;
+      }
+      returnClaimToPending(profileDir, owned);
+      summary.pending += 1;
+    } catch (error) {
+      returnClaimToPending(profileDir, owned);
+      summary.pending += 1;
+      emitDiagnostic('memory.reconcile.partial', { reason: error?.message || String(error) });
     }
-    if (result.recorded) {
-      markPendingConfirmed(profileDir, record);
-      summary.confirmed += 1;
-      continue;
-    }
-    summary.pending += 1;
+  }
+  if (summary.pending || summary.failed) {
+    emitDiagnostic('memory.reconcile.partial', { pending: summary.pending, failed: summary.failed });
   }
   return summary;
+}
+
+export async function runStartupReconcile(opts = {}) {
+  const env = opts.env ?? process.env;
+  if (shouldSkipStartupReconcile(env)) {
+    emitDiagnostic('memory.lifecycle.probe.skipped', { reason: 'child-process' });
+    return { skipped: true, summary: null };
+  }
+  try {
+    if (typeof opts.probe === 'function') await opts.probe();
+    const summary = await reconcilePending(opts);
+    return { skipped: false, summary };
+  } catch (error) {
+    emitDiagnostic('memory.lifecycle.probe.failed', { reason: error?.message || String(error) });
+    throw error;
+  }
 }
 
 export function formatReconcileReport(summary) {

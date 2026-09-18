@@ -6,18 +6,22 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { childToolAllowlist, isWriterAgent, parallelSafety, PLAN_SUBAGENTS, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
+import { childToolAllowlist, isWriterAgent, parallelSafety, PLAN_SUBAGENTS, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
+import { buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
+import { emitDiagnostic } from "../../lib/diagnostics.mjs";
 import { handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
+import { current1cMode, requireBuild } from "../../lib/mode-state.mjs";
+import { withSubagentSlot } from "../../lib/subagent-budget.mjs";
 import { combineParallelHandoffs, loadWorkflows, verifyWorkflowHandoff } from "../../lib/workflows.mjs";
 
-type OneCMode = "plan" | "build";
-type SharedState = typeof globalThis & { __PI_1C_MODE__?: OneCMode };
+type OneCMode = "plan" | "build" | "ask";
 type AgentSource = "package" | "user" | "project";
 type Agent = {
   name: string;
   description?: string;
   tools?: string[];
   capabilities: string[];
+  mcpReadOnly?: boolean;
   model?: string;
   modelTier?: string;
   prompt: string;
@@ -30,6 +34,7 @@ type AgentFrontmatter = {
   description?: unknown;
   tools?: unknown;
   capabilities?: unknown;
+  mcpReadOnly?: unknown;
   model?: unknown;
   modelTier?: unknown;
 };
@@ -48,10 +53,6 @@ function describeExit(code: number | null, signalName?: string | null): string {
   return `exited ${code}`;
 }
 
-function currentMode(): OneCMode {
-  return (globalThis as SharedState).__PI_1C_MODE__ === "plan" ? "plan" : "build";
-}
-
 function parseList(value: unknown): string[] {
   const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
   return raw.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
@@ -67,6 +68,7 @@ function parseAgent(filePath: string, source: AgentSource): Agent | null {
     description: typeof frontmatter.description === "string" ? frontmatter.description : undefined,
     tools: parseList(frontmatter.tools),
     capabilities: parseList(frontmatter.capabilities).map((x) => x.toLowerCase()),
+    mcpReadOnly: frontmatter.mcpReadOnly === true,
     model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
     modelTier: typeof frontmatter.modelTier === "string" ? frontmatter.modelTier : undefined,
     prompt: body,
@@ -168,6 +170,10 @@ function finalText(event: any): string {
 }
 
 function getPiInvocation(args: string[]): { command: string; args: string[] } {
+  const mock = String(process.env.PI_1C_MOCK_PI || "").trim();
+  if (mock && fs.existsSync(mock)) {
+    return { command: process.execPath, args: [mock, ...args] };
+  }
   const currentScript = process.argv[1];
   const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
   if (currentScript && !isBunVirtualScript && fs.existsSync(currentScript)) {
@@ -220,22 +226,33 @@ async function runAgent(
   else args.push("--no-tools");
   args.push("--append-system-prompt", promptFile, `Task: ${task}`);
 
-  return await new Promise((resolve, reject) => {
+  return withSubagentSlot(() => new Promise((resolve, reject) => {
     const invocation = getPiInvocation(args);
     const startedAt = Date.now();
     const proc = spawn(invocation.command, invocation.args, {
       cwd,
-      env: { ...process.env, PI_1C_SUBAGENT_DEPTH: String(depth + 1) },
+      env: {
+        ...process.env,
+        PI_1C_SUBAGENT_DEPTH: String(depth + 1),
+        PI_1C_CHILD_PROCESS: "1",
+        PI_1C_DISABLE_STARTUP_RECONCILE: "1",
+      },
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       detached: true,
     });
-    let buffer = "";
     let last = "";
-    let stderr = "";
+    const output = createChildOutputBuffer({
+      onEvent: (event) => {
+        const text = finalText(event);
+        if (text) last = text;
+        return text;
+      },
+    });
     let aborted = signal?.aborted === true;
     let timedOut = false;
     let killTimer: ReturnType<typeof setTimeout> | null = null;
+    let killEscalated = false;
     const terminate = (sig: NodeJS.Signals) => {
       try { process.kill(-proc.pid!, sig); } catch { try { proc.kill(sig); } catch {} }
     };
@@ -254,7 +271,11 @@ async function runAgent(
       timedOut = true;
       onProgress?.(`⏱ ${agent.name} — превышен лимит ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}с, останавливаю`);
       terminate("SIGTERM");
-      killTimer = setTimeout(() => terminate("SIGKILL"), SUBAGENT_KILL_GRACE_MS);
+      killTimer = setTimeout(() => {
+        killEscalated = true;
+        emitDiagnostic("subagent.kill.escalated", { agent: agent.name });
+        terminate("SIGKILL");
+      }, SUBAGENT_KILL_GRACE_MS);
     }, SUBAGENT_TIMEOUT_MS);
     const cleanup = () => {
       if (heartbeat) clearInterval(heartbeat);
@@ -263,26 +284,39 @@ async function runAgent(
       signal?.removeEventListener("abort", onAbort);
       fs.rmSync(tmpDir, { recursive: true, force: true });
     };
-    proc.stdout.on("data", (data) => {
-      buffer += data.toString();
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-      for (const line of lines) {
-        try { const text = finalText(JSON.parse(line)); if (text) last = text; } catch {}
-      }
-    });
-    proc.stderr.on("data", (data) => { stderr += data.toString(); });
+    proc.stdout.on("data", (data) => { output.pushStdout(data); });
+    proc.stderr.on("data", (data) => { output.pushStderr(data); });
     proc.on("error", (error) => { cleanup(); reject(error); });
     proc.on("close", (code, signalName) => {
+      output.flushRemainder();
+      const snap = output.snapshot();
+      if (snap.lastText) last = snap.lastText;
+      const meta = buildChildResult({
+        ok: code === 0 && !timedOut && !aborted,
+        exitCode: code,
+        signal: signalName,
+        timedOut,
+        durationMs: Date.now() - startedAt,
+        outputTruncated: snap.outputTruncated,
+        output: last,
+      });
       cleanup();
-      if (aborted || signal?.aborted) return reject(new Error(`subagent ${agent.name} отменён пользователем`));
-      if (timedOut) return reject(new Error(`subagent ${agent.name} превысил таймаут ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}с и был остановлен (${describeExit(code, signalName)}): ${stderr.slice(-2000)}`));
-      if (code !== 0) return reject(new Error(`subagent ${agent.name} ${describeExit(code, signalName)}: ${stderr.slice(-4000)}`));
+      if (aborted || signal?.aborted) return reject(Object.assign(new Error(`subagent ${agent.name} отменён пользователем`), { child: meta }));
+      if (timedOut) return reject(Object.assign(new Error(`subagent ${agent.name} превысил таймаут ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}с и был остановлен (${describeExit(code, signalName)}): ${snap.stderr.slice(-2000)}`), { child: meta }));
+      if (code !== 0) return reject(Object.assign(new Error(`subagent ${agent.name} ${describeExit(code, signalName)}: ${snap.stderr.slice(-4000)}`), { child: meta }));
       const parsed = parseUpstreamHandoff(last);
-      if (!parsed.ok) return reject(new Error(`subagent ${agent.name} returned invalid handoff: ${parsed.errors.join("; ")}`));
-      resolve({ agent: agent.name, output: last, handoff: parsed.handoff, upstreamHandoff: parsed.section, source: agent.source });
+      if (!parsed.ok) return reject(Object.assign(new Error(`subagent ${agent.name} returned invalid handoff: ${parsed.errors.join("; ")}`), { child: meta }));
+      resolve({
+        agent: agent.name,
+        output: last,
+        handoff: parsed.handoff,
+        upstreamHandoff: parsed.section,
+        source: agent.source,
+        ...meta,
+        ok: true,
+      });
     });
-  });
+  }));
 }
 
 const Item = Type.Object({ agent: Type.String(), task: Type.String() });
@@ -304,7 +338,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     const byName = new Map(agents.map((a) => [a.name, a]));
     const agent = byName.get(x.agent);
     if (!agent) throw new Error(`Unknown 1C agent: ${x.agent}. Available: ${agents.map((a) => a.name).join(", ")}`);
-    const mode = currentMode();
+    const mode = current1cMode();
     if (mode === "plan" && !PLAN_SUBAGENTS.has(agent.name)) {
       throw new Error(`1C PLAN blocks writer/execution subagent '${agent.name}'. Continue planning with read-only roles.`);
     }
@@ -323,14 +357,21 @@ export default function oneCSubagents(pi: ExtensionAPI) {
       }
       const emit = (text: string) => { try { onUpdate?.({ content: [{ type: "text", text }] }); } catch {} };
       try {
-        if (params.agent && params.task) {
+        const strategy = selectExecutionStrategy(params);
+        if (strategy.empty) {
+          const agents = await contextAgents(ctx);
+          return { content: [{ type: "text", text: `${strategy.reason}. Available: ${agents.map((a) => a.name).join(", ")}` }], isError: true };
+        }
+        if (!strategy.ok) throw new Error(strategy.reason);
+        if (strategy.strategy === "agent") {
           emit(`▶ ${params.agent} — запуск…`);
           const result = await runOne({ agent: params.agent, task: params.task }, ctx, signal, emit);
           emit(`✔ ${params.agent} — готово`);
           return { content: [{ type: "text", text: result.output }], details: result };
         }
-        if (params.parallel?.length) {
-          const safety = parallelSafety(params.parallel, writerNames(await contextAgents(ctx)));
+        if (strategy.strategy === "parallel") {
+          const agents = await contextAgents(ctx);
+          const safety = parallelSafety(params.parallel, writerNames(agents), agents);
           if (!safety.ok) throw new Error(safety.reason);
           const names = params.parallel.map((x: any) => x.agent).join(", ");
           emit(`▶ parallel: ${names} — запуск…`);
@@ -338,7 +379,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
           emit(`✔ parallel: ${names} — готово`);
           return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: results };
         }
-        if (params.chain?.length) {
+        if (strategy.strategy === "chain") {
           const results: any[] = [];
           let upstream = "";
           for (const [index, step] of params.chain.entries()) {
@@ -354,34 +395,33 @@ export default function oneCSubagents(pi: ExtensionAPI) {
           }
           return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: results };
         }
-        const agents = await contextAgents(ctx);
-        return { content: [{ type: "text", text: `Provide agent+task, parallel[], or chain[]. Available: ${agents.map((a) => a.name).join(", ")}` }], isError: true };
+        throw new Error("specify exactly one of agent+task, parallel[], or chain[]");
       } catch (error: any) {
         return { content: [{ type: "text", text: error?.message || String(error) }], isError: true };
       }
     },
   });
 
-  const workflows = loadWorkflows(packageRoot);
-  const workflowNames = [...workflows.keys()];
   const WorkflowParams = Type.Object({
-    workflow: Type.String({ description: `Workflow name to execute (one of: ${workflowNames.join(", ")}). Pass the workflow name, NOT the mode — never pass 'BUILD' or 'PLAN'.` }),
+    workflow: Type.String({ description: "Workflow name to execute. Pass the workflow name, NOT the mode — never pass 'BUILD' or 'PLAN'." }),
     task: Type.String(),
   });
 
   pi.registerTool({
     name: "workflow_1c",
     label: "1C Workflow",
-    description: `Execute a deterministic BUILD pipeline with validated handoffs. Available workflows: ${workflowNames.join(", ")}. Writer stages are always sequential.`,
+    description: "Execute a deterministic BUILD pipeline with validated handoffs. Writer stages are always sequential.",
     parameters: WorkflowParams,
     async execute(_id, params: any, signal: AbortSignal | undefined, onUpdate: any, ctx: any) {
       const emit = (text: string) => { try { onUpdate?.({ content: [{ type: "text", text }] }); } catch {} };
       try {
-        if (currentMode() !== "build") throw new Error("workflow_1c execution requires BUILD. In PLAN, produce/approve the plan first.");
+        requireBuild("workflow_1c execution");
+        const workflows = loadWorkflows(packageRoot);
         const workflow = workflows.get(params.workflow);
         if (!workflow) throw new Error(`Unknown workflow '${params.workflow}'. Available: ${[...workflows.keys()].join(", ")}`);
         const results: any[] = [];
-        const writers = writerNames(await contextAgents(ctx));
+        const agents = await contextAgents(ctx);
+        const writers = writerNames(agents);
         let upstream = "";
         let pendingVerification: any = null;
         const total = workflow.stages.length;
@@ -399,7 +439,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
             continue;
           }
           if (stage.type === "parallel") {
-            const safety = parallelSafety(stage.agents.map((agent: string) => ({ agent, task: params.task })), writers);
+            const safety = parallelSafety(stage.agents.map((agent: string) => ({ agent, task: params.task })), writers, agents);
             if (!safety.ok) throw new Error(safety.reason);
             const names = stage.agents.join(", ");
             emit(`▶ [${step}] parallel: ${names} — запуск…`);
@@ -421,6 +461,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
         }
         return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: { workflow: params.workflow, definition: workflow, results } };
       } catch (error: any) {
+        emitDiagnostic("workflow.stage.failed", { workflow: params.workflow, reason: error?.message || String(error) });
         return { content: [{ type: "text", text: error?.message || String(error) }], isError: true };
       }
     },

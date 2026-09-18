@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { assertNodeVersion } from '../lib/node-runtime.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -19,6 +20,8 @@ const existsCmd = (cmd) => spawnSync(cmd, ['--version'], { stdio: 'ignore' }).st
 const fail = (msg) => { console.error(`FAIL: ${msg}`); process.exit(1); };
 
 for (const cmd of ['node', 'git', 'pi']) if (!existsCmd(cmd)) fail(`required command not found: ${cmd}`);
+const node = assertNodeVersion();
+if (!node.ok) fail(node.message.replace(/^FAIL:\s*/, ''));
 
 console.log('STEP 1/3: register the Pi package (extensions/skills/prompts).');
 const piArgs = ['install'];
