@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { parseIdempotencyKey } from './memory-key.mjs';
 import { redact } from './redact.mjs';
 import { writeWithVerify } from './memory-write.mjs';
@@ -205,16 +206,75 @@ export function queuePendingRecord(profileDir, record) {
   return filePath;
 }
 
-function moveRecord(src, destDir, record, status) {
+function transitionClaim(src, destDir, record, status) {
   if (!src || !fs.existsSync(src)) return null;
   fs.mkdirSync(destDir, { recursive: true });
   const dest = path.join(destDir, originalPendingName(src));
   const body = serializePendingRecord({ ...record, status, filePath: dest });
-  fs.writeFileSync(dest, body);
-  try { fs.unlinkSync(src); } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
+  const tmp = `${src}.rewrite-${process.pid}-${crypto.randomUUID()}`;
+  fs.writeFileSync(tmp, body);
+  fs.renameSync(tmp, src);
+  try {
+    fs.renameSync(src, dest);
+  } catch (error) {
+    if (error?.code === 'EEXIST' || fs.existsSync(dest)) {
+      try { fs.unlinkSync(src); } catch { /* dest already holds the record */ }
+      return dest;
+    }
+    throw error;
   }
   return dest;
+}
+
+export function listQueueCopies(profileDir) {
+  const dirs = resolveMemoryStateRoots(profileDir);
+  const copies = [];
+  for (const state of ['pending', 'processing', 'done', 'failed']) {
+    const dir = dirs[state];
+    if (!fs.existsSync(dir)) continue;
+    for (const name of fs.readdirSync(dir)) {
+      if (name.startsWith('.')) continue;
+      copies.push({ state, dir, name, id: originalPendingName(path.join(dir, name)) });
+    }
+  }
+  return copies;
+}
+
+export function duplicateQueueIds(profileDir) {
+  const counts = new Map();
+  for (const copy of listQueueCopies(profileDir)) {
+    counts.set(copy.id, (counts.get(copy.id) || 0) + 1);
+  }
+  return [...counts.entries()].filter(([, n]) => n > 1).map(([id, n]) => ({ id, count: n }));
+}
+
+export function reconstructQueueUniqueness(profileDir) {
+  const copies = listQueueCopies(profileDir);
+  const byId = new Map();
+  for (const copy of copies) {
+    const list = byId.get(copy.id) || [];
+    list.push(copy);
+    byId.set(copy.id, list);
+  }
+  const rank = { failed: 3, done: 2, processing: 1, pending: 0 };
+  let repaired = 0;
+  for (const list of byId.values()) {
+    if (list.length < 2) continue;
+    list.sort((a, b) => rank[b.state] - rank[a.state]);
+    for (const extra of list.slice(1)) {
+      try {
+        fs.unlinkSync(path.join(extra.dir, extra.name));
+        repaired += 1;
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
+    }
+  }
+  return repaired;
+}
+
+function moveRecord(src, destDir, record, status) {
+  return transitionClaim(src, destDir, record, status);
 }
 
 export function markPendingConfirmed(profileDir, record) {
@@ -267,6 +327,7 @@ export async function reconcilePending({
     return summary;
   }
   migrateLegacyPending(profileDir);
+  reconstructQueueUniqueness(profileDir);
   reclaimStaleClaims(profileDir);
   const records = listPendingRecords(profileDir);
   if (records.length === 0) return summary;

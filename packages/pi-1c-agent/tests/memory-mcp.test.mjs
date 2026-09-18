@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mcpToolCall, resetMcpSessionsForTests } from '../lib/memory-mcp.mjs';
+import { mcpToolCall, resetMcpSessionsForTests, invalidateSession } from '../lib/memory-mcp.mjs';
 
 function fakeFetch(plan) {
   let inits = 0;
@@ -58,4 +58,53 @@ test('expired session resets and retries once', async () => {
   });
   assert.equal(result.ok, true);
   assert.equal(fake.stats().inits, 2);
+});
+
+test('concurrent stale-session recoveries share one initialize', async () => {
+  resetMcpSessionsForTests();
+  let inits = 0;
+  let toolCalls = 0;
+  const fetchImpl = async (_url, opts) => {
+    const body = JSON.parse(opts.body || '{}');
+    if (body.method === 'initialize') {
+      inits += 1;
+      await new Promise((r) => setTimeout(r, 30));
+      return {
+        ok: true,
+        headers: { get: (k) => String(k).toLowerCase() === 'mcp-session-id' ? `sess-${inits}` : null },
+        text: async () => '{}',
+      };
+    }
+    if (body.method === 'notifications/initialized') {
+      return { ok: true, headers: { get: () => null }, text: async () => '' };
+    }
+    toolCalls += 1;
+    if (opts.headers?.['mcp-session-id'] === 'sess-1' && toolCalls <= 8) {
+      return { ok: false, headers: { get: () => 'sess-1' }, text: async () => 'expired' };
+    }
+    return {
+      ok: true,
+      headers: { get: () => 'sess-2' },
+      text: async () => JSON.stringify({ result: { content: [{ type: 'text', text: 'ok' }] } }),
+    };
+  };
+  await mcpToolCall({ target: 'memory', tool: 'recall', args: { query: 'warm' }, fetchImpl });
+  await Promise.all(Array.from({ length: 8 }, () => mcpToolCall({
+    target: 'memory',
+    tool: 'recall',
+    args: { query: 'x' },
+    fetchImpl,
+  })));
+  assert.ok(inits <= 2);
+});
+
+test('late failure does not drop a replaced session', async () => {
+  resetMcpSessionsForTests();
+  const { memoryMcpUrls } = await import('../lib/memory-mcp.mjs');
+  const fake = fakeFetch({ calls: Array.from({ length: 4 }, () => ({ ok: true, text: 'ok' })) });
+  await mcpToolCall({ target: 'memory', tool: 'recall', args: { query: 'a' }, fetchImpl: fake.fetchImpl });
+  assert.equal(invalidateSession(memoryMcpUrls().memory, 'stale-old-id'), false);
+  const result = await mcpToolCall({ target: 'memory', tool: 'recall', args: { query: 'b' }, fetchImpl: fake.fetchImpl });
+  assert.equal(result.ok, true);
+  assert.equal(fake.stats().inits, 1);
 });

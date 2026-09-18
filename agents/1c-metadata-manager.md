@@ -4,6 +4,8 @@ description: "1C metadata management specialist. Creates, edits, validates, and 
 modelTier: coding
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive, git-index:exclusive
 ---
 
 # 1C Metadata Manager Agent

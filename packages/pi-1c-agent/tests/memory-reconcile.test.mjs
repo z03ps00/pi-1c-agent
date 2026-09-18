@@ -12,6 +12,8 @@ import {
   queuePendingRecord,
   reconcilePending,
   reclaimStaleClaims,
+  reconstructQueueUniqueness,
+  duplicateQueueIds,
   runStartupReconcile,
   serializePendingRecord,
   shouldSkipStartupReconcile,
@@ -20,17 +22,6 @@ import {
   ensureMemoryStateDirs,
   originalPendingName,
 } from '../lib/memory-reconcile.mjs';
-
-const profilePending = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  'state',
-  'agent-memory',
-  'pending',
-  '20260915-approve-mode.md',
-);
 
 function tempProfile() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-mem-'));
@@ -131,11 +122,15 @@ test('anonymous reconcile makes no writes', async () => {
 });
 
 test('existing approve-mode pending record is drainable by the reconcile path', async () => {
-  assert.ok(fs.existsSync(profilePending), 'fixture pending record missing');
   const profile = tempProfile();
-  const dest = path.join(profile, 'state', 'agent-memory', 'pending');
-  fs.mkdirSync(dest, { recursive: true });
-  fs.copyFileSync(profilePending, path.join(dest, '20260915-approve-mode.md'));
+  queuePendingRecord(profile, {
+    idempotency_key: 'task=approve-mode; agent=pi; date=2026-09-15; content_hash=approvemodehash01',
+    target: 'memory',
+    content: 'fact: approve-mode pending',
+    status: 'UNCONFIRMED',
+    task: 'approve-mode',
+    content_hash: 'approvemodehash01',
+  });
   const [record] = listPendingRecords(profile);
   assert.match(record.idempotency_key, /approve-mode/);
   assert.equal(record.status, 'UNCONFIRMED');
@@ -148,7 +143,9 @@ test('existing approve-mode pending record is drainable by the reconcile path', 
   });
   assert.equal(summary.confirmed, 1);
   assert.equal(listPendingRecords(profile).length, 0);
-  assert.ok(fs.existsSync(path.join(profile, 'state', 'agent-memory', 'done', '20260915-approve-mode.md')));
+  const done = fs.readdirSync(path.join(profile, 'state', 'agent-memory', 'done'));
+  assert.equal(done.length, 1);
+  assert.match(done[0], /approve-mode/);
 });
 
 test('paired pending filenames stay unique by target and hash', () => {
@@ -260,3 +257,58 @@ test('child env skips startup reconcile and failures emit diagnostics', async ()
   }));
   assert.ok(diagnosticEvents().some((e) => e.code === 'memory.lifecycle.probe.failed'));
 });
+
+test('crash during ACK leaves exactly one copy and does not double-write', async () => {
+  const profile = tempProfile();
+  const dirs = ensureMemoryStateDirs(profile);
+  const pending = queuePendingRecord(profile, {
+    idempotency_key: 'task=ackcrash; agent=pi; date=2026-09-18; content_hash=ackcrashhash0001',
+    target: 'memory',
+    content: 'fact: ack',
+    task: 'ackcrash',
+    content_hash: 'ackcrashhash0001',
+  });
+  const claimed = tryClaim(pending, dirs.processing, { pid: 9, now: 1 });
+  assert.ok(claimed);
+  fs.mkdirSync(dirs.done, { recursive: true });
+  fs.copyFileSync(claimed, path.join(dirs.done, originalPendingName(claimed)));
+  const repaired = reconstructQueueUniqueness(profile);
+  assert.ok(repaired >= 1);
+  const counts = queueItemCounts(profile);
+  assert.equal(counts.pending + counts.processing + counts.done + counts.failed, 1);
+  assert.equal(duplicateQueueIds(profile).length, 0);
+  let remembers = 0;
+  const summary = await reconcilePending({
+    profileDir: profile,
+    serversReachable: { memory: true },
+    existsByKey: async () => true,
+    remember: async () => {
+      remembers += 1;
+      return { ok: true };
+    },
+    recall: async () => true,
+  });
+  assert.equal(remembers, 0);
+  assert.equal(summary.pending, 0);
+  assert.equal(queueItemCounts(profile).pending + queueItemCounts(profile).processing + queueItemCounts(profile).done + queueItemCounts(profile).failed, 1);
+});
+
+test('reclaim during ACK does not duplicate the record', async () => {
+  const profile = tempProfile();
+  const dirs = ensureMemoryStateDirs(profile);
+  const pending = queuePendingRecord(profile, {
+    idempotency_key: 'task=reclaimack; agent=pi; date=2026-09-18; content_hash=reclaimackhash001',
+    target: 'memory',
+    content: 'fact: reclaim',
+    task: 'reclaimack',
+    content_hash: 'reclaimackhash001',
+  });
+  const claimed = tryClaim(pending, dirs.processing, { pid: 2, now: 1 });
+  fs.copyFileSync(claimed, path.join(dirs.done, originalPendingName(claimed)));
+  reclaimStaleClaims(profile, { now: 1 + 400_000, ttlMs: 300_000 });
+  reconstructQueueUniqueness(profile);
+  assert.equal(duplicateQueueIds(profile).length, 0);
+  const counts = queueItemCounts(profile);
+  assert.equal(counts.pending + counts.processing + counts.done + counts.failed, 1);
+});
+

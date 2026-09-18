@@ -4,6 +4,8 @@ description: "Read-only 1C codebase exploration specialist — the project's ONL
 modelTier: light
 tools: read, grep, find
 capabilities: mcp
+sideEffects: mcp-read
+resources: project-tree:shared
 ---
 
 # 1C Codebase Explorer Agent

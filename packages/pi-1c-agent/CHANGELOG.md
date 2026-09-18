@@ -1,11 +1,14 @@
 # Changelog
 
-## 0.6.2 (local patch)
-
-- Slash commands are unprefixed. `/1c-*` aliases removed. `/mode` is the only PLAN/BUILD/ASK switch besides Ctrl+Alt+P. Package prompts: `/bugfix`, `/implement`, `/review`.
-
-
 ## Unreleased
+
+### BREAKING: remaining multi-process runtime gaps
+- ASK blocks writer/execution subagents before spawn; ASK children get an ASK mode guard and no `write`/`edit`/`bash`.
+- `PI_1C_MAX_SUBAGENTS` is profile-wide across parent Pi processes (filesystem slot leases under `state/runtime/subagents/slots/`).
+- Memory ACK is rename-based; a record occupies exactly one of pending/processing/done/failed, including crash windows.
+- Knowledge apply stages a transaction then switches `committed.json` / HEAD; lock release requires the owner token.
+- Handoff v2 is strict: `schema` must equal 2 and include `runId`, `agent`, `status`, and structured verification. `public_surface` is no longer a required field.
+- CI matrix uses `fail-fast: false`; memory tests generate fixtures instead of reading live `state/`.
 
 ### BREAKING: fail-closed 1C mode
 - Missing or malformed `__PI_1C_MODE__` now resolves to **ASK**, not BUILD. Mutations require an explicit BUILD mode. Duplicate `currentMode()` helpers were removed in favor of `lib/mode-state.mjs`.
@@ -16,6 +19,10 @@
 - Process-wide `PI_1C_MAX_SUBAGENTS` budget; MCP agents are side-effect classified (unknown MCP cannot run beside other mutators unless `mcpReadOnly: true`).
 - MCP session initialize is single-flight; knowledge apply is revision/lock guarded; `.dev.env` values are exact-redacted before remote memory writes.
 - GitHub Actions CI (Linux/Windows, Node 22.19 / 22) plus a nightly stress job.
+
+## 0.6.2 (local patch)
+
+- Slash commands are unprefixed. `/1c-*` aliases removed. `/mode` is the only PLAN/BUILD/ASK switch besides Ctrl+Alt+P. Package prompts: `/bugfix`, `/implement`, `/review`.
 
 ### Session capture
 - Pi idle/footer no longer treats event context as Cursor: host is Pi when `getContextUsage` or `newSession` is a function. Footer shows `capture:on/stack` (default) instead of `capture:manual`.

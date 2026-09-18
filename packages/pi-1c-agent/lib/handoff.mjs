@@ -1,21 +1,42 @@
 export const HANDOFF_HEADING = '## Upstream Handoff';
 export const HANDOFF_V2_HEADING = '## Handoff v2';
 export const HANDOFF_FIELDS = [
-  'task', 'artifacts', 'findings', 'public_surface', 'locked_decisions',
+  'task', 'artifacts', 'findings', 'locked_decisions',
   'constraints', 'unresolved', 'verification',
 ];
+export const HANDOFF_STATUSES = new Set(['ok', 'error', 'cancelled', 'blocked']);
 
 export function handoffInstruction() {
-  return `\n\n# Mandatory 1C handoff\nEnd your final response with this exact section and valid JSON:\n\n${HANDOFF_HEADING}\n\n\`\`\`json\n{\n  "schema": 2,\n  "task": "short task description",\n  "artifacts": [],\n  "findings": [],\n  "public_surface": [],\n  "locked_decisions": [],\n  "constraints": [],\n  "unresolved": [],\n  "verification": []\n}\n\`\`\`\n\nRules: do not invent verification; preserve locked decisions; list unresolved work explicitly.`;
+  return `\n\n# Mandatory 1C handoff\nEnd your final response with this exact section and valid JSON:\n\n${HANDOFF_HEADING}\n\n\`\`\`json\n{\n  "schema": 2,\n  "runId": "uuid",\n  "agent": "1c-developer",\n  "status": "ok",\n  "task": "short task description",\n  "artifacts": [],\n  "findings": [],\n  "locked_decisions": [],\n  "constraints": [],\n  "unresolved": [],\n  "verification": []\n}\n\`\`\`\n\nRules: schema must equal 2; include runId, agent, and status; verification items are objects with kind, status, and summary; do not invent verification; preserve locked decisions; list unresolved work explicitly. Unlabeled v1 envelopes are rejected.`;
+}
+
+function validateVerification(value) {
+  if (!Array.isArray(value)) return ['verification must be an array'];
+  const errors = [];
+  value.forEach((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      errors.push(`verification[${index}] must be an object with kind, status, and summary`);
+      return;
+    }
+    if (typeof entry.kind !== 'string' || !entry.kind.trim()) errors.push(`verification[${index}].kind must be a non-empty string`);
+    if (typeof entry.status !== 'string' || !entry.status.trim()) errors.push(`verification[${index}].status must be a non-empty string`);
+    if (typeof entry.summary !== 'string' || !entry.summary.trim()) errors.push(`verification[${index}].summary must be a non-empty string`);
+  });
+  return errors;
 }
 
 export function validateHandoff(value) {
   const errors = [];
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { ok: false, errors: ['handoff must be an object'] };
+  if (value.schema !== 2) errors.push('schema must equal 2');
+  if (typeof value.runId !== 'string' || !value.runId.trim()) errors.push('runId must be a string');
+  if (typeof value.agent !== 'string' || !value.agent.trim()) errors.push('agent must be a string');
+  if (!HANDOFF_STATUSES.has(value.status)) errors.push('status must be ok|error|cancelled|blocked');
   if (typeof value.task !== 'string' || !value.task.trim()) errors.push('task must be a non-empty string');
-  for (const key of HANDOFF_FIELDS.filter((x) => x !== 'task')) {
+  for (const key of HANDOFF_FIELDS.filter((x) => x !== 'task' && x !== 'verification')) {
     if (!Array.isArray(value[key])) errors.push(`${key} must be an array`);
   }
+  errors.push(...validateVerification(value.verification));
   return { ok: errors.length === 0, errors };
 }
 

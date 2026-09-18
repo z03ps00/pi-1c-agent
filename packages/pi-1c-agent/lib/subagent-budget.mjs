@@ -1,3 +1,12 @@
+import {
+  acquireProfileSlot,
+  acquireResourceLeases,
+  releaseLease,
+  releaseResource,
+  runtimeProfileDir,
+  startLeaseHeartbeat,
+} from './runtime-scheduler.mjs';
+
 const waiters = [];
 let inFlight = 0;
 
@@ -31,11 +40,28 @@ export function releaseSubagentSlot() {
   pump();
 }
 
-export async function withSubagentSlot(fn) {
+export async function withSubagentSlot(fn, {
+  profileDir,
+  agent,
+  scopeKey = 'default',
+  env = process.env,
+} = {}) {
   await acquireSubagentSlot();
+  const root = profileDir ? runtimeProfileDir(env, profileDir) : '';
+  let slot;
+  let resources = [];
+  let heartbeat;
   try {
+    if (root) {
+      slot = await acquireProfileSlot(root);
+      if (agent) resources = await acquireResourceLeases(root, agent, { scopeKey });
+      heartbeat = startLeaseHeartbeat([slot, ...resources]);
+    }
     return await fn();
   } finally {
+    if (heartbeat) clearInterval(heartbeat);
+    for (const lease of resources) releaseResource(lease);
+    if (slot) releaseLease(slot);
     releaseSubagentSlot();
   }
 }

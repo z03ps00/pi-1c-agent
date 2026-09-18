@@ -40,6 +40,22 @@ test('stdout and stderr caps set outputTruncated', () => {
   assert.ok(Buffer.byteLength(snap.stderr) <= 32);
 });
 
+test('unicode stderr is capped in UTF-8 bytes', () => {
+  const buf = createChildOutputBuffer({ stderrMaxBytes: 1024, onEvent: () => {} });
+  buf.pushStderr('я'.repeat(5000));
+  assert.ok(Buffer.byteLength(buf.snapshot().stderr) <= 1024);
+});
+
+test('oversize JSON frame is reported not parsed', () => {
+  const events = [];
+  const buf = createChildOutputBuffer({ frameMaxBytes: 64, onEvent: (e) => events.push(e) });
+  buf.pushStdout(`${JSON.stringify({ type: 'huge', pad: 'x'.repeat(200) })}\n`);
+  const snap = buf.snapshot();
+  assert.equal(events.length, 0);
+  assert.equal(snap.frameError?.error, 'child_frame_too_large');
+  assert.ok(snap.frameError.frameBytes > 64);
+});
+
 test('structured child result carries timeout metadata', () => {
   const result = buildChildResult({ ok: false, exitCode: null, signal: 'SIGKILL', timedOut: true, durationMs: 12, outputTruncated: true });
   assert.equal(result.timedOut, true);

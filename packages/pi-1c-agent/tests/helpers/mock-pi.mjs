@@ -4,7 +4,7 @@ const payload = {
   type: 'message_end',
   message: {
     role: 'assistant',
-    content: 'done\n\n## Upstream Handoff\n\n```json\n{"task":"mock","artifacts":[],"findings":[],"public_surface":[],"locked_decisions":[],"constraints":[],"unresolved":[],"verification":["ok"]}\n```\n',
+    content: 'done\n\n## Upstream Handoff\n\n```json\n{"schema":2,"runId":"mock-1","agent":"1c-explorer","status":"ok","task":"mock","artifacts":[],"findings":[],"public_surface":[],"locked_decisions":[],"constraints":[],"unresolved":[],"verification":[]}\n```\n',
   },
 };
 if (behavior === 'sleep') {

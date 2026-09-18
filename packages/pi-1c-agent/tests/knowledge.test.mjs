@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   applyDraft, auditDraft, auditKnowledge, automaticInvalidations, computeConfigurationCandidate, createDraft,
   diffFingerprint, findItem, formatDraftChoice, initConfiguration, knowledgeRevision, listDrafts, loadAllItems, loadConfiguration, normalizeProposal, precedenceOf, queryKnowledge, versionMatches, writeCanonicalItem,
+  acquireKnowledgeLock, releaseKnowledgeLock,
 } from '../lib/knowledge.mjs';
 
 function tempProject() {
@@ -218,3 +219,28 @@ test('reader during apply sees a consistent snapshot', () => {
   assert.deepEqual(during, before);
   assert.equal(during.includes('project.rule.ghost'), false);
 });
+
+test('crash before pointer switch keeps the old committed set', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5', sourceRoot: 'src' });
+  const first = createDraft(cwd, { proposals: [{ action: 'add', kind: 'rule', scope: 'project', topic: 'keep', statement: 'Keep me', confidence: 'high' }] });
+  applyDraft(cwd, first.id);
+  const before = loadAllItems(cwd).map((x) => x.id).sort();
+  const second = createDraft(cwd, { proposals: [{ action: 'add', kind: 'rule', scope: 'project', topic: 'crash', statement: 'Should not commit', confidence: 'high' }] });
+  assert.throws(() => applyDraft(cwd, second.id, { crashBeforeCommit: true }), /crash before pointer/);
+  assert.equal(knowledgeRevision(cwd), 1);
+  assert.deepEqual(loadAllItems(cwd).map((x) => x.id).sort(), before);
+  assert.equal(loadAllItems(cwd).some((x) => x.topic === 'crash'), false);
+});
+
+test('stale owner cannot drop a taken-over knowledge lock', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5', sourceRoot: 'src' });
+  const first = acquireKnowledgeLock(cwd);
+  const ownerFile = path.join(cwd, '.pi', '1c', 'knowledge.lock', 'owner.json');
+  const stolen = { token: 'new-owner', pid: 2, host: 'x', createdAt: Date.now(), heartbeatAt: Date.now() };
+  fs.writeFileSync(ownerFile, `${JSON.stringify(stolen)}\n`);
+  assert.throws(() => releaseKnowledgeLock(cwd, first.token), /ownership lost/);
+  releaseKnowledgeLock(cwd, 'new-owner');
+});
+

@@ -4,6 +4,8 @@ description: "Expert 1C code developer agent. Creates modules, procedures, funct
 modelTier: coding
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive, git-index:exclusive
 ---
 
 # 1C Developer Agent

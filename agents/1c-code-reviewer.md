@@ -4,6 +4,8 @@ description: "Expert 1C code reviewer agent. Reviews code for bugs, readability,
 modelTier: analysis
 tools: read
 capabilities: mcp
+sideEffects: mcp-read
+resources: project-tree:shared
 ---
 
 # 1C Code Reviewer Agent

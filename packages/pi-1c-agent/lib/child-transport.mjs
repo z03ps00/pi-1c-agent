@@ -2,6 +2,7 @@ import { emitDiagnostic } from './diagnostics.mjs';
 
 export const DEFAULT_STDOUT_MAX_BYTES = 1_048_576;
 export const DEFAULT_STDERR_MAX_BYTES = 262_144;
+export const DEFAULT_FRAME_MAX_BYTES = 3_145_728;
 
 export function readByteCap(name, fallback) {
   const n = Number(process.env[name] ?? fallback);
@@ -20,17 +21,25 @@ export function consumeJsonLine(line, onEvent) {
   }
 }
 
+function capBuffer(buf, maxBytes) {
+  if (buf.length <= maxBytes) return buf;
+  return buf.subarray(buf.length - maxBytes);
+}
+
 export function createChildOutputBuffer({
   stdoutMaxBytes = readByteCap('PI_1C_CHILD_STDOUT_MAX_BYTES', DEFAULT_STDOUT_MAX_BYTES),
   stderrMaxBytes = readByteCap('PI_1C_CHILD_STDERR_MAX_BYTES', DEFAULT_STDERR_MAX_BYTES),
+  frameMaxBytes = readByteCap('PI_1C_CHILD_FRAME_MAX_BYTES', DEFAULT_FRAME_MAX_BYTES),
   onEvent,
 } = {}) {
-  let stdout = Buffer.alloc(0);
-  let stderr = '';
+  let parseBuf = Buffer.alloc(0);
+  let retainedStdout = Buffer.alloc(0);
+  let retainedStderr = Buffer.alloc(0);
   let stdoutBytes = 0;
   let stderrBytes = 0;
   let outputTruncated = false;
   let lastText = '';
+  let frameError = null;
 
   function noteTruncation(stream) {
     if (!outputTruncated) emitDiagnostic('subagent.stdout.truncated', { stream });
@@ -53,46 +62,62 @@ export function createChildOutputBuffer({
     }
   }
 
+  function noteOversize(frameBytes) {
+    frameError = { error: 'child_frame_too_large', frameBytes };
+    emitDiagnostic('subagent.frame.too_large', { frameBytes });
+  }
+
+  function handleFrame(frame) {
+    if (frame.length > frameMaxBytes) {
+      noteOversize(frame.length);
+      return;
+    }
+    consumeJsonLine(frame.toString('utf8'), handleEvent);
+  }
+
   function pushStdout(chunk) {
     const piece = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk ?? ''), 'utf8');
     stdoutBytes += piece.length;
-    stdout = Buffer.concat([stdout, piece]);
-    if (stdout.length > stdoutMaxBytes) {
-      noteTruncation('stdout');
-      stdout = stdout.subarray(0, stdoutMaxBytes);
-    }
+    parseBuf = Buffer.concat([parseBuf, piece]);
+    retainedStdout = capBuffer(Buffer.concat([retainedStdout, piece]), stdoutMaxBytes);
+    if (stdoutBytes > stdoutMaxBytes) noteTruncation('stdout');
     for (;;) {
-      const nl = stdout.indexOf(0x0a);
+      const nl = parseBuf.indexOf(0x0a);
       if (nl < 0) break;
-      consumeJsonLine(stdout.subarray(0, nl).toString('utf8'), handleEvent);
-      stdout = stdout.subarray(nl + 1);
+      handleFrame(parseBuf.subarray(0, nl));
+      parseBuf = parseBuf.subarray(nl + 1);
+    }
+    if (parseBuf.length > frameMaxBytes) {
+      noteOversize(parseBuf.length);
+      parseBuf = Buffer.alloc(0);
     }
   }
 
   function pushStderr(chunk) {
-    const text = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk ?? '');
-    stderrBytes += Buffer.byteLength(text);
-    stderr += text;
-    if (Buffer.byteLength(stderr) > stderrMaxBytes) {
+    const piece = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk ?? ''), 'utf8');
+    stderrBytes += piece.length;
+    retainedStderr = Buffer.concat([retainedStderr, piece]);
+    if (retainedStderr.length > stderrMaxBytes) {
       noteTruncation('stderr');
-      stderr = stderr.slice(stderr.length - stderrMaxBytes);
+      retainedStderr = retainedStderr.subarray(retainedStderr.length - stderrMaxBytes);
     }
   }
 
   function flushRemainder() {
-    if (stdout.length) {
-      consumeJsonLine(stdout.toString('utf8'), handleEvent);
-      stdout = Buffer.alloc(0);
+    if (parseBuf.length) {
+      handleFrame(parseBuf);
+      parseBuf = Buffer.alloc(0);
     }
   }
 
   function snapshot() {
     return {
       lastText,
-      stderr,
+      stderr: retainedStderr.toString('utf8'),
       outputTruncated,
       stdoutBytes,
       stderrBytes,
+      frameError,
     };
   }
 
@@ -108,9 +133,10 @@ export function buildChildResult({
   outputTruncated = false,
   handoff = null,
   output = '',
+  frameError = null,
 } = {}) {
-  return {
-    ok: Boolean(ok),
+  const result = {
+    ok: Boolean(ok) && !frameError,
     exitCode,
     signal,
     timedOut: Boolean(timedOut),
@@ -119,4 +145,6 @@ export function buildChildResult({
     handoff,
     output,
   };
+  if (frameError) Object.assign(result, frameError);
+  return result;
 }

@@ -4,6 +4,8 @@ description: "Expert 1C testing agent. Tests code and functions using web browse
 modelTier: analysis
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write, ib-write
+resources: ib:exclusive, build-dir:exclusive
 ---
 
 # 1C Tester Agent

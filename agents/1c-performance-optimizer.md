@@ -4,6 +4,8 @@ description: "Expert 1C performance optimization specialist. Analyzes code for p
 modelTier: coding
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive
 ---
 
 # 1C Performance Optimizer Agent

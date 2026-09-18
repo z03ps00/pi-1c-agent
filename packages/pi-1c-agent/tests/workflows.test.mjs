@@ -44,7 +44,7 @@ test('parallel handoffs preserve each exact upstream section', () => {
 
 test('verification gate requires explicit verification evidence', () => {
   assert.equal(verifyWorkflowHandoff({handoff:{verification:[]}}).ok, false);
-  const ok = verifyWorkflowHandoff({handoff:{verification:['syntaxcheck PASS']}});
+  const ok = verifyWorkflowHandoff({handoff:{verification:[{kind:'syntaxcheck',status:'passed',summary:'syntaxcheck PASS'}]}});
   assert.equal(ok.ok, true);
 });
 

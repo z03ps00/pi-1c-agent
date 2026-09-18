@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { auditKnowledge, loadConfiguration } from '../lib/knowledge.mjs';
+import { collectRuntimeStatus, formatRuntimeStatus } from '../lib/runtime-status.mjs';
 import { auditDevEnvSchema, initStatus, locateDevEnvExample } from '../lib/project-init.mjs';
 import { dockerPolicyLabel } from '../lib/docker-policy.mjs';
 import { MIN_NODE_VERSION, nodeMeetsMinimum } from '../lib/node-runtime.mjs';
@@ -87,6 +88,8 @@ add('product health helper', exists(path.join(packageRoot, 'lib', 'product-healt
 add('handoff validator', exists(path.join(packageRoot, 'lib', 'handoff.mjs')));
 add('session-rotate helper', exists(path.join(packageRoot, 'lib', 'session-rotate.mjs')));
 add('writer concurrency policy', exists(path.join(packageRoot, 'lib', 'agent-policy.mjs')));
+add('runtime scheduler helper', exists(path.join(packageRoot, 'lib', 'runtime-scheduler.mjs')));
+add('runtime status helper', exists(path.join(packageRoot, 'lib', 'runtime-status.mjs')));
 add('pinned upstream lock', exists(path.join(packageRoot, 'upstream', 'UPSTREAM.lock.json')));
 
 const packagePathHits = scanMachineLocalPaths(listPackageShippedFiles(packageRoot));
@@ -203,6 +206,18 @@ if (!packageOnly) {
     let projectAgents = false;
     try { projectAgents = JSON.parse(read(settingsFile))?.projectAgents === true; } catch {}
     add('project agents explicit opt-in', projectAgents, true, projectAgents ? 'enabled; runtime trust gate also required' : 'run /agent-scope on');
+  }
+
+  const runtime = collectRuntimeStatus({ profileDir: base, cwd: process.cwd() });
+  add('runtime inflight children', true, false, String(runtime.inflightChildren));
+  add('runtime lease directory', exists(path.join(base, 'state', 'runtime')), false, exists(path.join(base, 'state', 'runtime')) ? 'state/runtime' : 'not created yet');
+  add('memory queue counts', true, false, `pending=${runtime.memory.pending} processing=${runtime.memory.processing} done=${runtime.memory.done} failed=${runtime.memory.failed}`);
+  add('memory queue uniqueness', runtime.duplicateQueueIds.length === 0, true, runtime.duplicateQueueIds.length ? runtime.duplicateQueueIds.map((d) => `${d.id}:${d.count}`).join(', ') : 'ok');
+  add('knowledge revision', true, false, String(runtime.knowledgeRevision));
+  add('mcp session counters', true, false, `init=${runtime.mcp.initCount} reset=${runtime.mcp.resetCount}`);
+  if (!jsonOutput) {
+    // included in check details; keep formatRuntimeStatus available for operators
+    void formatRuntimeStatus;
   }
 
   const openSpecVersion = commandVersion('openspec');

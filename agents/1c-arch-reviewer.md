@@ -4,6 +4,8 @@ description: "Expert 1C architecture reviewer agent. Reviews architectural decis
 modelTier: analysis
 tools: read
 capabilities: mcp
+sideEffects: mcp-read
+resources: project-tree:shared
 ---
 
 # 1C Architecture Reviewer Agent

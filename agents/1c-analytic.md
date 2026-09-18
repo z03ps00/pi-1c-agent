@@ -4,6 +4,8 @@ description: "Expert 1C business analyst agent. Analyzes existing code and metad
 modelTier: analysis
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive
 ---
 
 # 1C Business Analyst Agent

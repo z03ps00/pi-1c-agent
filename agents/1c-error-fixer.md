@@ -4,6 +4,8 @@ description: "Expert 1C error resolution specialist. Fixes syntax errors, runtim
 modelTier: light
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive
 ---
 
 # 1C Error Fixer Agent

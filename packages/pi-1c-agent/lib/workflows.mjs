@@ -117,7 +117,12 @@ export function combineParallelHandoffs(results) {
 
 export function verifyWorkflowHandoff(result) {
   if (!result?.handoff || typeof result.handoff !== 'object') return { ok: false, reason: 'no validated upstream handoff available' };
-  const verification = Array.isArray(result.handoff.verification) ? result.handoff.verification.filter(Boolean) : [];
-  if (verification.length === 0) return { ok: false, reason: 'upstream handoff has no verification evidence' };
+  const raw = Array.isArray(result.handoff.verification) ? result.handoff.verification.filter(Boolean) : [];
+  if (raw.length === 0) return { ok: false, reason: 'upstream handoff has no verification evidence' };
+  const verification = raw.map((item) => (
+    typeof item === 'string'
+      ? item
+      : `${item.kind || 'check'}:${item.status || 'unknown'} ${item.summary || ''}`.trim()
+  ));
   return { ok: true, verification };
 }

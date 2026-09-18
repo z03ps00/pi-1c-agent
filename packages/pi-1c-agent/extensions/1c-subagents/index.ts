@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -6,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { childToolAllowlist, isWriterAgent, parallelSafety, PLAN_SUBAGENTS, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
+import { childModeGuardText, childToolAllowlist, evaluateSubagentRequest, isWriterAgent, parallelSafety, parseResources, parseSideEffects, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
 import { buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
 import { handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
@@ -22,6 +23,8 @@ type Agent = {
   tools?: string[];
   capabilities: string[];
   mcpReadOnly?: boolean;
+  sideEffects: string[];
+  resources: { name: string; mode: "shared" | "exclusive" }[];
   model?: string;
   modelTier?: string;
   prompt: string;
@@ -35,6 +38,8 @@ type AgentFrontmatter = {
   tools?: unknown;
   capabilities?: unknown;
   mcpReadOnly?: unknown;
+  sideEffects?: unknown;
+  resources?: unknown;
   model?: unknown;
   modelTier?: unknown;
 };
@@ -69,6 +74,8 @@ function parseAgent(filePath: string, source: AgentSource): Agent | null {
     tools: parseList(frontmatter.tools),
     capabilities: parseList(frontmatter.capabilities).map((x) => x.toLowerCase()),
     mcpReadOnly: frontmatter.mcpReadOnly === true,
+    sideEffects: parseSideEffects(frontmatter.sideEffects),
+    resources: parseResources(frontmatter.resources),
     model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
     modelTier: typeof frontmatter.modelTier === "string" ? frontmatter.modelTier : undefined,
     prompt: body,
@@ -212,9 +219,7 @@ async function runAgent(
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-1c-agent-"));
   const promptFile = path.join(tmpDir, "agent.md");
-  const modeGuard = mode === "plan"
-    ? "\n\n# Parent 1C PLAN mode\nOperate read-only. Never mutate files, metadata, Git, dependencies, database state or external systems. Return findings and handoff only."
-    : "\n\n# Parent 1C BUILD mode\nPerform only the assigned role. Do not recursively delegate to other 1C subagents.";
+  const modeGuard = childModeGuardText(mode);
   fs.writeFileSync(promptFile, agent.prompt + modeGuard + handoffInstruction(), { mode: 0o600 });
 
   const args = ["--mode", "json", "-p", "--no-session", "--1c-mode", mode];
@@ -226,6 +231,18 @@ async function runAgent(
   else args.push("--no-tools");
   args.push("--append-system-prompt", promptFile, `Task: ${task}`);
 
+  const runId = crypto.randomUUID();
+  const parentRunId = String(process.env.PI_1C_PARENT_RUN_ID || process.env.PI_1C_RUN_ID || "");
+  const profileDir = globalAgentDir();
+  const diagnosticBase = () => ({
+    profileDir,
+    runId,
+    parentRunId,
+    projectId: cwd,
+    agent: agent.name,
+    workflow: String(process.env.PI_1C_WORKFLOW || ""),
+    stage: agent.name,
+  });
   return withSubagentSlot(() => new Promise((resolve, reject) => {
     const invocation = getPiInvocation(args);
     const startedAt = Date.now();
@@ -236,11 +253,14 @@ async function runAgent(
         PI_1C_SUBAGENT_DEPTH: String(depth + 1),
         PI_1C_CHILD_PROCESS: "1",
         PI_1C_DISABLE_STARTUP_RECONCILE: "1",
+        PI_1C_RUN_ID: runId,
+        PI_1C_PARENT_RUN_ID: parentRunId || runId,
       },
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       detached: true,
     });
+    emitDiagnostic("subagent.started", { ...diagnosticBase(), childPid: proc.pid, durationMs: 0 });
     let last = "";
     const output = createChildOutputBuffer({
       onEvent: (event) => {
@@ -292,15 +312,23 @@ async function runAgent(
       const snap = output.snapshot();
       if (snap.lastText) last = snap.lastText;
       const meta = buildChildResult({
-        ok: code === 0 && !timedOut && !aborted,
+        ok: code === 0 && !timedOut && !aborted && !snap.frameError,
         exitCode: code,
         signal: signalName,
         timedOut,
         durationMs: Date.now() - startedAt,
         outputTruncated: snap.outputTruncated,
         output: last,
+        frameError: snap.frameError,
       });
       cleanup();
+      emitDiagnostic(timedOut ? "subagent.timeout" : aborted ? "subagent.cancelled" : snap.frameError ? "subagent.frame_error" : code === 0 ? "subagent.completed" : "subagent.failed", {
+        ...diagnosticBase(),
+        childPid: proc.pid,
+        durationMs: meta.durationMs,
+        exitCode: code,
+      });
+      if (snap.frameError) return reject(Object.assign(new Error(`subagent ${agent.name} ${snap.frameError.error} frameBytes=${snap.frameError.frameBytes}`), { child: meta }));
       if (aborted || signal?.aborted) return reject(Object.assign(new Error(`subagent ${agent.name} отменён пользователем`), { child: meta }));
       if (timedOut) return reject(Object.assign(new Error(`subagent ${agent.name} превысил таймаут ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}с и был остановлен (${describeExit(code, signalName)}): ${snap.stderr.slice(-2000)}`), { child: meta }));
       if (code !== 0) return reject(Object.assign(new Error(`subagent ${agent.name} ${describeExit(code, signalName)}: ${snap.stderr.slice(-4000)}`), { child: meta }));
@@ -316,7 +344,7 @@ async function runAgent(
         ok: true,
       });
     });
-  }));
+  }), { profileDir: globalAgentDir(), agent, scopeKey: cwd });
 }
 
 const Item = Type.Object({ agent: Type.String(), task: Type.String() });
@@ -339,10 +367,8 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     const agent = byName.get(x.agent);
     if (!agent) throw new Error(`Unknown 1C agent: ${x.agent}. Available: ${agents.map((a) => a.name).join(", ")}`);
     const mode = current1cMode();
-    if (mode === "plan" && !PLAN_SUBAGENTS.has(agent.name)) {
-      throw new Error(`1C PLAN blocks writer/execution subagent '${agent.name}'. Continue planning with read-only roles.`);
-    }
     const allTools = pi.getAllTools().map((t) => t.name);
+    evaluateSubagentRequest({ mode, agent, allTools });
     return runAgent(agent, x.task, ctx.cwd, mode, allTools, signal, onProgress);
   }
 

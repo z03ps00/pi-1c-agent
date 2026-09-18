@@ -4,6 +4,8 @@ description: "Expert 1C code refactoring specialist. Focuses on dead code cleanu
 modelTier: coding
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive, git-index:exclusive
 ---
 
 # 1C Refactoring Agent

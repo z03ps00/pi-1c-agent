@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { emitDiagnostic } from './diagnostics.mjs';
 
@@ -19,7 +20,17 @@ export function draftsDir(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge
 export function itemsDir(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge', 'items'); }
 export function rulesDir(cwd, scope) { return path.join(knowledgeRoot(cwd), 'rules', scope); }
 export function knowledgeLockPath(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge.lock'); }
-export function committedSnapshotPath(cwd) { return path.join(knowledgeRoot(cwd), 'knowledge', 'committed.json'); }
+export function knowledgeTransactionsDir(cwd) {
+  return path.join(knowledgeRoot(cwd), 'knowledge-transactions');
+}
+
+export function knowledgeHeadPath(cwd) {
+  return path.join(knowledgeRoot(cwd), 'knowledge', 'HEAD');
+}
+
+export function committedSnapshotPath(cwd) {
+  return path.join(knowledgeRoot(cwd), 'knowledge', 'committed.json');
+}
 
 export function ensureKnowledgeDirs(cwd) {
   for (const dir of [
@@ -109,13 +120,30 @@ export function acquireKnowledgeLock(cwd, { staleMs = 30_000, timeoutMs = 5_000 
   while (true) {
     try {
       fs.mkdirSync(dir);
-      fs.writeFileSync(path.join(dir, 'owner'), `${process.pid} ${Date.now()}\n`);
-      return dir;
+      const token = crypto.randomUUID();
+      const owner = {
+        token,
+        pid: process.pid,
+        host: os.hostname(),
+        createdAt: Date.now(),
+        heartbeatAt: Date.now(),
+      };
+      fs.writeFileSync(path.join(dir, 'owner.json'), `${JSON.stringify(owner)}\n`);
+      return { dir, token };
     } catch (error) {
       if (error?.code !== 'EEXIST') throw error;
       try {
-        const st = fs.statSync(dir);
-        if (Date.now() - st.mtimeMs > staleMs) fs.rmSync(dir, { recursive: true, force: true });
+        const ownerFile = path.join(dir, 'owner.json');
+        let stale = false;
+        if (fs.existsSync(ownerFile)) {
+          const owner = JSON.parse(fs.readFileSync(ownerFile, 'utf8'));
+          const beat = Number(owner.heartbeatAt || owner.createdAt || 0);
+          stale = !beat || Date.now() - beat > staleMs;
+        } else {
+          const st = fs.statSync(dir);
+          stale = Date.now() - st.mtimeMs > staleMs;
+        }
+        if (stale) fs.rmSync(dir, { recursive: true, force: true });
       } catch {
         // retry
       }
@@ -125,17 +153,25 @@ export function acquireKnowledgeLock(cwd, { staleMs = 30_000, timeoutMs = 5_000 
   }
 }
 
-export function releaseKnowledgeLock(cwd) {
+export function releaseKnowledgeLock(cwd, token) {
   const dir = knowledgeLockPath(cwd);
+  const ownerFile = path.join(dir, 'owner.json');
+  let owner = null;
+  try { owner = JSON.parse(fs.readFileSync(ownerFile, 'utf8')); } catch { owner = null; }
+  if (token && owner && owner.token !== token) {
+    throw new Error('knowledge lock ownership lost');
+  }
+  if (token && !owner) return false;
   try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+  return true;
 }
 
 export function withKnowledgeLock(cwd, fn) {
-  acquireKnowledgeLock(cwd);
+  const lock = acquireKnowledgeLock(cwd);
   try {
-    return fn();
+    return fn(lock);
   } finally {
-    releaseKnowledgeLock(cwd);
+    releaseKnowledgeLock(cwd, lock.token);
   }
 }
 
@@ -274,6 +310,8 @@ export function findItem(cwd, id) {
 }
 
 export function loadConfiguration(cwd) {
+  const committed = readCommittedSnapshot(cwd);
+  if (committed?.configuration && typeof committed.configuration === 'object') return committed.configuration;
   const file = configurationPath(cwd);
   if (!fs.existsSync(file)) return null;
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
@@ -462,11 +500,64 @@ export function auditDraft(cwd, draftOrId) {
   return { ok: errors.length === 0, errors, warnings };
 }
 
-export function applyDraft(cwd, draftId, { expectedRevision } = {}) {
-  return withKnowledgeLock(cwd, () => applyDraftLocked(cwd, draftId, { expectedRevision }));
+export function applyDraft(cwd, draftId, { expectedRevision, crashBeforeCommit = false } = {}) {
+  return withKnowledgeLock(cwd, () => applyDraftLocked(cwd, draftId, { expectedRevision, crashBeforeCommit }));
 }
 
-function applyDraftLocked(cwd, draftId, { expectedRevision } = {}) {
+function cloneItem(item) {
+  const copy = { ...item };
+  delete copy._file;
+  return copy;
+}
+
+function workingItems(cwd) {
+  const committed = readCommittedSnapshot(cwd);
+  if (committed && Array.isArray(committed.items)) return committed.items.map(cloneItem);
+  return scanAllItems(cwd).map(cloneItem);
+}
+
+function findWorking(items, id) {
+  return items.find((x) => x.id === id) ?? null;
+}
+
+function stageKnowledgeTransaction(cwd, { revision, items, configuration, draft }) {
+  const txId = crypto.randomUUID();
+  const txDir = path.join(knowledgeTransactionsDir(cwd), `tx-${txId}`);
+  fs.mkdirSync(path.join(txDir, 'items'), { recursive: true });
+  const snapshot = {
+    schema: 1,
+    revision: Number(revision) || 0,
+    updatedAt: now(),
+    configuration,
+    items: items.map(cloneItem),
+  };
+  fs.writeFileSync(path.join(txDir, 'configuration.json'), `${JSON.stringify(configuration, null, 2)}\n`);
+  fs.writeFileSync(path.join(txDir, 'committed.json'), `${JSON.stringify(snapshot, null, 2)}\n`);
+  fs.writeFileSync(path.join(txDir, 'manifest.json'), `${JSON.stringify({ txId, revision: snapshot.revision, draftId: draft?.id, createdAt: now() }, null, 2)}\n`);
+  for (const item of items) {
+    const dest = path.join(txDir, 'items', `${slug(item.id)}.json`);
+    fs.writeFileSync(dest, `${JSON.stringify(item, null, 2)}\n`);
+  }
+  if (!fs.existsSync(path.join(txDir, 'committed.json'))) throw new Error('knowledge transaction missing committed snapshot');
+  return { txDir, snapshot };
+}
+
+export function commitKnowledgePointer(cwd, snapshot) {
+  const dest = committedSnapshotPath(cwd);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  atomicWriteJson(dest, snapshot);
+  const headTmp = `${knowledgeHeadPath(cwd)}.tmp-${process.pid}`;
+  fs.writeFileSync(headTmp, `${snapshot.revision}\n`);
+  fs.renameSync(headTmp, knowledgeHeadPath(cwd));
+  return dest;
+}
+
+function materializeCommittedTree(cwd, snapshot) {
+  if (snapshot.configuration) atomicWriteJson(configurationPath(cwd), snapshot.configuration);
+  for (const item of snapshot.items || []) writeCanonicalItem(cwd, item);
+}
+
+function applyDraftLocked(cwd, draftId, { expectedRevision, crashBeforeCommit = false } = {}) {
   const draft = loadDraft(cwd, draftId);
   if (!draft) throw new Error(`draft not found: ${draftId}`);
   if (draft.status === 'applied') return { draft, results: [], alreadyApplied: true };
@@ -481,42 +572,49 @@ function applyDraftLocked(cwd, draftId, { expectedRevision } = {}) {
   if (!preflight.ok) throw new Error(`draft preflight failed: ${preflight.errors.join('; ')}`);
   const results = [];
   if (preflight.warnings.length) results.push({ action: 'warnings', warnings: preflight.warnings });
+  const items = workingItems(cwd);
+  const upsert = (next) => {
+    const idx = items.findIndex((x) => x.id === next.id);
+    if (idx >= 0) items[idx] = cloneItem(next);
+    else items.push(cloneItem(next));
+  };
   for (const proposal of draft.proposals ?? []) {
     const { action, targetId, item, reason } = proposal;
     if (action === 'add') {
-      const existing = findItem(cwd, item.id);
+      const existing = findWorking(items, item.id);
       if (existing) results.push({ action: 'skip', id: item.id, reason: 'already exists' });
       else {
-        writeCanonicalItem(cwd, item);
+        upsert(item);
         for (const supersededId of item.supersedes ?? []) {
-          const old = findItem(cwd, supersededId);
-          if (old) updateExistingItem(cwd, old, { status: 'superseded', supersededBy: item.id });
+          const old = findWorking(items, supersededId);
+          if (old) upsert({ ...old, status: 'superseded', supersededBy: item.id, updatedAt: now() });
         }
         results.push({ action: 'add', id: item.id });
       }
       continue;
     }
     const id = targetId || item?.id;
-    const existing = id ? findItem(cwd, id) : null;
+    const existing = id ? findWorking(items, id) : null;
     if (!existing) { results.push({ action: 'skip', id, reason: 'target not found' }); continue; }
     if (action === 'update') {
       const merged = { ...existing, ...item, id: existing.id, createdAt: existing.createdAt, updatedAt: now() };
       delete merged._file;
-      updateExistingItem(cwd, existing, merged);
+      upsert(merged);
       for (const supersededId of merged.supersedes ?? []) {
         if (supersededId === existing.id) continue;
-        const old = findItem(cwd, supersededId);
-        if (old) updateExistingItem(cwd, old, { status: 'superseded', supersededBy: existing.id });
+        const old = findWorking(items, supersededId);
+        if (old) upsert({ ...old, status: 'superseded', supersededBy: existing.id, updatedAt: now() });
       }
       results.push({ action: 'update', id: existing.id });
     } else if (action === 'invalidate') {
-      updateExistingItem(cwd, existing, { status: 'stale', staleReason: reason || 'configuration changed' });
+      upsert({ ...existing, status: 'stale', staleReason: reason || 'configuration changed', updatedAt: now() });
       results.push({ action: 'invalidate', id: existing.id });
     } else if (action === 'disable') {
-      updateExistingItem(cwd, existing, { status: 'disabled', disabledReason: reason || 'disabled by approved draft' });
+      upsert({ ...existing, status: 'disabled', disabledReason: reason || 'disabled by approved draft', updatedAt: now() });
       results.push({ action: 'disable', id: existing.id });
     }
   }
+  let configuration = { ...(loadConfiguration(cwd) || {}) };
   if (draft.meta?.configurationCandidate && draft.meta?.fingerprintIndex) {
     const before = loadConfiguration(cwd);
     const candidate = draft.meta.configurationCandidate;
@@ -526,19 +624,24 @@ function applyDraftLocked(cwd, draftId, { expectedRevision } = {}) {
       changedPaths: draft.meta?.diff?.changed ?? [],
       candidateVersion: candidate.version,
     });
-    saveConfigurationCandidate(cwd, candidate, draft.meta.fingerprintIndex);
+    configuration = { ...configuration, ...candidate };
     if (carried.length) results.push({ action: 'carry-forward', ids: carried });
     results.push({ action: 'configuration-update', version: candidate.version, fingerprint: candidate.fingerprint });
   }
-  draft.status = 'applied';
-  draft.appliedAt = now();
-  atomicWriteJson(path.join(draftsDir(cwd), `${draftId}.json`), draft);
-  const configuration = loadConfiguration(cwd) || {};
   const nextRevision = currentRevision + 1;
   configuration.revision = nextRevision;
   configuration.updatedAt = now();
-  atomicWriteJson(configurationPath(cwd), configuration);
-  writeCommittedSnapshot(cwd, { revision: nextRevision, items: scanAllItems(cwd), configuration });
+  draft.status = 'applied';
+  draft.appliedAt = now();
+  const { snapshot } = stageKnowledgeTransaction(cwd, { revision: nextRevision, items, configuration, draft });
+  if (crashBeforeCommit) {
+    const err = new Error('knowledge crash before pointer switch');
+    err.code = 'knowledge.crash-before-commit';
+    throw err;
+  }
+  commitKnowledgePointer(cwd, snapshot);
+  materializeCommittedTree(cwd, snapshot);
+  atomicWriteJson(path.join(draftsDir(cwd), `${draftId}.json`), draft);
   return { draft, results, alreadyApplied: false, revision: nextRevision };
 }
 

@@ -4,6 +4,8 @@ description: "Expert 1C documentation specialist for end-user and administrator 
 modelTier: analysis
 tools: read, write, edit, grep, find, bash
 capabilities: mcp
+sideEffects: filesystem-write, shell, mcp-write
+resources: project-tree:exclusive
 ---
 
 # 1C Documentation Writer Agent

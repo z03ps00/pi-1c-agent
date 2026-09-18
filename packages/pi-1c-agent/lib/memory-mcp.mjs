@@ -11,7 +11,10 @@ export const MCP_MUTATE_TIMEOUT_MS = 30000;
 const MUTATE_TOOLS = new Set(['remember', 'write', 'add_resource', 'edit', 'forget']);
 const sessions = new Map();
 const initPromises = new Map();
+const recoveryPromises = new Map();
 let rpcId = 1;
+let initCount = 0;
+let resetCount = 0;
 
 function nextRpcId() {
   rpcId += 1;
@@ -134,7 +137,10 @@ async function initializeMcpSession(url, fetchImpl, timeoutMs) {
   } catch {
     // ignore
   }
-  if (sessionId) sessions.set(url, sessionId);
+  if (sessionId) {
+    sessions.set(url, sessionId);
+    initCount += 1;
+  }
   try {
     const notified = await postMcp(url, {
       jsonrpc: '2.0',
@@ -152,9 +158,33 @@ async function initializeMcpSession(url, fetchImpl, timeoutMs) {
   return sessionId || '';
 }
 
+export function invalidateSession(url, observedSessionId) {
+  if (sessions.get(url) === observedSessionId) {
+    sessions.delete(url);
+    resetCount += 1;
+    return true;
+  }
+  return false;
+}
+
+export function mcpSessionStats() {
+  return { initCount, resetCount, active: sessions.size };
+}
+
+export async function recoverMcpSession(url, observedSessionId, fetchImpl, timeoutMs) {
+  invalidateSession(url, observedSessionId);
+  let pending = recoveryPromises.get(url);
+  if (!pending) {
+    pending = initializeMcpSession(url, fetchImpl, timeoutMs)
+      .finally(() => recoveryPromises.delete(url));
+    recoveryPromises.set(url, pending);
+  }
+  return pending;
+}
+
 export async function ensureMcpSession(url, fetchImpl, timeoutMs) {
   if (sessions.has(url)) return sessions.get(url);
-  let pending = initPromises.get(url);
+  let pending = initPromises.get(url) || recoveryPromises.get(url);
   if (!pending) {
     pending = initializeMcpSession(url, fetchImpl, timeoutMs)
       .finally(() => initPromises.delete(url));
@@ -166,7 +196,10 @@ export async function ensureMcpSession(url, fetchImpl, timeoutMs) {
 export function resetMcpSessionsForTests() {
   sessions.clear();
   initPromises.clear();
+  recoveryPromises.clear();
   rpcId = 1;
+  initCount = 0;
+  resetCount = 0;
 }
 
 export async function mcpToolCall({
@@ -190,8 +223,7 @@ export async function mcpToolCall({
     let sessionId = await ensureMcpSession(url, fetchImpl, Math.min(ms, 8000));
     let res = await postMcp(url, payload, fetchImpl, ms, sessionId);
     if (!res?.ok) {
-      sessions.delete(url);
-      sessionId = await ensureMcpSession(url, fetchImpl, Math.min(ms, 8000));
+      sessionId = await recoverMcpSession(url, sessionId, fetchImpl, Math.min(ms, 8000));
       res = await postMcp(url, payload, fetchImpl, ms, sessionId);
     }
     if (!res?.ok) return { ok: false };
