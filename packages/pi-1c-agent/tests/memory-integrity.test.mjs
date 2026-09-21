@@ -90,9 +90,22 @@ test('verify-after-write confirms or queues UNCONFIRMED', async () => {
     record: prep.record,
     existsByKey: async () => false,
     remember: async () => ({ ok: true }),
-    recall: async () => false,
+    recall: async () => true,
+    sleep: async () => {},
   });
   assert.equal(confirmed.status, 'recorded');
+  assert.equal(confirmed.confirmed, true);
+
+  const accepted = await writeWithVerify({
+    record: prep.record,
+    existsByKey: async () => false,
+    remember: async () => ({ ok: true }),
+    recall: async () => false,
+    sleep: async () => {},
+  });
+  assert.equal(accepted.status, 'accepted');
+  assert.equal(accepted.recorded, false);
+  assert.equal(accepted.confirmed, false);
 
   const queued = [];
   const failed = await writeWithVerify({
@@ -149,6 +162,20 @@ test('first-miss then hit recall becomes recorded', async () => {
   assert.equal(calls, 2);
 });
 
+test('generic credential families are redacted before leftover check', () => {
+  const samples = [
+    'AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+    'GITLAB_TOKEN=glpat-0123456789abcdefghijkl',
+    'NPM_TOKEN=npm_0123456789abcdefghijklmnopqrstuvwxyz',
+    'CUSTOM_CREDENTIAL=s3cret-value-without-spaces',
+  ];
+  for (const sample of samples) {
+    const out = redact(sample);
+    assert.doesNotMatch(out.text, /wJalr|glpat-|npm_0123|s3cret-value/, sample);
+    assert.equal(hasUnredactableSecret(out.text), false, sample);
+  }
+});
+
 test('unredactable secret blocks prepareWrite', () => {
   const blocked = prepareWrite({ content: '-----BEGIN PRIVATE KEY-----\nMIIB', task: 't', agent: 'pi' });
   assert.equal(blocked.ok, false);
@@ -158,7 +185,7 @@ test('exact .dev.env values are redacted even with unusual quoting', () => {
   const secrets = loadExactSecretValues({ envText: 'ERP_PROD_CREDENTIAL="s3cret value with spaces"\n' });
   const out = redact('use ERP_PROD_CREDENTIAL = "s3cret value with spaces" in report', { exactValues: secrets });
   assert.doesNotMatch(out.text, /s3cret value with spaces/);
-  assert.match(out.text, /\[REDACTED:secret_value\]/);
+  assert.match(out.text, /\[REDACTED:(?:secret_value|secret_store|credential_field)\]/);
 });
 
 test('known token is fully redacted', () => {

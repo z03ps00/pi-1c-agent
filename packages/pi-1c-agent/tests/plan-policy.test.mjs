@@ -11,6 +11,7 @@ import {
   evaluateAnonMcpCall,
   evaluateAnonWriteCall,
   describeMcpCall,
+  isPlanReadOnlyToolName,
   isRecallMcpCall,
   getPlanVisibleTools,
   getReadOnlyVisibleTools,
@@ -44,6 +45,23 @@ test('PLAN rejects symlink escape', () => {
 test('PLAN visible tools deny unknown custom mutators by default', () => {
   const tools = getPlanVisibleTools(['read','bash','write','edit','delete_database','syntaxcheck','subagent_1c'], ['read','bash','write','edit','delete_database','syntaxcheck','subagent_1c']);
   assert.deepEqual(tools.sort(), ['edit','read','subagent_1c','syntaxcheck','write'].sort());
+});
+
+test('PLAN/ASK deny deceptive read-looking mutators by name', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-plan-'));
+  for (const name of [
+    'get_and_delete',
+    'query_and_update',
+    'validate_and_apply',
+    'show_then_write',
+    'metadata_reset',
+  ]) {
+    assert.equal(isPlanReadOnlyToolName(name), false, name);
+    assert.equal(evaluatePlanToolCall(cwd, name, {}).allowed, false, name);
+    assert.equal(evaluateReadOnlyToolCall('ask', cwd, name, {}).allowed, false, name);
+  }
+  assert.equal(isPlanReadOnlyToolName('read'), true);
+  assert.equal(isPlanReadOnlyToolName('syntaxcheck'), true);
 });
 
 test('PLAN allows only the explicit read-only MCP inventory', () => {

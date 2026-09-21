@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { redact } from './redact.mjs';
+import { hasUnredactableSecret, sanitizeForEgress } from './redact.mjs';
 
 function emptyDistill() {
   return {
@@ -146,7 +146,7 @@ export function parseDistillPayload(text) {
   return out;
 }
 
-export function distillPromptEntries(entries = []) {
+export function distillPromptEntries(entries = [], { cwd, exactValues } = {}) {
   const lines = [];
   for (const entry of Array.isArray(entries) ? entries : []) {
     const role = entry?.role || entry?.type || '';
@@ -156,7 +156,11 @@ export function distillPromptEntries(entries = []) {
     const row = [role, tool && `tool=${tool}`, file && `file=${file}`, content].filter(Boolean).join(' | ');
     if (row) lines.push(row);
   }
-  return redact(lines.join('\n').slice(0, 12000)).text;
+  const sanitized = sanitizeForEgress(lines.join('\n').slice(0, 12000), { cwd, exactValues });
+  if (hasUnredactableSecret(sanitized.text)) {
+    throw new Error('distill payload contains an unredactable secret');
+  }
+  return sanitized.text;
 }
 
 function isUsefulDistill(distilled) {
@@ -189,11 +193,12 @@ export async function distillWithProvider({
   fetchImpl = globalThis.fetch,
   env,
   profileDir,
+  cwd,
   timeoutMs = 30000,
 } = {}) {
   const provider = resolveStackProvider({ mode, model, profileDir, env });
   if (!provider) return null;
-  const user = distillPromptEntries(entries);
+  const user = distillPromptEntries(entries, { cwd });
   const text = await callChatCompletions({
     endpoint: provider.endpoint,
     apiKey: provider.apiKey,

@@ -110,10 +110,10 @@ export async function writeWithVerify({
   sleep,
   verify,
 } = {}) {
-  if (!record) return { status: 'blocked', recorded: false, reason: 'no record' };
+  if (!record) return { status: 'blocked', recorded: false, confirmed: false, reason: 'no record' };
   if (typeof existsByKey === 'function') {
     const existing = await existsByKey(record);
-    if (existing) return { status: 'duplicate', recorded: false, existing: true };
+    if (existing) return { status: 'duplicate', recorded: false, confirmed: false, existing: true };
   }
   let wrote = { ok: false };
   try {
@@ -123,23 +123,21 @@ export async function writeWithVerify({
   }
   if (!wrote?.ok) {
     if (typeof queuePending === 'function') queuePending(record);
-    return { status: 'UNCONFIRMED', recorded: false };
-  }
-  // Cognee recall often drops the exact idempotency_key after cognify.
-  // HTTP-ok remember is enough; do not block the pair on CHUNKS read-back.
-  if (record.target === 'memory') {
-    return { status: 'recorded', recorded: true, correlation_id: record.correlation_id };
+    return { status: 'UNCONFIRMED', recorded: false, confirmed: false };
   }
   const found = await recallWithRetry(recall, record, {
     attempts: verify?.attempts ?? VERIFY_RETRY.attempts,
     delaysMs: verify?.delaysMs ?? VERIFY_RETRY.delaysMs,
     sleep: typeof sleep === 'function' ? sleep : defaultSleep,
   });
-  if (!found) {
-    if (typeof queuePending === 'function') queuePending(record);
-    return { status: 'UNCONFIRMED', recorded: false };
+  if (found) {
+    return { status: 'recorded', recorded: true, confirmed: true, correlation_id: record.correlation_id };
   }
-  return { status: 'recorded', recorded: true, correlation_id: record.correlation_id };
+  if (typeof queuePending === 'function') queuePending(record);
+  if (record.target === 'memory') {
+    return { status: 'accepted', recorded: false, confirmed: false, correlation_id: record.correlation_id };
+  }
+  return { status: 'UNCONFIRMED', recorded: false, confirmed: false };
 }
 
 export async function writePaired({

@@ -28,6 +28,7 @@ import {
   formatWrapNotify,
   CAPTURE_STATE_TYPE,
 } from '../lib/session-capture.mjs';
+import { distillPromptEntries } from '../lib/distill-provider.mjs';
 import { createMcpAdapters, MCP_MUTATE_TIMEOUT_MS } from '../lib/memory-mcp.mjs';
 import { resolveStackProvider } from '../lib/distill-provider.mjs';
 
@@ -499,4 +500,40 @@ test('stack mode calls the provider and empty/error falls back', async () => {
     fetchImpl: async () => { throw new Error('ollama down'); },
     env: { ROUTERAI_API_KEY: '' },
   }), /ollama down|stack provider/);
+});
+
+test('remote distill never receives exact project secrets or known credential families', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-distill-'));
+  fs.writeFileSync(path.join(tmp, '.dev.env'), 'ERP_PROD_CREDENTIAL="s3cret value with spaces"\n');
+  const entries = [
+    { role: 'user', content: 'AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' },
+    { role: 'assistant', content: 'use ERP_PROD_CREDENTIAL = "s3cret value with spaces" and GITLAB_TOKEN=glpat-0123456789abcdefghijkl' },
+  ];
+  const prompt = distillPromptEntries(entries, { cwd: tmp });
+  assert.doesNotMatch(prompt, /s3cret value with spaces/);
+  assert.doesNotMatch(prompt, /wJalrXUtnFEMI/);
+  assert.doesNotMatch(prompt, /glpat-0123456789/);
+
+  const calls = [];
+  await distillWithProvider({
+    mode: 'stack',
+    entries,
+    cwd: tmp,
+    fetchImpl: async (_url, init) => {
+      calls.push(JSON.parse(init.body));
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '{"task":"x"}' } }] }),
+      };
+    },
+    env: {
+      ROUTERAI_API_KEY: 'test-key',
+      ROUTERAI_ENDPOINT: 'https://routerai.ru/api/v1',
+    },
+  });
+  assert.equal(calls.length, 1);
+  const body = JSON.stringify(calls[0]);
+  assert.doesNotMatch(body, /s3cret value with spaces/);
+  assert.doesNotMatch(body, /wJalrXUtnFEMI/);
+  assert.doesNotMatch(body, /glpat-0123456789/);
 });

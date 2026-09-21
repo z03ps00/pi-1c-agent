@@ -2,6 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { Key } from "@earendil-works/pi-tui";
 import {
   approveLevelName,
+  approvalScope,
   classifyDanger,
   cycleApproveLevel,
   describeApprove,
@@ -251,7 +252,7 @@ function lastAssistantText(messages: any[]): string {
 }
 
 const APPROVE_ONCE = "Approve once";
-const APPROVE_ALL = "Approve all like this (session)";
+const APPROVE_ALL = "Approve this risk class for this target (session)";
 const APPROVE_DENY = "Deny";
 
 export default function oneCModeExtension(pi: ExtensionAPI): void {
@@ -540,7 +541,8 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     if (level <= 0) return;
     const classification = classifyDanger(event.toolName, event.input ?? {}, cwd);
     if (!shouldPrompt(level, classification.dangerous)) return;
-    if (approveAllowlist.has(classification.category)) return;
+    const scope = approvalScope(event.toolName, classification, event.input ?? {});
+    if (approveAllowlist.has(scope)) return;
     const label = `${event.toolName}: ${classification.reason}`;
     if (!ctx?.hasUI) {
       return {
@@ -550,7 +552,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     }
     const choice = await ctx.ui.select(`Approve action? ${label}`, [APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY]);
     if (choice === APPROVE_ALL) {
-      approveAllowlist.add(classification.category);
+      approveAllowlist.add(scope);
       return;
     }
     if (choice === APPROVE_ONCE) return;

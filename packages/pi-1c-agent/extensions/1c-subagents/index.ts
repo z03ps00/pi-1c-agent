@@ -8,7 +8,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { childModeGuardText, childToolAllowlist, evaluateSubagentRequest, isWriterAgent, parallelSafety, parseResources, parseSideEffects, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
+import { childProcessEnv } from "../../lib/child-env.mjs";
 import { buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
+import { terminateProcessTree } from "../../lib/process-supervisor.mjs";
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
 import { handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
 import { current1cMode, requireBuild } from "../../lib/mode-state.mjs";
@@ -248,14 +250,13 @@ async function runAgent(
     const startedAt = Date.now();
     const proc = spawn(invocation.command, invocation.args, {
       cwd,
-      env: {
-        ...process.env,
+      env: childProcessEnv(process.env, {
         PI_1C_SUBAGENT_DEPTH: String(depth + 1),
         PI_1C_CHILD_PROCESS: "1",
         PI_1C_DISABLE_STARTUP_RECONCILE: "1",
         PI_1C_RUN_ID: runId,
         PI_1C_PARENT_RUN_ID: parentRunId || runId,
-      },
+      }),
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       detached: true,
@@ -274,7 +275,7 @@ async function runAgent(
     let killTimer: ReturnType<typeof setTimeout> | null = null;
     let killEscalated = false;
     const terminate = (sig: NodeJS.Signals) => {
-      try { process.kill(-proc.pid!, sig); } catch { try { proc.kill(sig); } catch {} }
+      terminateProcessTree(proc, sig);
     };
     const onAbort = () => { aborted = true; terminate("SIGTERM"); };
     if (signal) {

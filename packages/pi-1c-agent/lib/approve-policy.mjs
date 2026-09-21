@@ -48,7 +48,7 @@ export function approveLevelName(level) {
 
 export function describeApprove(level) {
   const name = approveLevelName(level);
-  if (name === 'safe') return 'ask before dangerous actions (writes, destructive bash, MCP/IB mutations)';
+  if (name === 'safe') return 'ask before writes, non-read-only shell, and MCP/IB mutations (UX guard, not an OS sandbox)';
   if (name === 'strict') return 'approve every tool call';
   return 'do not ask — current BUILD behaviour';
 }
@@ -90,9 +90,67 @@ export function shouldPrompt(level, dangerous) {
   return false;
 }
 
+const SHELL_META_RE = /[;&|><`$()\n]|&&|\|\||>>|<</;
+const READ_ONLY_SHELL_HEADS = new Set([
+  'pwd', 'ls', 'dir', 'echo', 'cat', 'head', 'tail', 'wc', 'file', 'stat',
+  'which', 'type', 'whoami', 'uname', 'date', 'true', 'false', 'id',
+  'grep', 'rg', 'egrep', 'fgrep', 'less', 'more',
+]);
+const READ_ONLY_GIT_SUB = new Set([
+  'status', 'diff', 'log', 'show', 'rev-parse', 'branch', 'describe',
+  'ls-files', 'ls-tree', 'cat-file', 'blame', 'shortlog', 'name-rev',
+]);
+const MUTATING_FIND_FLAGS = new Set(['-delete', '-exec', '-ok', '-fprint', '-fprintf', '-fls']);
+
+export function classifyReadOnlyShell(command) {
+  const text = typeof command === 'string' ? command.trim() : '';
+  if (!text) return { allowed: false, reason: 'empty shell command' };
+  if (SHELL_META_RE.test(text)) {
+    return { allowed: false, reason: 'shell metacharacters or redirection' };
+  }
+  const tokens = text.split(/\s+/).filter(Boolean);
+  const cmd = tokens[0] || '';
+  if (cmd === 'git') {
+    const sub = tokens[1] || '';
+    if (!READ_ONLY_GIT_SUB.has(sub)) {
+      return { allowed: false, reason: `git ${sub || '(missing subcommand)'}` };
+    }
+    return { allowed: true, reason: `read-only git ${sub}` };
+  }
+  if (cmd === 'find') {
+    if (tokens.some((token) => MUTATING_FIND_FLAGS.has(token))) {
+      return { allowed: false, reason: 'mutating find' };
+    }
+    return { allowed: true, reason: 'read-only find' };
+  }
+  if (READ_ONLY_SHELL_HEADS.has(cmd)) {
+    return { allowed: true, reason: `read-only ${cmd}` };
+  }
+  return { allowed: false, reason: 'shell execution' };
+}
+
+function shellRiskTarget(command) {
+  const tokens = String(command ?? '').trim().split(/\s+/).filter(Boolean);
+  if (tokens[0] === 'git') return `git ${tokens[1] || ''}`.trim();
+  return tokens[0] || 'shell';
+}
+
+export function approvalScope(toolName, classification = {}, input = {}) {
+  const tool = String(toolName ?? '').trim() || 'unknown';
+  const risk = String(classification.category || 'unclassified');
+  let target = extractToolTarget(input) || '';
+  if (!target && (tool === 'bash' || tool === 'powershell')) {
+    target = shellRiskTarget(input?.command);
+  }
+  if (!target) target = String(classification.reason || '').slice(0, 80);
+  return [tool, risk, target].join(':');
+}
+
 export function dangerousBashReason(command) {
+  const safe = classifyReadOnlyShell(command);
+  if (safe.allowed) return null;
   const text = typeof command === 'string' ? command : '';
-  if (!text.trim()) return null;
+  if (!text.trim()) return 'empty shell command';
   if (DOCKER_COMMAND_RE.test(text)) return 'docker/podman/mcp-ctl command';
   if (RM_RF_RE.test(text)) return 'rm -rf';
   if (GIT_PUSH_RE.test(text)) return 'git push';
@@ -102,7 +160,7 @@ export function dangerousBashReason(command) {
   if (CONFIG_LOAD_RE.test(text)) return 'infobase/config load (.dt/.cf/.cfe)';
   if (LOAD_INFOBASE_RE.test(text)) return 'ЗагрузитьИнформационнуюБазу';
   if (PUBLISH_RE.test(text)) return 'publication command';
-  return null;
+  return safe.reason;
 }
 
 function classifyMcp(toolName, input) {
@@ -150,7 +208,7 @@ export function classifyDanger(toolName, input = {}, _cwd = process.cwd()) {
     const command = typeof input?.command === 'string' ? input.command : '';
     const hit = dangerousBashReason(command);
     if (hit) return { dangerous: true, category: 'bash', reason: hit };
-    return { dangerous: false, category: 'bash', reason: 'non-destructive shell command' };
+    return { dangerous: false, category: 'shell-read', reason: 'read-only shell command' };
   }
   if (isMcpGateway(name)) {
     return classifyMcp(name, input) ?? { dangerous: true, category: 'mcp_mutation', reason: `MCP call '${name}'` };

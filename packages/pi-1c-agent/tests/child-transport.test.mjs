@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildChildResult, consumeJsonLine, createChildOutputBuffer } from '../lib/child-transport.mjs';
+import { appendTail, buildChildResult, consumeJsonLine, createChildOutputBuffer } from '../lib/child-transport.mjs';
 import { resetDiagnostics } from '../lib/diagnostics.mjs';
 
 test('final JSON without trailing newline is flushed', () => {
@@ -54,6 +54,22 @@ test('oversize JSON frame is reported not parsed', () => {
   assert.equal(events.length, 0);
   assert.equal(snap.frameError?.error, 'child_frame_too_large');
   assert.ok(snap.frameError.frameBytes > 64);
+});
+
+test('appendTail never retains more than the cap and copies only the tail', () => {
+  const huge = Buffer.alloc(32 * 1024 * 1024, 0x61);
+  const kept = appendTail(Buffer.from('prefix'), huge, 1024);
+  assert.equal(kept.length, 1024);
+  assert.equal(kept.toString('utf8'), 'a'.repeat(1024));
+});
+
+test('oversized single stdout chunk is truncated without keeping the frame', () => {
+  const buf = createChildOutputBuffer({ stdoutMaxBytes: 1024, frameMaxBytes: 4096 });
+  buf.pushStdout(Buffer.alloc(32 * 1024 * 1024, 0x61));
+  const snap = buf.snapshot();
+  assert.equal(snap.outputTruncated, true);
+  assert.equal(snap.stdoutBytes, 32 * 1024 * 1024);
+  assert.equal(snap.frameError?.error, 'child_frame_too_large');
 });
 
 test('structured child result carries timeout metadata', () => {

@@ -41,6 +41,7 @@
   "scripts": {
     "test": "node tests/run-all.mjs",
     "test:stress": "PI_1C_STRESS=1 node tests/run-stress.mjs",
+    "typecheck": "node tools/typecheck.mjs",
     "doctor:package": "node tools/doctor.mjs --package-only",
     "scan:public": "node ../../scripts/scan-public-tree.mjs"
   }

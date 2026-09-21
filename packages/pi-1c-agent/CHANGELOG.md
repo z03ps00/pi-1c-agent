@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Security
+- ASK/PLAN tool authorization is fail-closed: only the explicit read-only inventory is allowed. Name fragments such as `get`/`query`/`validate` no longer classify a custom tool as read-only.
+- Session distillation sanitizes exact `.dev.env` secrets and known credential families before any remote provider call.
+- `/approve safe` treats shell as dangerous unless the command is on a narrow read-only allowlist. Session "approve this risk class" is scoped to tool + risk + target, not the whole `bash` category.
+- Child agents inherit an explicit environment allowlist instead of the full parent `process.env`.
+
+### Reliability
+- Child stdout/stderr retention copies only a bounded tail and never concatenates an oversize frame.
+- Process-tree termination uses a POSIX process group or Windows `taskkill /T`.
+- Memory write distinguishes `accepted` (transport ACK) from `recorded` (read-back). Queue reconstruction prefers `done` over `failed`.
+
+### Testing / CI
+- Adversarial tool-name, shell-equivalence, secret-egress, bounded-buffer, child-env, and process-supervisor tests.
+- `npm run typecheck` parses runtime `.mjs` and extension `.ts` files. CI matrix adds Node 24.
+
 ### BREAKING: remaining multi-process runtime gaps
 - ASK blocks writer/execution subagents before spawn; ASK children get an ASK mode guard and no `write`/`edit`/`bash`.
 - `PI_1C_MAX_SUBAGENTS` is profile-wide across parent Pi processes (filesystem slot leases under `state/runtime/subagents/slots/`).

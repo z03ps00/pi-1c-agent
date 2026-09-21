@@ -275,6 +275,8 @@ export async function runDistiller({
   entries,
   distillWithProvider,
   distillWithChat,
+  cwd,
+  profileDir,
 } = {}) {
   if (mode === 'off') return { distilled: distillHeuristic(entries), fallback: false, used: 'heuristic' };
   try {
@@ -282,7 +284,7 @@ export async function runDistiller({
       const distilled = await distillWithChat(entries);
       if (distilled) return { distilled, fallback: false, used: 'chat' };
     } else if (mode !== 'chat' && typeof distillWithProvider === 'function') {
-      const distilled = await distillWithProvider({ mode, entries });
+      const distilled = await distillWithProvider({ mode, entries, cwd, profileDir });
       if (distilled) return { distilled, fallback: false, used: mode };
     }
   } catch {
@@ -328,6 +330,8 @@ export async function captureSession({
       entries,
       distillWithProvider,
       distillWithChat,
+      cwd,
+      profileDir,
     });
     distilled = result.distilled;
     fallback = result.fallback;
@@ -414,7 +418,8 @@ export async function captureSession({
     distilled,
     fact: paired.fact,
     report: paired.report,
-    wrotePending: paired.fact?.status === 'UNCONFIRMED' || paired.report?.status === 'UNCONFIRMED',
+    wrotePending: ['UNCONFIRMED', 'accepted'].includes(paired.fact?.status)
+      || ['UNCONFIRMED', 'accepted'].includes(paired.report?.status),
   };
 }
 

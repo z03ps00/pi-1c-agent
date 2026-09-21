@@ -27,7 +27,7 @@ ASK → PLAN_DRAFT → PLAN_READY → BUILD_EXECUTING
 Ctrl+Alt+P cycles BUILD → PLAN → ASK
 ```
 
-PLAN обязан исследовать и построить исполнимый план даже для greenfield-задач, где будущему BUILD придётся создавать папки/файлы. Отсутствие write-доступа не является причиной остановить планирование. ASK не пишет никуда, включая planning roots.
+PLAN обязан исследовать и построить исполнимый план даже для greenfield-задач, где будущему BUILD придётся создавать папки/файлы. Отсутствие write-доступа не является причиной остановить планирование. ASK не пишет никуда, включая planning roots. Неизвестные custom tools в ASK/PLAN запрещены, пока они явно не входят в read-only inventory: имя вроде `get_and_delete` само по себе не считается чтением.
 
 Planning writes (PLAN only) разрешены только в:
 
@@ -261,3 +261,13 @@ Pinned `comol/ai_rules_1c` commit:
 ```
 
 Полный upstream snapshot не vendored в публичный ZIP из-за неуточнённой root license, обнаруженной аудитом. Bootstrap получает именно pinned commit.
+
+## Safety boundaries
+
+`/approve` — дополнительный UX-guard в BUILD, а не OS sandbox. Pi выполняется с правами текущего пользователя. `safe` спрашивает перед записью файлов, любым shell, который не доказан как read-only allowlist (`git status` / `ls` / `grep` без метасимволов), и перед MCP/IB mutations. Session-одобрение действует только на тот же tool + risk class + target, не на всю категорию `bash`.
+
+Перед внешней distillation (RouterAI / `stack`) и перед записью в Cognee/OpenViking применяется один egress-filter: generic secret rules плюс exact values из ближайшего `.dev.env`. Если после очистки секрет остаётся, remote distill блокируется, а memory write не выполняется.
+
+`recorded` означает подтверждённый read-back. Cognee ACK без read-back — это `accepted` / pending, не `recorded`. OpenViking-отчёт подтверждается read-back по URI/`correlation_id`.
+
+`engines.node` — `>=22.19.0`. CI проверяет Node 22.19, 22 и 24 на Linux и Windows.

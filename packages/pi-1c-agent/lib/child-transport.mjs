@@ -21,9 +21,16 @@ export function consumeJsonLine(line, onEvent) {
   }
 }
 
-function capBuffer(buf, maxBytes) {
-  if (buf.length <= maxBytes) return buf;
-  return buf.subarray(buf.length - maxBytes);
+export function appendTail(current, piece, maxBytes) {
+  const cap = Number(maxBytes) || 0;
+  if (cap <= 0) return Buffer.alloc(0);
+  const src = Buffer.isBuffer(piece) ? piece : Buffer.from(String(piece ?? ''), 'utf8');
+  const prev = Buffer.isBuffer(current) ? current : Buffer.alloc(0);
+  if (src.length >= cap) return Buffer.from(src.subarray(src.length - cap));
+  const keep = cap - src.length;
+  const left = prev.length > keep ? prev.subarray(prev.length - keep) : prev;
+  if (!left.length) return Buffer.from(src);
+  return Buffer.concat([left, src], left.length + src.length);
 }
 
 export function createChildOutputBuffer({
@@ -78,29 +85,46 @@ export function createChildOutputBuffer({
   function pushStdout(chunk) {
     const piece = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk ?? ''), 'utf8');
     stdoutBytes += piece.length;
-    parseBuf = Buffer.concat([parseBuf, piece]);
-    retainedStdout = capBuffer(Buffer.concat([retainedStdout, piece]), stdoutMaxBytes);
+    retainedStdout = appendTail(retainedStdout, piece, stdoutMaxBytes);
     if (stdoutBytes > stdoutMaxBytes) noteTruncation('stdout');
-    for (;;) {
-      const nl = parseBuf.indexOf(0x0a);
-      if (nl < 0) break;
-      handleFrame(parseBuf.subarray(0, nl));
-      parseBuf = parseBuf.subarray(nl + 1);
-    }
-    if (parseBuf.length > frameMaxBytes) {
-      noteOversize(parseBuf.length);
+    let offset = 0;
+    while (offset < piece.length) {
+      const nl = piece.indexOf(0x0a, offset);
+      if (nl < 0) {
+        const remaining = piece.subarray(offset);
+        const nextBytes = parseBuf.length + remaining.length;
+        if (nextBytes > frameMaxBytes) {
+          noteOversize(nextBytes);
+          parseBuf = Buffer.alloc(0);
+          return;
+        }
+        parseBuf = parseBuf.length
+          ? Buffer.concat([parseBuf, remaining], nextBytes)
+          : Buffer.from(remaining);
+        return;
+      }
+      const linePart = piece.subarray(offset, nl);
+      const frameBytes = parseBuf.length + linePart.length;
+      if (frameBytes > frameMaxBytes) {
+        noteOversize(frameBytes);
+        parseBuf = Buffer.alloc(0);
+        offset = nl + 1;
+        continue;
+      }
+      const frame = parseBuf.length
+        ? Buffer.concat([parseBuf, linePart], frameBytes)
+        : linePart;
       parseBuf = Buffer.alloc(0);
+      handleFrame(frame);
+      offset = nl + 1;
     }
   }
 
   function pushStderr(chunk) {
     const piece = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk ?? ''), 'utf8');
     stderrBytes += piece.length;
-    retainedStderr = Buffer.concat([retainedStderr, piece]);
-    if (retainedStderr.length > stderrMaxBytes) {
-      noteTruncation('stderr');
-      retainedStderr = retainedStderr.subarray(retainedStderr.length - stderrMaxBytes);
-    }
+    if (stderrBytes > stderrMaxBytes || piece.length > stderrMaxBytes) noteTruncation('stderr');
+    retainedStderr = appendTail(retainedStderr, piece, stderrMaxBytes);
   }
 
   function flushRemainder() {

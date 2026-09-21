@@ -106,6 +106,17 @@ test('1c-mode docker hard-block is flag or socket detect, not unconditional', ()
   assert.doesNotMatch(mode, /AWG, а docker-контейнеры/);
 });
 
+test('1c-mode scopes session approvals and 1c-subagents restrict child env', () => {
+  const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
+  assert.match(mode, /approvalScope/);
+  assert.match(mode, /Approve this risk class for this target \(session\)/);
+  assert.doesNotMatch(mode, /Approve all like this/);
+  const agents = fs.readFileSync(path.join(root, 'extensions', '1c-subagents', 'index.ts'), 'utf8');
+  assert.match(agents, /childProcessEnv/);
+  assert.match(agents, /terminateProcessTree/);
+  assert.doesNotMatch(agents, /\.\.\.process\.env/);
+});
+
 test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
   assert.match(mode, /registerCommand\("mode"/);

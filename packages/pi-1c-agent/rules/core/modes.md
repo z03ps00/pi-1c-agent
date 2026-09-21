@@ -29,6 +29,7 @@ Read-only research. Answer questions from existing files and read-only tools/MCP
 
 - `write` / `edit` are hidden and blocked, including `openspec/**` and `.pi/1c/**` (those roots are PLAN-only).
 - `bash` is disabled (same as PLAN).
+- Unknown custom tools are denied unless they are on the explicit read-only inventory. A name that merely looks like `get`/`query`/`validate` is not enough.
 - If the user asks for a change, explain the approach and point to `/mode plan` or `/mode build` once; then follow the current-mode line.
 
 ### PLAN_DRAFT
@@ -99,9 +100,9 @@ Ask before the model executes a tool in BUILD. Independent of ASK/PLAN/BUILD and
 
 - Surfaces: `/approve off|safe|strict|status` (no argument opens a picker like `/mode`), `Ctrl+Alt+S` (cycle off → safe → strict), `--approve <level>`, env `PI_1C_APPROVE` (new sessions). Footer always shows `approve:off|safe|strict`.
 - `off` — do not ask (current BUILD behaviour). Default for a new session.
-- `safe` — prompt only on dangerous actions: `write`/`edit`, destructive `bash` (`rm -rf`, `git push` / `reset --hard` / `clean -fd` / `checkout --`, docker/podman, `.dt`/`.cf`/`.cfe` load, `ЗагрузитьИнформационнуюБазу`, publication), MCP mutations, live-IB tools (`vcexecutecode`, execute-code/query).
+- `safe` — prompt on file writes, any shell command that is not on the narrow read-only allowlist, MCP mutations, and live-IB tools. Approval is a UX guard, not an OS sandbox.
 - `strict` — prompt on every tool call.
-- Dialog: Approve once / Approve all like this (session) / Deny. Without UI (RPC/print) the would-be prompt is fail-closed: the call is blocked, not auto-allowed.
+- Dialog: Approve once / Approve this risk class for this target (session) / Deny. The session allowlist is keyed by tool + risk class + target, not by the broad category `bash`. Without UI (RPC/print) the would-be prompt is fail-closed: the call is blocked, not auto-allowed.
 - ASK/PLAN still hard-block mutations first; this gate runs in BUILD after those checks.
 
 ## Commands

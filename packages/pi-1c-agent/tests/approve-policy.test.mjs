@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   APPROVE_MAX_LEVEL,
+  approvalScope,
   approveLevelName,
   classifyDanger,
+  classifyReadOnlyShell,
   cycleApproveLevel,
   dangerousBashReason,
   describeApprove,
@@ -36,7 +38,7 @@ test('approve helpers parse, cycle and name levels', () => {
   assert.equal(approveLevelName(0), 'off');
   assert.equal(approveLevelName(1), 'safe');
   assert.equal(approveLevelName(2), 'strict');
-  assert.match(describeApprove(1), /dangerous/);
+  assert.match(describeApprove(1), /non-read-only shell/);
   assert.match(describeApprove(2), /every tool/);
 });
 
@@ -84,10 +86,47 @@ test('classifyDanger flags destructive bash and leaves git status alone', () => 
   }
   assert.equal(classifyDanger('bash', { command: 'git status' }).dangerous, false);
   assert.equal(classifyDanger('bash', { command: 'grep docker README.md' }).dangerous, false);
-  assert.equal(classifyDanger('bash', { command: 'rm file.txt' }).dangerous, false);
+  assert.equal(classifyDanger('bash', { command: 'rm file.txt' }).dangerous, true);
   assert.equal(dangerousBashReason('git status'), null);
   const ps = classifyDanger('powershell', { command: 'git reset --hard' });
   assert.equal(ps.dangerous, true);
+});
+
+test('safe shell is allowlist-only and treats equivalents as dangerous', () => {
+  const dangerous = [
+    'rm --recursive --force /tmp/x',
+    'git restore .',
+    'find . -delete',
+    'truncate -s 0 data.db',
+    'python -c "import os; os.remove(\'x\')"',
+    'node -e "fs.unlinkSync(\'x\')"',
+    'dd if=/dev/null of=x',
+    'rm file.txt',
+  ];
+  for (const command of dangerous) {
+    const result = classifyDanger('bash', { command });
+    assert.equal(result.dangerous, true, command);
+    assert.equal(classifyReadOnlyShell(command).allowed, false, command);
+  }
+  assert.equal(classifyReadOnlyShell('git status').allowed, true);
+  assert.equal(classifyReadOnlyShell('ls -la').allowed, true);
+  assert.equal(classifyReadOnlyShell('git status; rm -rf x').allowed, false);
+});
+
+test('approvalScope is narrower than the mutation category', () => {
+  const push = classifyDanger('bash', { command: 'git push origin main' });
+  const restore = classifyDanger('bash', { command: 'git restore .' });
+  const write = classifyDanger('write', { path: 'src/foo.bsl' });
+  const otherWrite = classifyDanger('write', { path: 'src/bar.bsl' });
+  assert.notEqual(
+    approvalScope('bash', push, { command: 'git push origin main' }),
+    approvalScope('bash', restore, { command: 'git restore .' }),
+  );
+  assert.notEqual(
+    approvalScope('write', write, { path: 'src/foo.bsl' }),
+    approvalScope('write', otherWrite, { path: 'src/bar.bsl' }),
+  );
+  assert.match(approvalScope('bash', push, { command: 'git push origin main' }), /bash:bash:git push/);
 });
 
 test('classifyDanger MCP read vs mutation and live IB tools', () => {

@@ -256,7 +256,7 @@ export function reconstructQueueUniqueness(profileDir) {
     list.push(copy);
     byId.set(copy.id, list);
   }
-  const rank = { failed: 3, done: 2, processing: 1, pending: 0 };
+  const rank = { done: 3, failed: 2, processing: 1, pending: 0 };
   let repaired = 0;
   for (const list of byId.values()) {
     if (list.length < 2) continue;

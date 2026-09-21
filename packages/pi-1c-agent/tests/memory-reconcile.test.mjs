@@ -258,6 +258,29 @@ test('child env skips startup reconcile and failures emit diagnostics', async ()
   assert.ok(diagnosticEvents().some((e) => e.code === 'memory.lifecycle.probe.failed'));
 });
 
+test('duplicate reconstruction prefers done over failed', () => {
+  const profile = tempProfile();
+  const dirs = ensureMemoryStateDirs(profile);
+  const name = 'same-memory-hash.md';
+  fs.writeFileSync(path.join(dirs.done, name), serializePendingRecord({
+    idempotency_key: 'task=dup; agent=pi; date=2026-09-21; content_hash=duphash0000000001',
+    target: 'memory',
+    status: 'confirmed',
+    content: 'fact: confirmed',
+  }));
+  fs.writeFileSync(path.join(dirs.failed, name), serializePendingRecord({
+    idempotency_key: 'task=dup; agent=pi; date=2026-09-21; content_hash=duphash0000000001',
+    target: 'memory',
+    status: 'failed',
+    content: 'fact: failed',
+  }));
+  assert.ok(reconstructQueueUniqueness(profile) >= 1);
+  assert.equal(fs.existsSync(path.join(dirs.done, name)), true);
+  assert.equal(fs.existsSync(path.join(dirs.failed, name)), false);
+  assert.equal(queueItemCounts(profile).done, 1);
+  assert.equal(queueItemCounts(profile).failed, 0);
+});
+
 test('crash during ACK leaves exactly one copy and does not double-write', async () => {
   const profile = tempProfile();
   const dirs = ensureMemoryStateDirs(profile);

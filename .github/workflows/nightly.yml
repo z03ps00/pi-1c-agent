@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22.19"
+      - run: npm run typecheck
+        working-directory: packages/pi-1c-agent
       - run: npm test
         working-directory: packages/pi-1c-agent
       - run: npm run test:stress

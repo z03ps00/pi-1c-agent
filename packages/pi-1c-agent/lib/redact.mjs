@@ -20,7 +20,7 @@ const RULES = [
   },
   {
     kind: 'api_key',
-    re: /\b(?:sk-|rk-|ghp_|gho_|github_pat_|xox[baprs]-)[A-Za-z0-9_-]{16,}\b/g,
+    re: /\b(?:sk-|rk-|ghp_|gho_|github_pat_|glpat-|npm_|xox[baprs]-)[A-Za-z0-9_-]{16,}\b/g,
   },
   {
     kind: 'token',
@@ -32,7 +32,11 @@ const RULES = [
   },
   {
     kind: 'secret_store',
-    re: /(?:KNOWLEDGE_MCP_AUTHORIZATION|ROUTERAI_API_KEY|GEMINI_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|API_KEY|SECRET_KEY|SECRET)\s*[=:]\s*['"]?[^\s'"]+/gi,
+    re: /(?:KNOWLEDGE_MCP_AUTHORIZATION|ROUTERAI_API_KEY|GEMINI_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|GITLAB_TOKEN|NPM_TOKEN|API_KEY|SECRET_KEY|ACCESS_KEY|SECRET|TOKEN|CREDENTIAL)[A-Za-z0-9_-]*\s*[=:]\s*(?:(['"])(?:\\.|(?!\1).)*\1|[^\s'"]+)/gi,
+  },
+  {
+    kind: 'credential_field',
+    re: /(?:^|[\s;])[A-Za-z0-9_-]*(?:SECRET|TOKEN|API[_-]?KEY|ACCESS[_-]?KEY|CREDENTIAL)[A-Za-z0-9_-]*\s*[=:]\s*(?:(['"])(?:\\.|(?!\1).)*\1|[^\s'"\n]+)/gi,
   },
 ];
 
@@ -41,7 +45,8 @@ const LEFTOVER = [
   /(?:password|passwd|pwd|passphrase)\s*[=:]\s*(?!'?\[REDACTED)/i,
   /(?:Bearer|Basic)\s+(?!\[REDACTED)[A-Za-z0-9._\-+/=]{8,}/i,
   /(?:postgres(?:ql)?|mysql|mongodb|redis):\/\/[^:\s]+:(?!\[REDACTED)[^@\s]+@/i,
-  /\b(?:sk-|rk-|ghp_|gho_|github_pat_|xox[baprs]-)[A-Za-z0-9_-]{16,}\b/,
+  /\b(?:sk-|rk-|ghp_|gho_|github_pat_|glpat-|npm_|xox[baprs]-)[A-Za-z0-9_-]{16,}\b/,
+  /(?:secret|token|api[_-]?key|access[_-]?key|credential)[A-Za-z0-9_-]*\s*[=:]\s*(?!\[REDACTED)/i,
 ];
 
 const SKIP_EXACT_VALUES = new Set(['', 'true', 'false', 'yes', 'no', 'on', 'off', '0', '1', 'utf-8', 'utf8']);
@@ -103,4 +108,9 @@ export function redact(text, { exactValues = [] } = {}) {
 export function hasUnredactableSecret(text) {
   const raw = String(text ?? '');
   return LEFTOVER.some((re) => re.test(raw));
+}
+
+export function sanitizeForEgress(text, { cwd, exactValues } = {}) {
+  const values = exactValues ?? loadExactSecretValues({ cwd });
+  return redact(text, { exactValues: values });
 }

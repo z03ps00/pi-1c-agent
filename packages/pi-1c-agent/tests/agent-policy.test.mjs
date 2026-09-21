@@ -35,13 +35,14 @@ test('MCP capability adds custom tools but never undeclared built-in mutators', 
 });
 
 test('PLAN filters writer tools but keeps read-only MCP tools', () => {
-  const tools = childToolAllowlist({ mode:'plan', agentTools:['read','write','bash'], capabilities:['mcp'], allTools:['read','write','bash','syntaxcheck','codesearch','subagent_1c','delete_database','mcp'] });
+  const tools = childToolAllowlist({ mode:'plan', agentTools:['read','write','bash'], capabilities:['mcp'], allTools:['read','write','bash','syntaxcheck','codesearch','subagent_1c','delete_database','get_and_delete','mcp'] });
   assert.ok(tools.includes('syntaxcheck'));
   assert.ok(tools.includes('codesearch'));
   assert.ok(tools.includes('mcp'));
   assert.equal(tools.includes('write'), false);
   assert.equal(tools.includes('bash'), false);
   assert.equal(tools.includes('delete_database'), false);
+  assert.equal(tools.includes('get_and_delete'), false);
 });
 
 test('ASK blocks writer subagents before spawn and keeps explorer', () => {

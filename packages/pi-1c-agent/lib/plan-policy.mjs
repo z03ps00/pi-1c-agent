@@ -16,11 +16,6 @@ const EXACT_READ_ONLY = new Set([
   'get_method_call_hierarchy','trace_impact',
 ]);
 
-const READ_ONLY_PATTERNS = [
-  /(^|[_-])(read|get|list|find|grep|search|lookup|inspect|describe|show|query|review|check|validate|analy[sz]e|trace)([_-]|$)/i,
-  /(^|[_-])(docs?|metadata|schema|dependencies|hierarchy|scope)([_-]|$)/i,
-];
-
 const PLAN_MCP_READ_ONLY_TOOLS = Object.freeze({
   knowledge: new Set(['find', 'glob', 'grep', 'health', 'list', 'list_watches', 'read', 'search', 'tree']),
   memory: new Set(['recall', 'search_tools']),
@@ -49,8 +44,7 @@ const ANON_MUTATOR_FALLBACK_RE = anonMutatorFallbackRegex();
 
 export function isPlanReadOnlyToolName(name) {
   if (EXACT_READ_ONLY.has(name)) return true;
-  if (name === 'write' || name === 'edit' || name === 'bash') return false;
-  return READ_ONLY_PATTERNS.some((re) => re.test(name));
+  return false;
 }
 
 export function getPlanVisibleTools(activeTools, allTools) {
@@ -64,7 +58,7 @@ export function getPlanVisibleTools(activeTools, allTools) {
   for (const name of ['write', 'edit', 'subagent_1c']) {
     if (available.has(name) && !out.includes(name)) out.push(name);
   }
-  // mcp is the lazy proxy; name does not match read-only patterns, but PLAN
+  // mcp is the lazy proxy; it is not in the exact read-only inventory, but PLAN
   // already allows recall/search via evaluatePlanMcpToolCall.
   if (available.has('mcp') && active.has('mcp') && !out.includes('mcp')) out.push('mcp');
   return [...new Set(out)];
