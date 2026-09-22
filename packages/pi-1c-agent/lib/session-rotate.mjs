@@ -72,7 +72,7 @@ export function statusText(state, host = 'pi') {
 
 export function footerLabel(state) {
   const s = normalizeState(state);
-  return s.enabled ? `rotate:${s.thresholdPercent}%` : 'rotate:off';
+  return s.enabled ? `rotate on ${s.thresholdPercent}%` : `rotate off ${s.thresholdPercent}%`;
 }
 
 export function shouldRotateOnIdle({ enabled, percent, thresholdPercent, alreadyRotating = false } = {}) {

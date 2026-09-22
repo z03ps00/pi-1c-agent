@@ -43,6 +43,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/capture-model` | Distiller: `off` / `stack` / `ollama <model>` / `routerai <model>` / `chat` (default `stack`) |
 | `/anon` | Pi anonymous session: `1` no memory writes, `2` no reads, `3` no local traces, `off` |
 | `/approve` | Pi approval mode: `off` do not ask, `safe` ask on dangerous BUILD actions, `strict` approve every tool (`Ctrl+Alt+S`) |
+| `/theme` | Pi TUI theme: picker, `standard` (VS Code Dark+), `dracula`, `list`, `status` |
 | `/litemode` | `VERIFICATION_DEPTH` |
 | `/economymode` | Orchestrator economy mode |
 | `/rulesmodel` | `AGENT_MODEL` profile |

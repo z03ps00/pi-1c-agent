@@ -19,6 +19,9 @@ export const PACKAGE_OWNED_COMMANDS = [
   'bootstrap',
   'openspec-setup',
   'agent-scope',
+  'status',
+  'palette',
+  'theme',
 ];
 export const DESTRUCTIVE_PROMPT_NAMES = [
   'update1cbase',

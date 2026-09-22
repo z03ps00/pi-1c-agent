@@ -100,6 +100,20 @@ test('short agent names resolve when unique', () => {
   assert.equal(resolveDiscoveredAgentName('nope', agents), null);
 });
 
+test('role aliases map reviewer and fixer even when prefixes collide', () => {
+  const agents = [
+    { name: '1c-explorer' },
+    { name: '1c-code-reviewer' },
+    { name: '1c-arch-reviewer' },
+    { name: '1c-error-fixer' },
+  ];
+  assert.equal(resolveDiscoveredAgentName('reviewer', agents), '1c-code-reviewer');
+  assert.equal(resolveDiscoveredAgentName('review', agents), '1c-code-reviewer');
+  assert.equal(resolveDiscoveredAgentName('fixer', agents), '1c-error-fixer');
+  assert.equal(resolveDiscoveredAgentName('arch-reviewer', agents), '1c-arch-reviewer');
+  assert.equal(resolveDiscoveredAgentName('architect-reviewer', agents), '1c-arch-reviewer');
+});
+
 test('ASK mode guard is not BUILD', () => {
   assert.match(childModeGuardText('ask'), /ASK mode/);
   assert.doesNotMatch(childModeGuardText('ask'), /BUILD mode/);

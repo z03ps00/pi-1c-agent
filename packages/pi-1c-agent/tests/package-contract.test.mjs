@@ -151,3 +151,15 @@ test('1c-ui palette shortcut is Ctrl+Shift+K not Ctrl+K', () => {
   assert.doesNotMatch(ui, /Key\.ctrl\("k"\)/);
   assert.match(ui, /Key\.alt\("a"\)/);
 });
+
+test('1c-ui registers /theme and ships VS Code palettes', () => {
+  const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');
+  assert.match(ui, /registerCommand\("theme"/);
+  assert.doesNotMatch(ui, /registerCommand\("1c-theme"/);
+  assert.match(ui, /overlaySelect\(ctx, "Choose theme"/);
+  assert.ok(Array.isArray(pkg.pi.themes) && pkg.pi.themes.includes('themes'));
+  for (const name of ['standard', 'dracula']) {
+    const json = JSON.parse(fs.readFileSync(path.join(root, 'themes', `${name}.json`), 'utf8'));
+    assert.equal(json.name, name);
+  }
+});

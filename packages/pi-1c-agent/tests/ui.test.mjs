@@ -1,16 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   uiAvailable,
   hasDialogUi,
   composeFooter,
   footerSegments,
   FOOTER_DROP_ORDER,
+  mcpCountsFromAdapterSnapshot,
+  mcpCountsFromConfig,
+  mcpFooterLabel,
+  thinkingFooterLabel,
+  rotateFooterLabel,
   composeStatus,
   mapRunStatus,
-  composeAgentCard,
   composeAgentCardLines,
+  composeSubagentCallLines,
+  composeSubagentResultLines,
   composeHubRows,
+  composeHubDetailLines,
   composeWidgetLines,
   RunTracker,
   composeWorkflowView,
@@ -32,6 +42,13 @@ import {
   resetUiBusForTests,
   stripAnsi,
   colorize,
+  parseThemeArgs,
+  resolveThemeName,
+  themeSelectItems,
+  formatThemeList,
+  applyTheme,
+  REQUIRED_COLOR_TOKENS,
+  SHIPPED_THEMES,
 } from '../lib/ui/index.mjs';
 
 test('uiAvailable requires hasUI and tui mode', () => {
@@ -49,19 +66,65 @@ test('footer BUILD omits default-off flags', () => {
     approve: 'safe',
     anonLevel: 0,
     rotateEnabled: false,
+    rotateThreshold: 85,
     captureEnabled: false,
     contextPercent: 58,
     gitBranch: 'main',
     model: 'claude-sonnet',
     projectName: 'ERP 2.5',
-  }, 120);
+    thinkingLevel: 'off',
+    mcpConnected: 0,
+    mcpEnabled: 0,
+  }, 160);
   assert.match(text, /BUILD/);
   assert.match(text, /safe/);
+  assert.match(text, /mcp 0\/0/);
+  assert.match(text, /think off/);
+  assert.match(text, /rotate off 85%/);
   assert.doesNotMatch(text, /anon:off/);
-  assert.doesNotMatch(text, /rotate:off/);
   assert.doesNotMatch(text, /capture:off/);
   assert.doesNotMatch(text, /approve:off/);
   assert.ok(segments.some((s) => s.id === 'mode'));
+});
+
+test('footer shows MCP count, thinking, and rotate on/off with threshold', () => {
+  const off = composeFooter({
+    mode: 'ask',
+    rotateEnabled: false,
+    rotateThreshold: 80,
+    thinkingLevel: 'high',
+    mcpConnected: 2,
+    mcpEnabled: 5,
+    contextPercent: 12,
+  }, 160);
+  assert.match(off.text, /mcp 2\/5/);
+  assert.match(off.text, /think high/);
+  assert.match(off.text, /rotate off 80%/);
+  const on = composeFooter({
+    mode: 'build',
+    rotateEnabled: true,
+    rotateThreshold: 90,
+    thinkingLevel: 'medium',
+    mcpConnected: 1,
+    mcpEnabled: 1,
+  }, 160);
+  assert.match(on.text, /mcp 1\/1/);
+  assert.match(on.text, /think medium/);
+  assert.match(on.text, /rotate on 90%/);
+});
+
+test('MCP footer counts come from adapter snapshot or mcp.json', () => {
+  assert.deepEqual(mcpCountsFromAdapterSnapshot({
+    connectedCount: 2,
+    disabledCount: 1,
+    servers: [{}, {}, {}, {}],
+  }), { connected: 2, enabled: 3 });
+  assert.deepEqual(mcpCountsFromConfig({
+    mcpServers: { a: { url: 'http://127.0.0.1:1' }, b: { disabled: true } },
+  }), { connected: 0, enabled: 1 });
+  assert.equal(mcpFooterLabel({ mcpConnected: 2, mcpEnabled: 5 }), 'mcp 2/5');
+  assert.equal(thinkingFooterLabel('HIGH'), 'think high');
+  assert.equal(rotateFooterLabel({ rotateEnabled: false, rotateThreshold: 85 }), 'rotate off 85%');
 });
 
 test('footer PLAN shows read-only and plan id', () => {
@@ -120,6 +183,11 @@ test('status screen includes mode, context, and running agents', () => {
     approve: 'safe',
     anonLevel: 0,
     contextPercent: 58,
+    thinkingLevel: 'high',
+    mcpConnected: 2,
+    mcpEnabled: 4,
+    rotateEnabled: false,
+    rotateThreshold: 85,
     gitBranch: 'main',
     agents: [
       { agent: '1c-developer', status: 'working' },
@@ -130,6 +198,9 @@ test('status screen includes mode, context, and running agents', () => {
   });
   assert.match(text, /BUILD/);
   assert.match(text, /58%/);
+  assert.match(text, /high/);
+  assert.match(text, /2\/4/);
+  assert.match(text, /off · 85%/);
   assert.match(text, /2 running/);
   assert.match(text, /developer/);
   assert.match(text, /tester/);
@@ -146,7 +217,7 @@ test('mapRunStatus covers hub states', () => {
   assert.equal(mapRunStatus({ aborted: true }), 'cancelled');
 });
 
-test('agent cards collapse success and surface failure', () => {
+test('agent cards collapse success and surface failure without an ASCII box', () => {
   const now = 1_000_000;
   const ok = composeAgentCardLines({ agent: '1c-developer', status: 'completed', startedAt: now - 31000, endedAt: now }, now);
   assert.equal(ok.length, 1);
@@ -156,9 +227,41 @@ test('agent cards collapse success and surface failure', () => {
   assert.match(fail[0], /failed/);
   assert.match(fail[0], /12s/);
   assert.match(fail[1], /Invalid handoff/);
-  const running = composeAgentCard({ agent: '1c-developer', status: 'working', activity: 'ЗагрузкаКурсовВалют', startedAt: now - 24000 }, now);
-  assert.equal(running.status, 'working');
-  assert.match(running.duration, /s/);
+  const running = composeAgentCardLines({ agent: '1c-developer', status: 'working', activity: 'read src/x.bsl', startedAt: now - 24000 }, now);
+  assert.match(running[0], /developer/);
+  assert.match(running[0], /working/);
+  assert.equal(running.join('\n').includes('╭'), false);
+  const call = composeSubagentCallLines({ agent: '1c-explorer', task: 'Find currency load module' }, { startedAt: now - 5000 }, now);
+  assert.match(call[0], /1C Subagent explorer/);
+  assert.match(call[0], /5s/);
+  assert.match(call[1], /currency load/);
+});
+
+test('subagent result is one live log, expanded shows tools', () => {
+  const now = 1_000_000;
+  const run = {
+    agent: '1c-explorer',
+    status: 'working',
+    startedAt: now - 63000,
+    items: [
+      { type: 'tool', name: 'read', preview: 'read src/a.bsl', status: 'done' },
+      { type: 'tool', name: 'grep', preview: 'grep /курс/', status: 'running' },
+    ],
+  };
+  const live = composeSubagentResultLines(run, { isPartial: true, now });
+  assert.match(live[0], /working/);
+  assert.match(live[0], /1m 3s/);
+  assert.match(live.join('\n'), /read src\/a\.bsl/);
+  assert.match(live.join('\n'), /Ctrl\+O/);
+  assert.equal(live.join('\n').includes('╭'), false);
+  const done = composeSubagentResultLines({ ...run, status: 'completed', endedAt: now }, { isPartial: false, now });
+  assert.match(done[0], /completed/);
+  assert.doesNotMatch(done.join('\n'), /╭─ AGENT/);
+  const expanded = composeSubagentResultLines(run, { expanded: true, isPartial: true, now });
+  assert.match(expanded.join('\n'), /grep \/курс\//);
+  const detail = composeHubDetailLines({ name: 'explorer', status: 'working', kind: 'read-only', duration: '12s', items: run.items });
+  assert.match(detail.join('\n'), /read src\/a\.bsl/);
+  assert.match(detail.join('\n'), /↑ parent/);
 });
 
 test('hub rows mix discovered idle agents with live runs', () => {
@@ -173,25 +276,34 @@ test('hub rows mix discovered idle agents with live runs', () => {
   assert.equal(rev.status, 'idle');
 });
 
-test('widget lists running agents and hides when idle', () => {
+test('widget lists running agents on one line and hides when idle', () => {
   const now = Date.now();
+  const one = composeWidgetLines([
+    { agent: '1c-explorer', status: 'working', startedAt: now - 5000 },
+  ], now);
+  assert.equal(one.length, 1);
+  assert.match(one[0], /explorer/);
+  assert.match(one[0], /5s/);
   const lines = composeWidgetLines([
     { agent: '1c-developer', status: 'working', activity: 'editing ЗагрузкаКурсовВалют', startedAt: now },
     { agent: '1c-tester', status: 'testing', activity: 'YaxUnit 14/22', startedAt: now },
   ], now);
-  assert.match(lines[0], /2 running/);
-  assert.match(lines.join('\n'), /developer/);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /developer/);
+  assert.match(lines[0], /tester/);
   assert.deepEqual(composeWidgetLines([]), []);
 });
 
 test('footer drop order keeps mode and approval longer than model/bar', () => {
   assert.equal(FOOTER_DROP_ORDER[0], 'bar');
-  assert.equal(FOOTER_DROP_ORDER[1], 'model');
+  assert.ok(FOOTER_DROP_ORDER.includes('mcp'));
+  assert.ok(FOOTER_DROP_ORDER.includes('thinking'));
+  assert.ok(FOOTER_DROP_ORDER.includes('rotate'));
   assert.ok(!FOOTER_DROP_ORDER.includes('mode'));
   const snap = { mode: 'build', approve: 'safe', model: 'claude-sonnet', projectName: 'ERP', contextPercent: 58 };
   const { segments, dropped } = composeFooter(snap, 28);
   assert.ok(segments.some((s) => s.id === 'mode'));
-  assert.ok(dropped.some((s) => s.id === 'bar' || s.id === 'model'));
+  assert.ok(dropped.some((s) => s.id === 'bar' || s.id === 'model' || s.id === 'project'));
 });
 
 test('run tracker keeps discovered agents when a run starts', () => {
@@ -262,9 +374,10 @@ test('palette fuzzy match and does not bind ctrl+k', () => {
   const hits = filterPaletteActions('mod');
   assert.ok(hits.some((a) => a.id === 'mode'));
   const ids = PALETTE_ACTIONS.map((a) => a.id);
-  for (const need of ['mode', 'agents', 'status', 'doctor', 'init', 'config', 'memory', 'session', 'approve', 'anon', 'settings']) {
+  for (const need of ['mode', 'agents', 'status', 'doctor', 'init', 'config', 'memory', 'session', 'approve', 'anon', 'theme', 'settings']) {
     assert.ok(ids.includes(need), need);
   }
+  assert.ok(filterPaletteActions('drac').some((a) => a.id === 'theme'));
   assert.equal(PALETTE_SHORTCUT, 'ctrl+shift+k');
   assert.equal(paletteBindsCtrlK(), false);
 });
@@ -297,4 +410,36 @@ test('ui bus is not session state', () => {
   assert.equal(getSnapshot('mode').mode, 'build');
   resetUiBusForTests();
   assert.equal(getSnapshot('mode'), undefined);
+});
+
+test('theme args and shipped VS Code palettes', () => {
+  assert.deepEqual(parseThemeArgs(''), { kind: 'pick' });
+  assert.deepEqual(parseThemeArgs('status'), { kind: 'status' });
+  assert.deepEqual(parseThemeArgs('list'), { kind: 'list' });
+  assert.deepEqual(parseThemeArgs('dracula'), { kind: 'set', name: 'dracula' });
+  assert.equal(parseThemeArgs('foo/bar').kind, 'invalid');
+  assert.equal(resolveThemeName('VSCode', []), 'standard');
+  assert.equal(resolveThemeName('Dracula', []), 'dracula');
+  const items = themeSelectItems([
+    { name: 'light', path: undefined },
+    { name: 'dracula', path: '/pkg/themes/dracula.json' },
+    { name: 'standard', path: '/pkg/themes/standard.json' },
+    { name: 'dark', path: undefined },
+  ], 'standard');
+  assert.deepEqual(items.map((i) => i.value), ['standard', 'dracula', 'dark', 'light']);
+  assert.match(items[0].label, /current/);
+  assert.match(items[0].description, /Dark\+/);
+  assert.match(items[1].description, /Dracula/);
+  const listed = formatThemeList(items.map((i) => ({ name: i.value })), 'dracula');
+  assert.match(listed, /Current: dracula/);
+  const failed = applyTheme({ ui: { setTheme: () => ({ success: false, error: 'missing' }) } }, 'nope');
+  assert.equal(failed.success, false);
+  const here = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'themes');
+  for (const shipped of SHIPPED_THEMES) {
+    const json = JSON.parse(fs.readFileSync(path.join(here, `${shipped.name}.json`), 'utf8'));
+    assert.equal(json.name, shipped.name);
+    for (const token of REQUIRED_COLOR_TOKENS) {
+      assert.ok(json.colors[token] !== undefined && json.colors[token] !== null, `${shipped.name} missing ${token}`);
+    }
+  }
 });

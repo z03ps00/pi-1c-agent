@@ -152,8 +152,8 @@ test('mid-turn guard arms only when enabled, streaming, and at/above threshold',
 });
 
 test('footer label and cursor status wording', () => {
-  assert.equal(footerLabel(defaultState()), 'rotate:off');
-  assert.equal(footerLabel({ enabled: true, thresholdPercent: 85 }), 'rotate:85%');
+  assert.equal(footerLabel(defaultState()), 'rotate off 85%');
+  assert.equal(footerLabel({ enabled: true, thresholdPercent: 85 }), 'rotate on 85%');
   assert.match(statusText(defaultState(), 'cursor'), /does not activate/);
 });
 

@@ -10,23 +10,26 @@ import { Type } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
 import { childModeGuardText, childToolAllowlist, evaluateSubagentRequest, isWriterAgent, parallelSafety, parseResources, parseSideEffects, resolveDiscoveredAgentName, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
 import { childProcessEnv } from "../../lib/child-env.mjs";
-import { buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
+import { assistantTextFromEvent, activityItemFromEvent, appendActivityItems, buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
 import { terminateProcessTree } from "../../lib/process-supervisor.mjs";
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
-import { HANDOFF_HEADING, handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
+import { HANDOFF_HEADING, handoffFailureMessage, handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
 import { current1cMode, requireBuild } from "../../lib/mode-state.mjs";
 import { withSubagentSlot } from "../../lib/subagent-budget.mjs";
 import { combineParallelHandoffs, loadWorkflows, verifyWorkflowHandoff } from "../../lib/workflows.mjs";
 import {
-  composeAgentCardLines,
   composeHubRows,
   composeHubText,
+  composeSubagentCallLines,
+  composeSubagentResultLines,
   composeWorkflowResult,
+  formatDuration,
   invokeAction,
   mapRunStatus,
   publish,
   registerAction,
   RunTracker,
+  shortAgentName,
   uiAvailable,
 } from "../../lib/ui/index.mjs";
 
@@ -61,7 +64,7 @@ type AgentFrontmatter = {
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
-const SUBAGENT_HEARTBEAT_MS = 15000;
+const LIVE_TICK_MS = 1000;
 const SUBAGENT_TIMEOUT_MS = Math.max(60_000, Number(process.env.PI_1C_SUBAGENT_TIMEOUT_MS ?? 600_000) || 600_000);
 const SUBAGENT_KILL_GRACE_MS = 10_000;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -176,20 +179,22 @@ function modelTierKey(tier?: string): string | undefined {
 }
 
 function resolveAgentModel(agent: Agent, cwd: string): string | undefined {
-  if (agent.model) return agent.model;
+  if (typeof agent.model === "string" && agent.model.trim()) return agent.model.trim();
   const key = modelTierKey(agent.modelTier);
   if (!key) return undefined;
   const env = loadDevEnv(cwd);
-  if (env[key]) return env[key];
-  return loadModelDefaults()[key] || undefined;
+  const fromEnv = typeof env[key] === "string" ? env[key].trim() : "";
+  if (fromEnv) return fromEnv;
+  const fromDefaults = String(loadModelDefaults()[key] || "").trim();
+  return fromDefaults || undefined;
 }
 
-function finalText(event: any): string {
-  if (event?.type !== "message_end" || event?.message?.role !== "assistant") return "";
-  const content = event.message.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) return content.filter((x: any) => x?.type === "text").map((x: any) => x.text).join("\n");
-  return "";
+function pickHandoffText(last: string, collected: string[]): string[] {
+  const blobs: string[] = [];
+  if (last) blobs.push(last);
+  const joined = collected.filter(Boolean).join("\n\n");
+  if (joined && joined !== last) blobs.push(joined);
+  return blobs;
 }
 
 function getPiInvocation(args: string[]): { command: string; args: string[] } {
@@ -228,7 +233,7 @@ async function runAgent(
   mode: OneCMode,
   allTools: string[],
   signal?: AbortSignal,
-  onProgress?: (text: string) => void,
+  onProgress?: (update: { activity?: string; items?: any[] } | string) => void,
 ): Promise<{ agent: string; output: string; handoff: any; upstreamHandoff: string; source: AgentSource }> {
   const depth = Number(process.env.PI_1C_SUBAGENT_DEPTH ?? "0");
   if (depth >= 1) throw new Error("Nested 1C subagent delegation is blocked to prevent recursive orchestration.");
@@ -236,7 +241,8 @@ async function runAgent(
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-1c-agent-"));
   const promptFile = path.join(tmpDir, "agent.md");
   const modeGuard = childModeGuardText(mode);
-  fs.writeFileSync(promptFile, agent.prompt + modeGuard + handoffInstruction(), { mode: 0o600 });
+  const instruction = handoffInstruction(agent.name);
+  fs.writeFileSync(promptFile, `${instruction}\n\n${agent.prompt}${modeGuard}\n${instruction}`, { mode: 0o600 });
 
   const args = ["--mode", "json", "-p", "--no-session", "--1c-mode", mode];
   const resolvedModel = resolveAgentModel(agent, cwd);
@@ -245,7 +251,7 @@ async function runAgent(
   const tools = childToolAllowlist({ mode, agentTools: agent.tools, capabilities: agent.capabilities, allTools });
   if (tools.length > 0) args.push("--tools", tools.join(","));
   else args.push("--no-tools");
-  args.push("--append-system-prompt", promptFile, `Task: ${task}\n\nEnd your final response with this exact heading and a schema-2 JSON fence:\n${HANDOFF_HEADING}`);
+  args.push("--append-system-prompt", promptFile, `Task: ${task}\n\nYou MUST end the final response with this exact heading and a schema-2 JSON fence. The parent rejects the run without it, including demos.\n${HANDOFF_HEADING}`);
 
   const runId = crypto.randomUUID();
   const parentRunId = String(process.env.PI_1C_PARENT_RUN_ID || process.env.PI_1C_RUN_ID || "");
@@ -270,6 +276,8 @@ async function runAgent(
         PI_1C_DISABLE_STARTUP_RECONCILE: "1",
         PI_1C_RUN_ID: runId,
         PI_1C_PARENT_RUN_ID: parentRunId || runId,
+        PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR || profileDir,
+        PI_SKIP_VERSION_CHECK: process.env.PI_SKIP_VERSION_CHECK || "1",
       }),
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
@@ -277,10 +285,24 @@ async function runAgent(
     });
     emitDiagnostic("subagent.started", { ...diagnosticBase(), childPid: proc.pid, durationMs: 0 });
     let last = "";
+    const collected: string[] = [];
+    let items: any[] = [];
+    const emitProgress = (activity: string) => {
+      onProgress?.({ activity, items } as any);
+    };
     const output = createChildOutputBuffer({
       onEvent: (event) => {
-        const text = finalText(event);
-        if (text) last = text;
+        const text = assistantTextFromEvent(event);
+        if (text) {
+          last = text;
+          collected.push(text);
+        }
+        const incoming = activityItemFromEvent(event);
+        if (incoming) {
+          items = appendActivityItems(items, incoming);
+          const lastTool = [...items].reverse().find((entry) => entry?.type === "tool");
+          emitProgress(lastTool?.preview || (typeof incoming === "object" && !Array.isArray(incoming) && incoming.type === "text" ? incoming.text : "") || "");
+        }
         return text;
       },
     });
@@ -296,15 +318,10 @@ async function runAgent(
       if (signal.aborted) onAbort();
       else signal.addEventListener("abort", onAbort, { once: true });
     }
-    const heartbeat = onProgress
-      ? setInterval(() => {
-          const secs = Math.round((Date.now() - startedAt) / 1000);
-          onProgress(`… ${agent.name} — работает ${secs}с`);
-        }, SUBAGENT_HEARTBEAT_MS)
-      : null;
+    emitProgress("starting");
     const timeoutTimer = setTimeout(() => {
       timedOut = true;
-      onProgress?.(`⏱ ${agent.name} — превышен лимит ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}с, останавливаю`);
+      emitProgress(`timeout ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}s`);
       terminate("SIGTERM");
       killTimer = setTimeout(() => {
         killEscalated = true;
@@ -313,7 +330,6 @@ async function runAgent(
       }, SUBAGENT_KILL_GRACE_MS);
     }, SUBAGENT_TIMEOUT_MS);
     const cleanup = () => {
-      if (heartbeat) clearInterval(heartbeat);
       if (timeoutTimer) clearTimeout(timeoutTimer);
       if (killTimer) clearTimeout(killTimer);
       signal?.removeEventListener("abort", onAbort);
@@ -342,13 +358,37 @@ async function runAgent(
         childPid: proc.pid,
         durationMs: meta.durationMs,
         exitCode: code,
+        stdoutBytes: snap.stdoutBytes,
+        stderrBytes: snap.stderrBytes,
+        stopReason: snap.lastStopReason || "",
       });
       if (snap.frameError) return reject(Object.assign(new Error(`subagent ${agent.name} ${snap.frameError.error} frameBytes=${snap.frameError.frameBytes}`), { child: meta }));
       if (aborted || signal?.aborted) return reject(Object.assign(new Error(`subagent ${agent.name} отменён пользователем`), { child: meta }));
       if (timedOut) return reject(Object.assign(new Error(`subagent ${agent.name} превысил таймаут ${Math.round(SUBAGENT_TIMEOUT_MS / 1000)}с и был остановлен (${describeExit(code, signalName)}): ${snap.stderr.slice(-2000)}`), { child: meta }));
       if (code !== 0) return reject(Object.assign(new Error(`subagent ${agent.name} ${describeExit(code, signalName)}: ${snap.stderr.slice(-4000)}`), { child: meta }));
-      const parsed = parseUpstreamHandoff(last);
-      if (!parsed.ok) return reject(Object.assign(new Error(`subagent ${agent.name} returned invalid handoff: ${parsed.errors.join("; ")}`), { child: meta }));
+      if (snap.lastStopReason === "error" || snap.lastStopReason === "aborted") {
+        const detail = snap.lastErrorMessage || last || "empty provider response";
+        return reject(Object.assign(new Error(`subagent ${agent.name} provider ${snap.lastStopReason}: ${detail}${snap.stderr.trim() ? `\n${snap.stderr.slice(-2000)}` : ""}`), { child: meta }));
+      }
+      let parsed = parseUpstreamHandoff(last);
+      if (!parsed.ok) {
+        for (const blob of pickHandoffText(last, collected)) {
+          parsed = parseUpstreamHandoff(blob);
+          if (parsed.ok) {
+            last = blob;
+            break;
+          }
+        }
+      }
+      if (!parsed.ok) return reject(Object.assign(new Error(handoffFailureMessage(agent.name, parsed, last, {
+        stderr: snap.stderr,
+        stdoutTail: snap.stdoutTail,
+        stdoutBytes: snap.stdoutBytes,
+        stderrBytes: snap.stderrBytes,
+        eventTypes: snap.eventTypes,
+        lastStopReason: snap.lastStopReason,
+        lastErrorMessage: snap.lastErrorMessage,
+      })), { child: meta }));
       resolve({
         agent: agent.name,
         output: last,
@@ -389,6 +429,13 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     return agents;
   }
 
+  function findRun(agentName?: string) {
+    const list = [...tracker.list()].reverse();
+    if (!agentName) return list[0];
+    const short = shortAgentName(agentName);
+    return list.find((r) => r.agent === agentName || r.agent === `1c-${agentName}` || shortAgentName(r.agent) === short);
+  }
+
   async function runOne(x: { agent: string; task: string }, ctx: any, signal: AbortSignal | undefined, onProgress?: (text: string) => void, extra: { workflowId?: string; stageIndex?: number } = {}) {
     const agents = await contextAgents(ctx);
     const byName = new Map(agents.map((a) => [a.name, a]));
@@ -414,13 +461,18 @@ export default function oneCSubagents(pi: ExtensionAPI) {
       stageIndex: extra.stageIndex,
     });
     const tui = uiAvailable(ctx);
-    const onAgentProgress = (text: string) => {
-      const status = mapRunStatus({ event: "progress", agentName: agent.name, activity: text });
-      tracker.update(runId, { status, activity: text });
+    const onAgentProgress = (update: { activity?: string; items?: any[] } | string) => {
+      const payload = typeof update === "string" ? { activity: update } : (update || {});
+      const activity = String(payload.activity || "");
+      const status = mapRunStatus({ event: "progress", agentName: agent.name, activity });
+      const patch: Record<string, unknown> = { status, activity };
+      if (Array.isArray(payload.items)) patch.items = payload.items;
+      tracker.update(runId, patch);
       if (!tui) return;
       const run = tracker.get(runId);
-      try { onUpdateSafe(onProgress, composeAgentCardLines(run).join("\n"), { ui: { ...run, abort: undefined } }); } catch {}
+      try { onUpdateSafe(onProgress, composeSubagentResultLines(run, { isPartial: true }).join("\n"), { ui: { ...run, abort: undefined } }); } catch {}
     };
+    onAgentProgress({ activity: "starting", items: [] });
     try {
       const result = await runAgent(agent, x.task, ctx.cwd, mode, allTools, local.signal, onAgentProgress);
       tracker.finish(runId, { ok: true });
@@ -450,17 +502,38 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     return emit;
   }
 
+  function ensureLiveTick(context: any) {
+    if (!context?.state) return;
+    if (context.isPartial !== true) {
+      if (context.state.tick) {
+        clearInterval(context.state.tick);
+        context.state.tick = null;
+      }
+      return;
+    }
+    if (context.state.tick) return;
+    context.state.tick = setInterval(() => {
+      try { context.invalidate(); } catch { /* ignore */ }
+    }, LIVE_TICK_MS);
+  }
+
   function subagentRenderers() {
     return {
-      renderShell: "self" as const,
       renderCall(args: any, theme: any, context: any) {
-        const ui = context?.state?.ui || context?.state?.workflowUi;
-        if (ui?.stages) return new Text(composeWorkflowResult(ui, { expanded: true }).join("\n"), 0, 0);
-        if (ui) return new Text(composeAgentCardLines(ui).join("\n"), 0, 0);
-        const name = args?.agent || (Array.isArray(args?.parallel) ? "parallel" : args?.workflow ? `workflow ${args.workflow}` : "subagent");
-        return new Text(theme.fg("toolTitle", `AGENT ${String(name).replace(/^1c-/, "")}`), 0, 0);
+        ensureLiveTick(context);
+        const ui = context?.state?.ui || context?.state?.workflowUi || {};
+        if (context?.state && !context.state.startedAt) context.state.startedAt = Number(ui.startedAt) || Date.now();
+        const name = shortAgentName(args?.agent || ui.agent || (Array.isArray(args?.parallel) ? "parallel" : args?.workflow ? `workflow ${args.workflow}` : "subagent"));
+        const started = Number(ui.startedAt || context?.state?.startedAt) || Date.now();
+        const ended = ui.endedAt ? Number(ui.endedAt) : Date.now();
+        let text = theme.fg("toolTitle", theme.bold("1C Subagent ")) + theme.fg("accent", name);
+        text += theme.fg("dim", `  ${formatDuration(ended - started)}`);
+        const header = composeSubagentCallLines(args, { ...ui, startedAt: started, endedAt: ui.endedAt });
+        if (header[1]) text += `\n${theme.fg("dim", header[1])}`;
+        return new Text(text, 0, 0);
       },
       renderResult(result: any, { expanded, isPartial }: any, theme: any, context: any) {
+        ensureLiveTick(context);
         const ui = result?.details?.ui || result?.details?.workflowUi;
         if (context?.state) {
           if (result?.details?.ui) context.state.ui = result.details.ui;
@@ -471,8 +544,8 @@ export default function oneCSubagents(pi: ExtensionAPI) {
           return new Text(lines.join("\n"), 0, 0);
         }
         if (ui) {
-          const lines = isPartial || expanded ? composeAgentCardLines(ui) : composeAgentCardLines({ ...ui, status: result.isError ? "failed" : (ui.status || "completed") });
-          if (expanded && result?.content?.[0]?.text) return new Text(`${lines.join("\n")}\n\n${result.content[0].text}`, 0, 0);
+          const lines = composeSubagentResultLines(ui, { expanded, isPartial });
+          if (expanded && !isPartial && result?.content?.[0]?.text) return new Text(`${lines.join("\n")}\n\n${result.content[0].text}`, 0, 0);
           return new Text(lines.join("\n"), 0, 0);
         }
         const text = result?.content?.[0]?.text || (result?.isError ? theme.fg("error", "failed") : "");
@@ -507,7 +580,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
           if (!tui) emit(`▶ ${params.agent} — запуск…`);
           const result = await runOne({ agent: params.agent, task: params.task }, ctx, signal, emit as any);
           if (!tui) emit(`✔ ${params.agent} — готово`);
-          return { content: [{ type: "text", text: result.output }], details: { ...result, ui: tracker.list().find((r) => r.agent === params.agent) } };
+          return { content: [{ type: "text", text: result.output }], details: { ...result, ui: findRun(params.agent) } };
         }
         if (strategy.strategy === "parallel") {
           const agents = await contextAgents(ctx);
@@ -537,8 +610,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
         }
         throw new Error("specify exactly one of agent+task, parallel[], or chain[]");
       } catch (error: any) {
-        const agentName = params?.agent || params?.parallel?.[0]?.agent || params?.chain?.[0]?.agent;
-        const run = [...tracker.list()].reverse().find((r) => !agentName || r.agent === agentName || r.agent === `1c-${agentName}`);
+        const run = findRun(params?.agent || params?.parallel?.[0]?.agent || params?.chain?.[0]?.agent);
         return {
           content: [{ type: "text", text: error?.message || String(error) }],
           isError: true,

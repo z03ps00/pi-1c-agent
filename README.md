@@ -340,6 +340,7 @@ my-1c-project/
 <pre>
 /anon
 /approve
+/theme
 /session-rotate
 /wrap
 /memory-flush

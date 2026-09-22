@@ -1,8 +1,10 @@
 import { matchesKey, SelectList, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import {
   composeApprovalView,
+  composeHubDetailLines,
   composeHubRows,
   composeHubText,
+  composeSubagentResultLines,
   getSnapshot,
   filterPaletteActions,
   PALETTE_ACTIONS,
@@ -156,18 +158,35 @@ export async function overlayHub(ctx: any): Promise<void> {
       rebuild();
       tui.requestRender();
     });
+    const tick = setInterval(() => tui.requestRender(), 1000);
     const finish = (value: null = null) => {
       unsub();
+      clearInterval(tick);
       done(value);
     };
     rebuild();
     return {
       invalidate() { list.invalidate(); },
       handleInput(data: string) {
-        if (detail && (matchesKey(data, "escape") || matchesKey(data, "backspace"))) {
-          detail = null;
-          tui.requestRender();
-          return;
+        if (detail) {
+          if (matchesKey(data, "up") || matchesKey(data, "left")) {
+            finish();
+            return;
+          }
+          if (matchesKey(data, "escape") || matchesKey(data, "backspace")) {
+            detail = null;
+            tui.requestRender();
+            return;
+          }
+          if (matchesKey(data, "x") || matchesKey(data, "X")) {
+            const selected = list.getSelectedItem();
+            const row = rows().find((r) => r.agent === selected?.value) || detail;
+            if (row?.id) invokeAction("agents-stop", row.id);
+            rebuild();
+            tui.requestRender();
+            return;
+          }
+          if (matchesKey(data, "down") || matchesKey(data, "right")) return;
         }
         if (matchesKey(data, "x") || matchesKey(data, "X")) {
           const selected = list.getSelectedItem();
@@ -184,18 +203,17 @@ export async function overlayHub(ctx: any): Promise<void> {
       render(width: number) {
         if (detail) {
           const live = rows().find((r) => r.agent === detail?.agent) || detail;
-          const body = [
-            `${live.name}  ${live.status}`,
-            `kind     ${live.kind}`,
-            live.mode ? `mode     ${live.mode}` : "",
-            live.model ? `model    ${live.model}` : "",
-            `elapsed  ${live.duration}`,
-            live.activity ? `activity ${live.activity}` : "",
-            live.error ? `error    ${live.error}` : "",
-            "",
-            "Steering a live child is not available (no stdin). x stops a running agent.",
-          ].filter(Boolean);
-          return frame(theme, "AGENT", body, width, "Esc back    x stop");
+          const log = composeSubagentResultLines({
+            agent: live.agent,
+            name: live.name,
+            status: live.status,
+            activity: live.activity,
+            error: live.error,
+            items: live.items,
+            startedAt: live.startedAt,
+            endedAt: live.endedAt,
+          }, { expanded: true, isPartial: live.stoppable });
+          return frame(theme, `AGENT ${live.name}`, [...log, "", ...composeHubDetailLines(live).slice(1)], width, "↑ parent    Esc back    x stop");
         }
         const body = list.render(Math.max(20, width - 4));
         if (!body.length) body.push(...composeHubText(rows()).split("\n"));
@@ -203,4 +221,58 @@ export async function overlayHub(ctx: any): Promise<void> {
       },
     };
   }, { overlay: true, overlayOptions: { width: "78%", minWidth: 44, maxHeight: "85%", anchor: "center" } });
+}
+
+export async function overlayChild(ctx: any, agentName?: string): Promise<void> {
+  if (!ctx?.ui?.custom) return;
+  await ctx.ui.custom<null>((tui: any, theme: any, _kb: unknown, done: (v: null) => void) => {
+    const pick = () => {
+      const snap = getSnapshot("agents") || {};
+      const rows = composeHubRows(snap.discovered || [], snap.runs || [], Date.now());
+      const wanted = String(agentName || "").replace(/^1c-/, "");
+      if (wanted) {
+        const hit = rows.find((r) => r.agent === agentName || r.name === wanted || r.agent === `1c-${wanted}`);
+        if (hit) return hit;
+      }
+      return rows.find((r) => r.stoppable) || rows.find((r) => r.status !== "idle") || null;
+    };
+    const unsub = subscribe((source: string) => {
+      if (source === "agents") tui.requestRender();
+    });
+    const tick = setInterval(() => tui.requestRender(), 1000);
+    const finish = () => {
+      unsub();
+      clearInterval(tick);
+      done(null);
+    };
+    return {
+      invalidate() {},
+      handleInput(data: string) {
+        if (matchesKey(data, "up") || matchesKey(data, "left") || matchesKey(data, "escape") || matchesKey(data, "backspace") || matchesKey(data, "ctrl+c")) {
+          finish();
+          return;
+        }
+        if (matchesKey(data, "x") || matchesKey(data, "X")) {
+          const row = pick();
+          if (row?.id) invokeAction("agents-stop", row.id);
+          tui.requestRender();
+        }
+      },
+      render(width: number) {
+        const live = pick();
+        if (!live) return frame(theme, "AGENT", ["No 1C subagent to inspect."], width, "↑ parent");
+        const log = composeSubagentResultLines({
+          agent: live.agent,
+          name: live.name,
+          status: live.status,
+          activity: live.activity,
+          error: live.error,
+          items: live.items,
+          startedAt: live.startedAt,
+          endedAt: live.endedAt,
+        }, { expanded: true, isPartial: live.stoppable });
+        return frame(theme, `AGENT ${live.name}`, [...log, "", ...composeHubDetailLines(live).slice(1)], width, "↑ parent    x stop");
+      },
+    };
+  }, { overlay: true, overlayOptions: { width: "82%", minWidth: 48, maxHeight: "90%", anchor: "center" } });
 }

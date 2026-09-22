@@ -26,3 +26,24 @@ test('child env allowlists runtime and provider keys only', () => {
   assert.equal(isAllowedChildEnvKey('AWS_SECRET_ACCESS_KEY'), false);
   assert.equal(isAllowedChildEnvKey('PI_CODING_AGENT_DIR'), true);
 });
+
+test('child env keeps proxy, CA, DeepSeek key and skips GitHub/AWS', () => {
+  const env = childProcessEnv({
+    HTTPS_PROXY: 'http://127.0.0.1:8080',
+    http_proxy: 'http://127.0.0.1:8080',
+    NODE_EXTRA_CA_CERTS: '/tmp/ca.pem',
+    DEEPSEEK_API_KEY: 'sk-deepseek',
+    PI_SKIP_VERSION_CHECK: '1',
+    GITHUB_TOKEN: 'gho_secret',
+    AWS_SECRET_ACCESS_KEY: 'aws',
+  });
+  assert.equal(env.HTTPS_PROXY, 'http://127.0.0.1:8080');
+  assert.equal(env.http_proxy, 'http://127.0.0.1:8080');
+  assert.equal(env.NODE_EXTRA_CA_CERTS, '/tmp/ca.pem');
+  assert.equal(env.DEEPSEEK_API_KEY, 'sk-deepseek');
+  assert.equal(env.PI_SKIP_VERSION_CHECK, '1');
+  assert.equal(env.GITHUB_TOKEN, undefined);
+  assert.equal(env.AWS_SECRET_ACCESS_KEY, undefined);
+  assert.equal(isAllowedChildEnvKey('HTTPS_PROXY'), true);
+  assert.equal(isAllowedChildEnvKey('DEEPSEEK_API_KEY'), true);
+});

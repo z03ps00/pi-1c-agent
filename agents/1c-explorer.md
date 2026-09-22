@@ -157,6 +157,28 @@ Use the format below. Stay within the thoroughness level's budget — no padding
 
 Drop any section that is empty. The report is a compressed brief, not a transcript. When-to-use boundaries are owned by the frontmatter description and `$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md → Subagent catalog`; if the task requires writing, designing, or opinionated review — report that a different agent owns it instead of doing it.
 
+## Mandatory runtime handoff
+
+The parent process **rejects this run** unless the final response ends with this exact heading and a schema-2 JSON fence — including demos and quick lookups. Put findings in `findings`; leave unused arrays empty.
+
+## Upstream Handoff
+
+```json
+{
+  "schema": 2,
+  "runId": "uuid",
+  "agent": "1c-explorer",
+  "status": "ok",
+  "task": "short restated goal",
+  "artifacts": [],
+  "findings": [],
+  "locked_decisions": [],
+  "constraints": [],
+  "unresolved": [],
+  "verification": []
+}
+```
+
 ## Common obligations
 
 Inherited from `$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md → Common obligations` — do not weaken, and read that section for the exceptions: **CONFUSION** on material forks; **MCP-first search** before any native discovery on 1C project source; **verification checklist** if the task ever writes project sources.

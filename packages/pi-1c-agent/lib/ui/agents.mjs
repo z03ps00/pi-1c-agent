@@ -50,6 +50,8 @@ export function composeAgentCard(run = {}, now = Date.now()) {
   };
 }
 
+const COLLAPSED_ITEM_COUNT = 8;
+
 export function composeAgentCardLines(run = {}, now = Date.now()) {
   const card = composeAgentCard(run, now);
   if (card.status === 'completed') return [`✓ ${card.name}   ${card.duration}   completed`];
@@ -59,13 +61,91 @@ export function composeAgentCardLines(run = {}, now = Date.now()) {
     return lines;
   }
   if (card.status === 'cancelled') return [`○ ${card.name}   ${card.duration}   cancelled`];
-  const lines = [
-    `╭─ AGENT ${card.name} ──────────────────────╮`,
-    `│ ● ${card.status.padEnd(36)}│`,
-  ];
-  if (card.activity) lines.push(`│ ${card.activity.slice(0, 36).padEnd(36)}│`);
-  lines.push(`│ ${card.duration.padEnd(36)}│`, `╰────────────────────────────────────────╯`);
+  const lines = [`● ${card.name}   ${card.duration}   ${card.status}`];
+  if (card.activity) lines.push(`  ${card.activity}`);
   return lines;
+}
+
+export function formatActivityLine(item = {}) {
+  if (item.type === 'text') {
+    const text = String(item.text || '').split('\n')[0].trim();
+    if (!text) return '';
+    return text.length > 80 ? `${text.slice(0, 77)}...` : text;
+  }
+  const mark = item.status === 'error' ? '✗' : item.status === 'running' ? '●' : '→';
+  return `${mark} ${item.preview || item.name || 'tool'}`;
+}
+
+export function composeSubagentCallLines(args = {}, run = {}, now = Date.now()) {
+  const name = shortAgentName(
+    args.agent || run.agent || run.name
+      || (Array.isArray(args.parallel) ? 'parallel' : args.workflow ? `workflow ${args.workflow}` : 'subagent'),
+  );
+  const started = Number(run.startedAt) || now;
+  const ended = run.endedAt ? Number(run.endedAt) : now;
+  const duration = formatDuration(ended - started);
+  const lines = [`1C Subagent ${name}  ·  ${duration}`];
+  const task = String(args.task || '').replace(/\s+/g, ' ').trim();
+  if (task) lines.push(`  ${task.length > 72 ? `${task.slice(0, 69)}...` : task}`);
+  else if (Array.isArray(args.parallel) && args.parallel.length) lines.push(`  parallel (${args.parallel.length})`);
+  else if (Array.isArray(args.chain) && args.chain.length) lines.push(`  chain (${args.chain.length})`);
+  return lines;
+}
+
+export function composeSubagentResultLines(run = {}, { expanded = false, isPartial = false, now = Date.now() } = {}) {
+  const card = composeAgentCard(run, now);
+  const items = Array.isArray(run.items) ? run.items : [];
+  const live = isPartial || ACTIVE_STATUSES.includes(card.status);
+  const lines = [];
+  if (live) lines.push(`● ${card.status}  ${card.duration}`);
+  else if (card.status === 'failed') {
+    lines.push(`✗ ${card.name}  ${card.duration}  failed`);
+    if (card.error) lines.push(`  ${card.error}`);
+  } else if (card.status === 'cancelled') lines.push(`○ ${card.name}  ${card.duration}  cancelled`);
+  else lines.push(`✓ ${card.name}  ${card.duration}  completed`);
+
+  if (!items.length) {
+    if (live && card.activity) lines.push(`  ${card.activity}`);
+    else if (expanded && !live) lines.push('  (no output)');
+    return lines;
+  }
+
+  const toShow = expanded ? items : items.slice(-COLLAPSED_ITEM_COUNT);
+  const skipped = items.length - toShow.length;
+  if (skipped > 0) lines.push(`  ... ${skipped} earlier`);
+  for (const item of toShow) {
+    if (expanded && item.type === 'text') {
+      const preview = String(item.text || '').split('\n').slice(0, 8).join('\n');
+      if (preview) lines.push(preview);
+    } else {
+      const line = formatActivityLine(item);
+      if (line) lines.push(`  ${line}`);
+    }
+  }
+  if (!expanded && items.length) lines.push('  (Ctrl+O to expand)');
+  return lines;
+}
+
+export function composeHubDetailLines(row = {}) {
+  const lines = [
+    `${row.name || shortAgentName(row.agent)}  ${row.status || 'idle'}`,
+    `kind     ${row.kind || 'read-only'}`,
+  ];
+  if (row.mode) lines.push(`mode     ${row.mode}`);
+  if (row.model) lines.push(`model    ${row.model}`);
+  if (row.duration) lines.push(`elapsed  ${row.duration}`);
+  if (row.activity) lines.push(`activity ${row.activity}`);
+  if (row.error) lines.push(`error    ${row.error}`);
+  const items = Array.isArray(row.items) ? row.items : [];
+  if (items.length) {
+    lines.push('', 'tools');
+    for (const item of items.slice(-12)) {
+      const line = formatActivityLine(item);
+      if (line) lines.push(`  ${line}`);
+    }
+  }
+  lines.push('', '↑ parent leaves the subagent. Esc goes back to the list. x stops a running child (no stdin).');
+  return lines.filter((line, i, all) => line !== '' || (i > 0 && all[i - 1] !== ''));
 }
 
 export function composeHubRows(discovered = [], runs = [], now = Date.now()) {
@@ -90,6 +170,9 @@ export function composeHubRows(discovered = [], runs = [], now = Date.now()) {
       ...card,
       agent: name,
       id: run?.id,
+      items: Array.isArray(run?.items) ? run.items : [],
+      startedAt: run?.startedAt,
+      endedAt: run?.endedAt,
       stoppable: Boolean(run && ACTIVE_STATUSES.includes(run.status)),
     });
   }
@@ -119,15 +202,16 @@ export function composeWidgetLines(runs = [], now = Date.now()) {
     if (!recent.length) return [];
     const last = recent[recent.length - 1];
     const card = composeAgentCard(last, now);
-    return [`Agents  ${card.status} · ${card.name}`];
+    return [`${card.name}  ·  ${card.status}`];
   }
-  const lines = [`Agents  ${active.length} running`];
-  active.forEach((run, i) => {
+  if (active.length === 1) {
+    const card = composeAgentCard(active[0], now);
+    return [`${card.name}  ·  ${card.duration}`];
+  }
+  return [active.map((run) => {
     const card = composeAgentCard(run, now);
-    const branch = i === active.length - 1 ? '└─' : '├─';
-    lines.push(`${branch} ${card.name.padEnd(12)} ● ${card.activity || card.status}`);
-  });
-  return lines;
+    return `${card.name} · ${card.duration}`;
+  }).join('  |  ')];
 }
 
 export class RunTracker {
@@ -156,6 +240,7 @@ export class RunTracker {
       model: record.model || '',
       status: 'starting',
       activity: record.activity || 'starting',
+      items: Array.isArray(record.items) ? record.items : [],
       startedAt: Date.now(),
       endedAt: null,
       error: '',

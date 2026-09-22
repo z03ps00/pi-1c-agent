@@ -24,6 +24,7 @@ test('/review-airules exists and is classified maintainer', () => {
   assert.equal(classifyCatalogSection(catalog, 'wrap'), 'settings');
   assert.equal(classifyCatalogSection(catalog, 'memory-flush'), 'settings');
   assert.equal(classifyCatalogSection(catalog, 'capture-model'), 'settings');
+  assert.equal(classifyCatalogSection(catalog, 'theme'), 'settings');
   assert.equal(classifyCatalogSection(catalog, 'init-knowledge'), 'settings');
   assert.match(commands, /review-airules/);
   assert.match(commands, /maintainer/i);

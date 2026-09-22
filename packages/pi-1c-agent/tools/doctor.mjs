@@ -74,6 +74,8 @@ add('1C memory lifecycle extension', exists(path.join(packageRoot, 'extensions',
 add('1C UI layer last', exists(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) && extList[extList.length - 1] === 'extensions/1c-ui/index.ts');
 const uiSrc = exists(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) : '';
 add('palette shortcut Ctrl+Shift+K not Ctrl+K', /Key\.ctrlShift\("k"\)/.test(uiSrc) && !/Key\.ctrl\("k"\)/.test(uiSrc) && /Key\.alt\("a"\)/.test(uiSrc));
+add('canonical /theme registration', /registerCommand\("theme"/.test(uiSrc) && !/registerCommand\("1c-theme"/.test(uiSrc));
+add('shipped VS Code themes', exists(path.join(packageRoot, 'themes', 'standard.json')) && exists(path.join(packageRoot, 'themes', 'dracula.json')) && Array.isArray(packageJson?.pi?.themes) && packageJson.pi.themes.includes('themes'));
 const memorySrc = exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) : '';
 add('canonical /memory-flush /wrap /capture-model', /registerCommand\("memory-flush"/.test(memorySrc) && /registerCommand\("wrap"/.test(memorySrc) && /registerCommand\("capture-model"/.test(memorySrc) && !/registerCommand\("1c-wrap"/.test(memorySrc));
 add('memory write helpers', exists(path.join(packageRoot, 'lib', 'redact.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-key.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-reconcile.mjs')));

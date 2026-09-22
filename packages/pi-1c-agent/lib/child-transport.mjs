@@ -1,5 +1,140 @@
 import { emitDiagnostic } from './diagnostics.mjs';
 
+export function assistantContentText(content) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  const texts = [];
+  const thinking = [];
+  for (const part of content) {
+    if (!part || typeof part !== 'object') continue;
+    if (part.type === 'text' && part.text) texts.push(String(part.text));
+    else if ((part.type === 'thinking' || part.type === 'reasoning') && (part.thinking || part.text || part.reasoning)) {
+      thinking.push(String(part.thinking || part.text || part.reasoning));
+    }
+  }
+  return texts.join('\n') || thinking.join('\n');
+}
+
+export function assistantTextFromEvent(event) {
+  if (!event || typeof event !== 'object') return '';
+  if (event.type === 'message_end' || event.type === 'turn_end') {
+    const message = event.message;
+    if (message?.role !== 'assistant') return '';
+    const text = assistantContentText(message.content);
+    if (text) return text;
+    if (message.errorMessage) return `ERROR (${message.stopReason || 'error'}): ${message.errorMessage}`;
+    return '';
+  }
+  if (event.type === 'agent_end' && Array.isArray(event.messages)) {
+    return event.messages
+      .filter((message) => message?.role === 'assistant')
+      .map((message) => assistantContentText(message.content) || (message.errorMessage ? `ERROR (${message.stopReason || 'error'}): ${message.errorMessage}` : ''))
+      .filter(Boolean)
+      .join('\n\n');
+  }
+  return '';
+}
+
+export const ACTIVITY_LOG_MAX = 40;
+
+function shortenPath(value, max = 60) {
+  const s = String(value || '');
+  if (s.length <= max) return s;
+  return `…${s.slice(-(max - 1))}`;
+}
+
+export function formatToolCallPreview(toolName, args = {}) {
+  const name = String(toolName || 'tool');
+  const a = args && typeof args === 'object' && !Array.isArray(args) ? args : {};
+  switch (name) {
+    case 'bash': {
+      const cmd = String(a.command || '...');
+      return `$ ${cmd.length > 60 ? `${cmd.slice(0, 57)}...` : cmd}`;
+    }
+    case 'read':
+      return `read ${shortenPath(a.file_path || a.path || '...')}`;
+    case 'write':
+      return `write ${shortenPath(a.file_path || a.path || '...')}`;
+    case 'edit':
+      return `edit ${shortenPath(a.file_path || a.path || '...')}`;
+    case 'ls':
+      return `ls ${shortenPath(a.path || '.')}`;
+    case 'find':
+      return `find ${a.pattern || '*'} in ${shortenPath(a.path || '.')}`;
+    case 'grep':
+      return `grep /${a.pattern || ''}/ in ${shortenPath(a.path || '.')}`;
+    default: {
+      const first = Object.keys(a)[0];
+      const val = first != null ? String(a[first] ?? '') : '';
+      const preview = val.length > 40 ? `${val.slice(0, 37)}...` : val;
+      return preview ? `${name} ${preview}` : name;
+    }
+  }
+}
+
+function toolActivityItem(event, status) {
+  const name = String(event.toolName || event.name || 'tool');
+  const args = event.args && typeof event.args === 'object' ? event.args : (event.arguments && typeof event.arguments === 'object' ? event.arguments : {});
+  return {
+    type: 'tool',
+    toolCallId: String(event.toolCallId || event.id || ''),
+    name,
+    args,
+    status,
+    preview: formatToolCallPreview(name, args),
+  };
+}
+
+function clipActivityText(text, max = 240) {
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  return raw.length > max ? `${raw.slice(0, max - 3)}...` : raw;
+}
+
+export function activityItemFromEvent(event) {
+  if (!event || typeof event !== 'object') return null;
+  const type = String(event.type || '');
+  if (type === 'tool_execution_start') return toolActivityItem(event, 'running');
+  if (type === 'tool_execution_end') return toolActivityItem(event, event.isError ? 'error' : 'done');
+  if (type === 'message_end' && event.message?.role === 'assistant' && Array.isArray(event.message.content)) {
+    const items = [];
+    for (const part of event.message.content) {
+      if (!part || typeof part !== 'object') continue;
+      if (part.type === 'toolCall' || part.type === 'tool_use') {
+        items.push(toolActivityItem({
+          toolCallId: part.id || part.toolCallId,
+          toolName: part.name || part.toolName,
+          args: part.arguments || part.args,
+        }, 'running'));
+      } else if (part.type === 'text' && part.text) {
+        const text = clipActivityText(part.text);
+        if (text) items.push({ type: 'text', text });
+      }
+    }
+    if (!items.length) return null;
+    return items.length === 1 ? items[0] : items;
+  }
+  return null;
+}
+
+export function appendActivityItems(log = [], incoming, maxItems = ACTIVITY_LOG_MAX) {
+  const next = Array.isArray(log) ? [...log] : [];
+  const raw = incoming == null ? [] : Array.isArray(incoming) ? incoming : [incoming];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    if (item.type === 'tool' && item.toolCallId) {
+      const idx = next.findIndex((x) => x && x.type === 'tool' && x.toolCallId === item.toolCallId);
+      if (idx >= 0) {
+        next[idx] = { ...next[idx], ...item, args: item.args || next[idx].args };
+        continue;
+      }
+    }
+    next.push(item);
+  }
+  const cap = Number.isFinite(Number(maxItems)) && Number(maxItems) > 0 ? Math.trunc(Number(maxItems)) : ACTIVITY_LOG_MAX;
+  return next.length > cap ? next.slice(next.length - cap) : next;
+}
+
 export const DEFAULT_STDOUT_MAX_BYTES = 1_048_576;
 export const DEFAULT_STDERR_MAX_BYTES = 262_144;
 export const DEFAULT_FRAME_MAX_BYTES = 3_145_728;
@@ -47,6 +182,9 @@ export function createChildOutputBuffer({
   let outputTruncated = false;
   let lastText = '';
   let frameError = null;
+  const eventTypes = [];
+  let lastStopReason = '';
+  let lastErrorMessage = '';
 
   function noteTruncation(stream) {
     if (!outputTruncated) emitDiagnostic('subagent.stdout.truncated', { stream });
@@ -54,18 +192,23 @@ export function createChildOutputBuffer({
   }
 
   function handleEvent(event) {
+    if (event?.type) {
+      eventTypes.push(event.type);
+      if (eventTypes.length > 24) eventTypes.shift();
+    }
+    const stopReason = event?.message?.stopReason;
+    if (typeof stopReason === 'string' && stopReason) lastStopReason = stopReason;
+    const errorMessage = event?.message?.errorMessage;
+    if (typeof errorMessage === 'string' && errorMessage) lastErrorMessage = errorMessage;
     if (typeof onEvent === 'function') {
       const text = onEvent(event);
       if (typeof text === 'string' && text) lastText = text;
       return;
     }
     if (event?.type === 'message_end' && event?.message?.role === 'assistant') {
-      const content = event.message.content;
-      if (typeof content === 'string' && content) lastText = content;
-      else if (Array.isArray(content)) {
-        const text = content.filter((x) => x?.type === 'text').map((x) => String(x.text ?? '')).join('\n');
-        if (text) lastText = text;
-      }
+      const text = assistantContentText(event.message.content);
+      if (text) lastText = text;
+      else if (event.message.errorMessage) lastText = `ERROR (${event.message.stopReason || 'error'}): ${event.message.errorMessage}`;
     }
   }
 
@@ -138,10 +281,14 @@ export function createChildOutputBuffer({
     return {
       lastText,
       stderr: retainedStderr.toString('utf8'),
+      stdoutTail: retainedStdout.toString('utf8').slice(-2000),
       outputTruncated,
       stdoutBytes,
       stderrBytes,
       frameError,
+      eventTypes: [...eventTypes],
+      lastStopReason,
+      lastErrorMessage,
     };
   }
 

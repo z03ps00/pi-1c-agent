@@ -45,7 +45,7 @@ test('no /1c-* prompt files; remaining titles are unprefixed', () => {
   }
 });
 
-const FORBIDDEN_PREFIXED_COMMAND = /\/1c-(learn|config|rule|init|doctor|mode|anon|approve|wrap|agents|memory-flush|bootstrap|openspec-setup|agent-scope|session-rotate|capture-model)\b/g;
+const FORBIDDEN_PREFIXED_COMMAND = /\/1c-(learn|config|rule|init|doctor|mode|anon|approve|wrap|agents|memory-flush|bootstrap|openspec-setup|agent-scope|session-rotate|capture-model|status|palette|theme)\b/g;
 
 function walkFiles(dir, exts, acc = []) {
   if (!fs.existsSync(dir)) return acc;

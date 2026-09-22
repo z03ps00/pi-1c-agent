@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendTail, buildChildResult, consumeJsonLine, createChildOutputBuffer } from '../lib/child-transport.mjs';
+import { appendActivityItems, activityItemFromEvent, appendTail, assistantTextFromEvent, buildChildResult, consumeJsonLine, createChildOutputBuffer, formatToolCallPreview } from '../lib/child-transport.mjs';
 import { resetDiagnostics } from '../lib/diagnostics.mjs';
 
 test('final JSON without trailing newline is flushed', () => {
@@ -77,4 +77,74 @@ test('structured child result carries timeout metadata', () => {
   assert.equal(result.timedOut, true);
   assert.equal(result.signal, 'SIGKILL');
   assert.equal(result.outputTruncated, true);
+});
+
+test('assistantTextFromEvent reads message_end, thinking fallback, and agent_end', () => {
+  assert.equal(assistantTextFromEvent({ type: 'message_end', message: { role: 'assistant', content: 'plain' } }), 'plain');
+  assert.equal(assistantTextFromEvent({
+    type: 'message_end',
+    message: { role: 'assistant', content: [{ type: 'thinking', thinking: 'hidden' }, { type: 'text', text: 'visible' }] },
+  }), 'visible');
+  assert.match(assistantTextFromEvent({
+    type: 'message_end',
+    message: { role: 'assistant', content: [{ type: 'thinking', thinking: 'only-think' }] },
+  }), /only-think/);
+  assert.match(assistantTextFromEvent({
+    type: 'message_end',
+    message: { role: 'assistant', content: [], stopReason: 'error', errorMessage: 'fetch failed' },
+  }), /fetch failed/);
+  assert.match(assistantTextFromEvent({
+    type: 'agent_end',
+    messages: [
+      { role: 'user', content: 'q' },
+      { role: 'assistant', content: 'one' },
+      { role: 'assistant', content: [{ type: 'text', text: 'two' }] },
+    ],
+  }), /one\n\ntwo/);
+});
+
+test('activityItemFromEvent maps tool_execution and upserts by toolCallId', () => {
+  const start = activityItemFromEvent({
+    type: 'tool_execution_start',
+    toolCallId: 't1',
+    toolName: 'read',
+    args: { path: 'src/Module.bsl' },
+  });
+  assert.equal(start.type, 'tool');
+  assert.equal(start.status, 'running');
+  assert.match(start.preview, /read src\/Module\.bsl/);
+  const end = activityItemFromEvent({
+    type: 'tool_execution_end',
+    toolCallId: 't1',
+    toolName: 'read',
+    args: { path: 'src/Module.bsl' },
+    isError: false,
+  });
+  const log = appendActivityItems(appendActivityItems([], start), end);
+  assert.equal(log.length, 1);
+  assert.equal(log[0].status, 'done');
+  const grep = activityItemFromEvent({
+    type: 'tool_execution_start',
+    toolCallId: 't2',
+    toolName: 'grep',
+    args: { pattern: 'курс', path: 'src' },
+  });
+  assert.match(grep.preview, /grep \/курс\//);
+  const fromMessage = activityItemFromEvent({
+    type: 'message_end',
+    message: {
+      role: 'assistant',
+      content: [
+        { type: 'toolCall', id: 't3', name: 'find', arguments: { pattern: '*.bsl', path: 'src' } },
+        { type: 'text', text: 'Looking around' },
+      ],
+    },
+  });
+  assert.equal(Array.isArray(fromMessage), true);
+  assert.equal(fromMessage[0].name, 'find');
+  assert.equal(fromMessage[1].type, 'text');
+  assert.match(formatToolCallPreview('bash', { command: 'git status' }), /\$ git status/);
+  const capped = appendActivityItems([], Array.from({ length: 50 }, (_, i) => ({ type: 'tool', toolCallId: `n${i}`, name: 'read', preview: `read ${i}` })), 40);
+  assert.equal(capped.length, 40);
+  assert.equal(capped[0].toolCallId, 'n10');
 });

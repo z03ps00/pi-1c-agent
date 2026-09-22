@@ -16,6 +16,7 @@ export const PACKAGE_SHIPPED_ROOTS = [
   'prompts',
   'config',
   'lib',
+  'themes',
 ];
 
 const SKIP_SCAN_NAMES = new Set(['product-health.mjs', 'docker-policy.mjs']);

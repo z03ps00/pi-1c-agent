@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+- Inside a 1C subagent view, **↑** (or left) returns to the parent chat, same idea as OpenCode. Esc goes back to the agent list. Click the running-agent widget or `/agents` then Enter to go in.
+- Subagent TUI is one Pi tool block: live duration ticks every second, Ctrl+O / click expands the child tool log, and the ASCII duplicate `AGENT` card is gone.
+- 1C footer always shows connected MCP count (`mcp 2/5`), thinking level (`think high`), and session-rotate on/off plus threshold (`rotate off 85%`). Live MCP counts come from `pi-mcp-adapter` status events.
 - Pi TUI layer (`1c-ui`): footer, agent hub, command palette (`Ctrl+Shift+K`), overlays — vanilla Pi 0.85 APIs only (`setFooter`, `setWidget`, `custom({overlay})`).
-- Short unique subagent names resolve (`explorer` → `1c-explorer`); the child prompt requires a schema-2 `## Upstream Handoff`.
+- `/theme` picks the TUI palette: shipped `standard` (VS Code Dark+ / Dark Modern) and `dracula`, plus Pi built-in `dark`/`light`.
+- Short unique subagent names resolve (`explorer` → `1c-explorer`); role aliases map `reviewer`/`review` → `1c-code-reviewer` and `fixer` → `1c-error-fixer`.
+- Child handoff parser recovers a schema-2 JSON fence even when `## Upstream Handoff` is missing, accepts heading variants, and includes the child output tail in the validation error. `1c-explorer` now requires that block in its report.
+- Default subagent models are empty: inherit the parent Pi model. ChatGPT Codex rejects `gpt-5.4-mini`; pinned mini/5.4/5.5 caused explorer to fail after a successful network path.
 - `--1c-approve` replaces colliding `--approve` (Pi 0.85 uses `--approve`/`-a` for project trust). `PI_1C_APPROVE` still applies on new sessions.
 - Session-start memory reconcile no longer blocks the first BUILD turn; it runs in the background with an 8s budget.
 - `/doctor --global` counts installed `agents/1c-*.md` when the upstream snapshot is absent, instead of failing `0/0`.

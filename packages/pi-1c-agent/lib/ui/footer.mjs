@@ -21,6 +21,57 @@ function roundPct(value) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
+function nonNegInt(value, fallback = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.trunc(n));
+}
+
+export const MCP_STATUS_EVENT = 'pi-mcp-adapter/status/v1';
+
+export function mcpCountsFromAdapterSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return { connected: 0, enabled: 0 };
+  const servers = Array.isArray(snapshot.servers) ? snapshot.servers : [];
+  const disabled = Number.isFinite(Number(snapshot.disabledCount))
+    ? Math.max(0, Math.trunc(Number(snapshot.disabledCount)))
+    : servers.filter((s) => s && (s.disabled === true || s.status === 'disabled')).length;
+  const enabled = Math.max(0, servers.length - disabled);
+  const connected = Number.isFinite(Number(snapshot.connectedCount))
+    ? Math.max(0, Math.trunc(Number(snapshot.connectedCount)))
+    : servers.filter((s) => s && s.status === 'connected').length;
+  return { connected, enabled };
+}
+
+export function mcpCountsFromConfig(mcp) {
+  const servers = mcp && typeof mcp === 'object' && mcp.mcpServers && typeof mcp.mcpServers === 'object'
+    ? mcp.mcpServers
+    : {};
+  let enabled = 0;
+  for (const def of Object.values(servers)) {
+    if (def && typeof def === 'object' && def.disabled === true) continue;
+    enabled++;
+  }
+  return { connected: 0, enabled };
+}
+
+export function mcpFooterLabel(snapshot = {}) {
+  const connected = nonNegInt(snapshot.mcpConnected, 0);
+  const enabled = nonNegInt(snapshot.mcpEnabled, connected);
+  return `mcp ${connected}/${enabled}`;
+}
+
+export function thinkingFooterLabel(level) {
+  const raw = String(level || 'off').trim().toLowerCase() || 'off';
+  return `think ${raw}`;
+}
+
+export function rotateFooterLabel(snapshot = {}) {
+  const on = snapshot.rotateEnabled === true;
+  const th = roundPct(snapshot.rotateThreshold);
+  const pct = th == null ? '85%' : `${th}%`;
+  return on ? `rotate on ${pct}` : `rotate off ${pct}`;
+}
+
 export function footerSegments(snapshot = {}) {
   const mode = String(snapshot.mode || 'ask').toLowerCase();
   const modeLabel = mode === 'build' ? 'BUILD' : mode === 'plan' ? 'PLAN' : 'ASK';
@@ -57,10 +108,10 @@ export function footerSegments(snapshot = {}) {
 
   if (snapshot.model) segs.push({ id: 'model', text: shortModel(snapshot.model) });
 
-  if (snapshot.rotateEnabled) {
-    const th = Number(snapshot.rotateThreshold);
-    segs.push({ id: 'rotate', text: Number.isFinite(th) ? `rotate ${th}%` : 'rotate on' });
-  }
+  segs.push({ id: 'mcp', text: mcpFooterLabel(snapshot) });
+  segs.push({ id: 'thinking', text: thinkingFooterLabel(snapshot.thinkingLevel) });
+  segs.push({ id: 'rotate', text: rotateFooterLabel(snapshot) });
+
   if (snapshot.captureEnabled) {
     const cap = snapshot.captureMode ? `capture ${snapshot.captureMode}` : 'capture on';
     segs.push({ id: 'capture', text: cap });
@@ -71,7 +122,7 @@ export function footerSegments(snapshot = {}) {
 
 /** Drop order for a narrow terminal (lowest priority first). Mode is never dropped. */
 export const FOOTER_DROP_ORDER = Object.freeze([
-  'bar', 'model', 'project', 'rotate', 'capture', 'memory', 'plan', 'git', 'ctx', 'approve', 'readonly', 'anon',
+  'bar', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'approve', 'readonly', 'anon',
 ]);
 
 export function composeFooter(snapshot = {}, width = 80) {
