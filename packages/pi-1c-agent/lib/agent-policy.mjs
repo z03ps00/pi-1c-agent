@@ -243,3 +243,14 @@ export function selectExecutionStrategy(params = {}) {
   if (hasChain) return { ok: true, strategy: 'chain' };
   return { ok: false, empty: true, reason: 'Provide agent+task, parallel[], or chain[]' };
 }
+
+/** Map `explorer` → `1c-explorer` when the short name is unambiguous. */
+export function resolveDiscoveredAgentName(requested, agents = []) {
+  const raw = String(requested || '').trim();
+  if (!raw) return null;
+  const names = agents.map((a) => (typeof a === 'string' ? a : a?.name)).filter(Boolean);
+  if (names.includes(raw)) return raw;
+  const unprefixed = raw.replace(/^1c-/, '');
+  const hits = names.filter((name) => name === raw || name === `1c-${unprefixed}` || name.replace(/^1c-/, '') === unprefixed);
+  return hits.length === 1 ? hits[0] : null;
+}

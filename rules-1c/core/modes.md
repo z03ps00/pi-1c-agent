@@ -97,7 +97,7 @@ Work without leaving traces in shared agent memory (Cognee/OpenViking) or the lo
 
 Ask before the model executes a tool in BUILD. Independent of ASK/PLAN/BUILD and of `/anon`. **Pi-only** (`1c-mode`); Cursor has its own Auto-run and does not enforce this gate.
 
-- Surfaces: `/approve off|safe|strict|status` (no argument opens a picker like `/mode`), `Ctrl+Alt+S` (cycle off → safe → strict), `--approve <level>`, env `PI_1C_APPROVE` (new sessions). Footer always shows `approve:off|safe|strict`.
+- Surfaces: `/approve off|safe|strict|status` (no argument opens a picker like `/mode`), `Ctrl+Alt+S` (cycle off → safe → strict), `--1c-approve <level>`, env `PI_1C_APPROVE` (new sessions). Footer always shows `approve:off|safe|strict`. Do **not** use Pi core `--approve` / `-a` for this — that flag is project-file trust and will swallow `safe` as a prompt.
 - `off` — do not ask (current BUILD behaviour). Default for a new session.
 - `safe` — prompt only on dangerous actions: `write`/`edit`, destructive `bash` (`rm -rf`, `git push` / `reset --hard` / `clean -fd` / `checkout --`, docker/podman, `.dt`/`.cf`/`.cfe` load, `ЗагрузитьИнформационнуюБазу`, publication), MCP mutations, live-IB tools (`vcexecutecode`, execute-code/query).
 - `strict` — prompt on every tool call.

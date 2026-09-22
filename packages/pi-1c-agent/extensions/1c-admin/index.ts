@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { registerAction } from "../../lib/ui/index.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -32,6 +33,7 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
     description: "Run deterministic Pi 1C doctor (no LLM guessing): /doctor [project|global]",
     handler: async (args, ctx) => handleDoctor(args, ctx),
   });
+  registerAction("command:doctor", (args: string | undefined, ctx: any) => handleDoctor(args, ctx));
   pi.registerCommand("bootstrap", {
     description: "Materialize the pinned ai_rules_1c snapshot into project/global Pi scope",
     handler: async (args, ctx) => {

@@ -7,15 +7,28 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { childModeGuardText, childToolAllowlist, evaluateSubagentRequest, isWriterAgent, parallelSafety, parseResources, parseSideEffects, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
+import { Text } from "@earendil-works/pi-tui";
+import { childModeGuardText, childToolAllowlist, evaluateSubagentRequest, isWriterAgent, parallelSafety, parseResources, parseSideEffects, resolveDiscoveredAgentName, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
 import { childProcessEnv } from "../../lib/child-env.mjs";
 import { buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
 import { terminateProcessTree } from "../../lib/process-supervisor.mjs";
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
-import { handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
+import { HANDOFF_HEADING, handoffInstruction, parseUpstreamHandoff } from "../../lib/handoff.mjs";
 import { current1cMode, requireBuild } from "../../lib/mode-state.mjs";
 import { withSubagentSlot } from "../../lib/subagent-budget.mjs";
 import { combineParallelHandoffs, loadWorkflows, verifyWorkflowHandoff } from "../../lib/workflows.mjs";
+import {
+  composeAgentCardLines,
+  composeHubRows,
+  composeHubText,
+  composeWorkflowResult,
+  invokeAction,
+  mapRunStatus,
+  publish,
+  registerAction,
+  RunTracker,
+  uiAvailable,
+} from "../../lib/ui/index.mjs";
 
 type OneCMode = "plan" | "build" | "ask";
 type AgentSource = "package" | "user" | "project";
@@ -52,6 +65,7 @@ const SUBAGENT_HEARTBEAT_MS = 15000;
 const SUBAGENT_TIMEOUT_MS = Math.max(60_000, Number(process.env.PI_1C_SUBAGENT_TIMEOUT_MS ?? 600_000) || 600_000);
 const SUBAGENT_KILL_GRACE_MS = 10_000;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const tracker = new RunTracker({ publish });
 
 function describeExit(code: number | null, signalName?: string | null): string {
   if (signalName) return `прерван сигналом ${signalName}`;
@@ -231,7 +245,7 @@ async function runAgent(
   const tools = childToolAllowlist({ mode, agentTools: agent.tools, capabilities: agent.capabilities, allTools });
   if (tools.length > 0) args.push("--tools", tools.join(","));
   else args.push("--no-tools");
-  args.push("--append-system-prompt", promptFile, `Task: ${task}`);
+  args.push("--append-system-prompt", promptFile, `Task: ${task}\n\nEnd your final response with this exact heading and a schema-2 JSON fence:\n${HANDOFF_HEADING}`);
 
   const runId = crypto.randomUUID();
   const parentRunId = String(process.env.PI_1C_PARENT_RUN_ID || process.env.PI_1C_RUN_ID || "");
@@ -362,15 +376,112 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     return discover(ctx.cwd, trusted);
   }
 
-  async function runOne(x: { agent: string; task: string }, ctx: any, signal: AbortSignal | undefined, onProgress?: (text: string) => void) {
+  async function publishDiscovered(ctx: any) {
+    const agents = await contextAgents(ctx);
+    const discovered = agents.map((a) => ({
+      name: a.name,
+      writer: isWriterAgent(a) || WRITER_SUBAGENTS.has(a.name),
+      kind: isWriterAgent(a) || WRITER_SUBAGENTS.has(a.name) ? "writer" : "read-only",
+      model: a.model,
+      source: a.source,
+    }));
+    tracker.setDiscovered(discovered);
+    return agents;
+  }
+
+  async function runOne(x: { agent: string; task: string }, ctx: any, signal: AbortSignal | undefined, onProgress?: (text: string) => void, extra: { workflowId?: string; stageIndex?: number } = {}) {
     const agents = await contextAgents(ctx);
     const byName = new Map(agents.map((a) => [a.name, a]));
-    const agent = byName.get(x.agent);
+    const resolvedName = resolveDiscoveredAgentName(x.agent, agents) || x.agent;
+    const agent = byName.get(resolvedName);
     if (!agent) throw new Error(`Unknown 1C agent: ${x.agent}. Available: ${agents.map((a) => a.name).join(", ")}`);
     const mode = current1cMode();
     const allTools = pi.getAllTools().map((t) => t.name);
     evaluateSubagentRequest({ mode, agent, allTools });
-    return runAgent(agent, x.task, ctx.cwd, mode, allTools, signal, onProgress);
+    const local = new AbortController();
+    if (signal) {
+      if (signal.aborted) local.abort();
+      else signal.addEventListener("abort", () => local.abort(), { once: true });
+    }
+    const writer = isWriterAgent(agent) || WRITER_SUBAGENTS.has(agent.name);
+    const runId = tracker.start({
+      agent: agent.name,
+      kind: writer ? "writer" : "read-only",
+      mode,
+      model: agent.model,
+      abort: local,
+      workflowId: extra.workflowId,
+      stageIndex: extra.stageIndex,
+    });
+    const tui = uiAvailable(ctx);
+    const onAgentProgress = (text: string) => {
+      const status = mapRunStatus({ event: "progress", agentName: agent.name, activity: text });
+      tracker.update(runId, { status, activity: text });
+      if (!tui) return;
+      const run = tracker.get(runId);
+      try { onUpdateSafe(onProgress, composeAgentCardLines(run).join("\n"), { ui: { ...run, abort: undefined } }); } catch {}
+    };
+    try {
+      const result = await runAgent(agent, x.task, ctx.cwd, mode, allTools, local.signal, onAgentProgress);
+      tracker.finish(runId, { ok: true });
+      return result;
+    } catch (error: any) {
+      tracker.finish(runId, { ok: false, aborted: local.signal.aborted || signal?.aborted, error: error?.message || String(error) });
+      throw error;
+    }
+  }
+
+  function onUpdateSafe(onProgress: ((text: string) => void) | undefined, text: string, details?: unknown) {
+    if (typeof onProgress === "function" && (onProgress as any).__onUpdate) {
+      try { (onProgress as any).__onUpdate({ content: [{ type: "text", text }], details }); } catch {}
+      return;
+    }
+    onProgress?.(text);
+  }
+
+  function bindEmit(onUpdate: any, ctx: any) {
+    const tui = uiAvailable(ctx);
+    const emit = ((text: string, details?: unknown) => {
+      const heartbeat = Boolean(details && (details as any).heartbeat);
+      if (!tui && heartbeat) return;
+      try { onUpdate?.({ content: [{ type: "text", text }], details }); } catch {}
+    }) as ((text: string, details?: unknown) => void) & { __onUpdate?: any };
+    emit.__onUpdate = onUpdate;
+    return emit;
+  }
+
+  function subagentRenderers() {
+    return {
+      renderShell: "self" as const,
+      renderCall(args: any, theme: any, context: any) {
+        const ui = context?.state?.ui || context?.state?.workflowUi;
+        if (ui?.stages) return new Text(composeWorkflowResult(ui, { expanded: true }).join("\n"), 0, 0);
+        if (ui) return new Text(composeAgentCardLines(ui).join("\n"), 0, 0);
+        const name = args?.agent || (Array.isArray(args?.parallel) ? "parallel" : args?.workflow ? `workflow ${args.workflow}` : "subagent");
+        return new Text(theme.fg("toolTitle", `AGENT ${String(name).replace(/^1c-/, "")}`), 0, 0);
+      },
+      renderResult(result: any, { expanded, isPartial }: any, theme: any, context: any) {
+        const ui = result?.details?.ui || result?.details?.workflowUi;
+        if (context?.state) {
+          if (result?.details?.ui) context.state.ui = result.details.ui;
+          if (result?.details?.workflowUi) context.state.workflowUi = result.details.workflowUi;
+        }
+        if (ui?.stages) {
+          const lines = composeWorkflowResult(ui, { expanded: expanded || isPartial });
+          return new Text(lines.join("\n"), 0, 0);
+        }
+        if (ui) {
+          const lines = isPartial || expanded ? composeAgentCardLines(ui) : composeAgentCardLines({ ...ui, status: result.isError ? "failed" : (ui.status || "completed") });
+          if (expanded && result?.content?.[0]?.text) return new Text(`${lines.join("\n")}\n\n${result.content[0].text}`, 0, 0);
+          return new Text(lines.join("\n"), 0, 0);
+        }
+        const text = result?.content?.[0]?.text || (result?.isError ? theme.fg("error", "failed") : "");
+        if (!expanded && !isPartial) {
+          return new Text(result?.isError ? theme.fg("error", text.split("\n")[0] || "failed") : theme.fg("success", "completed"), 0, 0);
+        }
+        return new Text(text, 0, 0);
+      },
+    };
   }
 
   pi.registerTool({
@@ -378,11 +489,13 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     label: "1C Subagent",
     description: "Delegate 1C work to isolated Pi subprocesses with trust gating, capability-aware tools, validated handoffs and writer-concurrency protection.",
     parameters: Params,
+    ...subagentRenderers(),
     async execute(_id, params: any, signal: AbortSignal | undefined, onUpdate: any, ctx: any) {
       if (Number(process.env.PI_1C_SUBAGENT_DEPTH ?? "0") >= 1) {
         return { content: [{ type: "text", text: "Nested 1C subagent delegation is blocked." }], isError: true };
       }
-      const emit = (text: string) => { try { onUpdate?.({ content: [{ type: "text", text }] }); } catch {} };
+      const emit = bindEmit(onUpdate, ctx);
+      const tui = uiAvailable(ctx);
       try {
         const strategy = selectExecutionStrategy(params);
         if (strategy.empty) {
@@ -391,19 +504,19 @@ export default function oneCSubagents(pi: ExtensionAPI) {
         }
         if (!strategy.ok) throw new Error(strategy.reason);
         if (strategy.strategy === "agent") {
-          emit(`▶ ${params.agent} — запуск…`);
-          const result = await runOne({ agent: params.agent, task: params.task }, ctx, signal, emit);
-          emit(`✔ ${params.agent} — готово`);
-          return { content: [{ type: "text", text: result.output }], details: result };
+          if (!tui) emit(`▶ ${params.agent} — запуск…`);
+          const result = await runOne({ agent: params.agent, task: params.task }, ctx, signal, emit as any);
+          if (!tui) emit(`✔ ${params.agent} — готово`);
+          return { content: [{ type: "text", text: result.output }], details: { ...result, ui: tracker.list().find((r) => r.agent === params.agent) } };
         }
         if (strategy.strategy === "parallel") {
           const agents = await contextAgents(ctx);
           const safety = parallelSafety(params.parallel, writerNames(agents), agents);
           if (!safety.ok) throw new Error(safety.reason);
           const names = params.parallel.map((x: any) => x.agent).join(", ");
-          emit(`▶ parallel: ${names} — запуск…`);
-          const results = await mapLimit(params.parallel, MAX_CONCURRENCY, (item) => runOne(item, ctx, signal, (t) => emit(`▶ ${t}`)));
-          emit(`✔ parallel: ${names} — готово`);
+          if (!tui) emit(`▶ parallel: ${names} — запуск…`);
+          const results = await mapLimit(params.parallel, MAX_CONCURRENCY, (item) => runOne(item, ctx, signal, emit as any));
+          if (!tui) emit(`✔ parallel: ${names} — готово`);
           return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: results };
         }
         if (strategy.strategy === "chain") {
@@ -414,17 +527,23 @@ export default function oneCSubagents(pi: ExtensionAPI) {
               ? (step.task.includes("{previous}") ? step.task.replace(/\{previous\}/g, upstream) : `${step.task}\n\n${upstream}`)
               : step.task;
             const label = `chain [${index + 1}/${params.chain.length}] ${step.agent}`;
-            emit(`▶ ${label} — запуск…`);
-            const result = await runOne({ agent: step.agent, task }, ctx, signal, (t) => emit(`▶ ${label}: ${t}`));
+            if (!tui) emit(`▶ ${label} — запуск…`);
+            const result = await runOne({ agent: step.agent, task }, ctx, signal, emit as any);
             results.push(result);
             upstream = result.upstreamHandoff;
-            emit(`✔ ${label} — готово`);
+            if (!tui) emit(`✔ ${label} — готово`);
           }
           return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: results };
         }
         throw new Error("specify exactly one of agent+task, parallel[], or chain[]");
       } catch (error: any) {
-        return { content: [{ type: "text", text: error?.message || String(error) }], isError: true };
+        const agentName = params?.agent || params?.parallel?.[0]?.agent || params?.chain?.[0]?.agent;
+        const run = [...tracker.list()].reverse().find((r) => !agentName || r.agent === agentName || r.agent === `1c-${agentName}`);
+        return {
+          content: [{ type: "text", text: error?.message || String(error) }],
+          isError: true,
+          details: { ui: { ...(run || {}), status: "failed", error: error?.message || String(error), endedAt: run?.endedAt || Date.now() } },
+        };
       }
     },
   });
@@ -439,13 +558,25 @@ export default function oneCSubagents(pi: ExtensionAPI) {
     label: "1C Workflow",
     description: "Execute a deterministic BUILD pipeline with validated handoffs. Writer stages are always sequential.",
     parameters: WorkflowParams,
+    ...subagentRenderers(),
     async execute(_id, params: any, signal: AbortSignal | undefined, onUpdate: any, ctx: any) {
-      const emit = (text: string) => { try { onUpdate?.({ content: [{ type: "text", text }] }); } catch {} };
+      const emit = bindEmit(onUpdate, ctx);
+      const tui = uiAvailable(ctx);
+      const startedAt = Date.now();
+      const workflowUi: any = { workflow: params.workflow, startedAt, stages: [] as any[] };
+      const pushUi = () => {
+        emit(composeWorkflowResult(workflowUi, { expanded: true }).join("\n"), { workflowUi, ui: workflowUi });
+      };
       try {
         requireBuild("workflow_1c execution");
         const workflows = loadWorkflows(packageRoot);
         const workflow = workflows.get(params.workflow);
         if (!workflow) throw new Error(`Unknown workflow '${params.workflow}'. Available: ${[...workflows.keys()].join(", ")}`);
+        workflowUi.stages = workflow.stages.map((stage: any) => ({
+          agent: stage.agent || (stage.type === "parallel" ? stage.agents?.join(", ") : stage.type),
+          name: stage.agent || stage.type,
+          status: "idle",
+        }));
         const results: any[] = [];
         const agents = await contextAgents(ctx);
         const writers = writerNames(agents);
@@ -455,51 +586,83 @@ export default function oneCSubagents(pi: ExtensionAPI) {
         for (const [index, stage] of workflow.stages.entries()) {
           if (signal?.aborted) throw new Error("workflow отменён пользователем");
           const step = `${index + 1}/${total}`;
+          workflowUi.currentIndex = index;
+          workflowUi.stages[index].status = "working";
+          if (tui) pushUi();
           if (stage.type === "agent") {
             const task = upstream ? `${params.task}\n\n${upstream}` : params.task;
-            emit(`▶ [${step}] ${stage.agent} — запуск…`);
-            const result = await runOne({ agent: stage.agent, task }, ctx, signal, (t) => emit(`▶ [${step}] ${t}`));
-            results.push(result);
-            upstream = result.upstreamHandoff;
-            pendingVerification = result;
-            emit(`✔ [${step}] ${stage.agent} — готово`);
+            if (!tui) emit(`▶ [${step}] ${stage.agent} — запуск…`);
+            try {
+              const result = await runOne({ agent: stage.agent, task }, ctx, signal, emit as any, { workflowId: params.workflow, stageIndex: index });
+              results.push(result);
+              upstream = result.upstreamHandoff;
+              pendingVerification = result;
+              workflowUi.stages[index].status = "completed";
+              if (!tui) emit(`✔ [${step}] ${stage.agent} — готово`);
+            } catch (error: any) {
+              workflowUi.stages[index].status = "failed";
+              workflowUi.stages[index].error = error?.message || String(error);
+              throw error;
+            }
             continue;
           }
           if (stage.type === "parallel") {
             const safety = parallelSafety(stage.agents.map((agent: string) => ({ agent, task: params.task })), writers, agents);
             if (!safety.ok) throw new Error(safety.reason);
             const names = stage.agents.join(", ");
-            emit(`▶ [${step}] parallel: ${names} — запуск…`);
-            const batch = await mapLimit(stage.agents, MAX_CONCURRENCY, (agent: string) => runOne({ agent, task: upstream ? `${params.task}\n\n${upstream}` : params.task }, ctx, signal, (t) => emit(`▶ [${step}] ${t}`)));
+            if (!tui) emit(`▶ [${step}] parallel: ${names} — запуск…`);
+            const batch = await mapLimit(stage.agents, MAX_CONCURRENCY, (agent: string) => runOne({ agent, task: upstream ? `${params.task}\n\n${upstream}` : params.task }, ctx, signal, emit as any, { workflowId: params.workflow, stageIndex: index }));
             results.push(...batch);
             upstream = combineParallelHandoffs(batch);
             pendingVerification = null;
-            emit(`✔ [${step}] parallel: ${names} — готово`);
+            workflowUi.stages[index].status = "completed";
+            if (!tui) emit(`✔ [${step}] parallel: ${names} — готово`);
             continue;
           }
           if (stage.type === "verification") {
-            emit(`▶ [${step}] verification — проверка…`);
+            if (!tui) emit(`▶ [${step}] verification — проверка…`);
             const gate = verifyWorkflowHandoff(pendingVerification);
-            if (!gate.ok) throw new Error(`Workflow verification gate failed: ${gate.reason}`);
+            if (!gate.ok) {
+              workflowUi.stages[index].status = "failed";
+              workflowUi.stages[index].error = gate.reason;
+              throw new Error(`Workflow verification gate failed: ${gate.reason}`);
+            }
             results.push({ agent: "verification", output: `Verification gate PASS\n${gate.verification.map((x: string) => `- ${x}`).join("\n")}`, handoff: pendingVerification.handoff, upstreamHandoff: pendingVerification.upstreamHandoff, source: "package" });
             pendingVerification = null;
-            emit(`✔ [${step}] verification — PASS`);
+            workflowUi.stages[index].status = "completed";
+            if (!tui) emit(`✔ [${step}] verification — PASS`);
           }
         }
-        return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: { workflow: params.workflow, definition: workflow, results } };
+        workflowUi.endedAt = Date.now();
+        return { content: [{ type: "text", text: results.map((r) => r.output).join("\n\n") }], details: { workflow: params.workflow, definition: workflow, results, ui: workflowUi, workflowUi } };
       } catch (error: any) {
+        workflowUi.endedAt = Date.now();
         emitDiagnostic("workflow.stage.failed", { workflow: params.workflow, reason: error?.message || String(error) });
-        return { content: [{ type: "text", text: error?.message || String(error) }], isError: true };
+        return { content: [{ type: "text", text: error?.message || String(error) }], isError: true, details: { ui: workflowUi, workflowUi } };
       }
     },
   });
 
+  registerAction("agents-stop", (id: string) => tracker.stop(id));
+
   pi.registerCommand("agents", {
     description: "Show trusted/active 1C subagents and their source",
     handler: async (_args, ctx) => {
-      const agents = await contextAgents(ctx);
-      const lines = agents.map((a) => `${a.name} [${a.source}]${isWriterAgent(a) || WRITER_SUBAGENTS.has(a.name) ? " writer" : " read-only"}`);
-      ctx.ui.notify(lines.length ? lines.join("\n") : "No 1C agents discovered. Run /bootstrap.", "info");
+      const agents = await publishDiscovered(ctx);
+      if (uiAvailable(ctx)) {
+        await invokeAction("agents-hub", ctx);
+        return;
+      }
+      const rows = composeHubRows(
+        agents.map((a) => ({ name: a.name, writer: isWriterAgent(a) || WRITER_SUBAGENTS.has(a.name) })),
+        tracker.list(),
+      );
+      ctx.ui.notify(composeHubText(rows), "info");
     },
   });
+
+  pi.on("session_start", async (_event, ctx) => {
+    await publishDiscovered(ctx).catch(() => {});
+  });
 }
+

@@ -77,6 +77,29 @@ export function parseApproveLevel(arg) {
   return { kind: 'invalid' };
 }
 
+/**
+ * CLI/env startup value. Ignores Pi core `--approve` boolean (project trust)
+ * and stringified true/false so they cannot steal 1C approval mode.
+ */
+export function parseApproveCliValue(value) {
+  if (typeof value === 'boolean' || value == null) return null;
+  const t = String(value).trim().toLowerCase();
+  if (!t || t === 'true' || t === 'false') return null;
+  const parsed = parseApproveLevel(t);
+  return parsed.kind === 'set' ? parsed.level : null;
+}
+
+/** Flag `--1c-approve` wins; else env on a new session. null = leave restored/default. */
+export function resolveApproveStartup({ flag, env, restored } = {}) {
+  const fromFlag = parseApproveCliValue(flag);
+  if (fromFlag != null) return fromFlag;
+  if (!restored) {
+    const fromEnv = parseApproveCliValue(env);
+    if (fromEnv != null) return fromEnv;
+  }
+  return null;
+}
+
 /** Hotkey cycle: off → safe → strict → off. */
 export function cycleApproveLevel(level) {
   const current = normalizeApproveLevel(level);

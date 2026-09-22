@@ -17,6 +17,8 @@ import {
   runStartupReconcile,
   serializePendingRecord,
   shouldSkipStartupReconcile,
+  STARTUP_RECONCILE_BUDGET_MS,
+  withBudget,
   tryClaim,
   resolveMemoryStateRoots,
   ensureMemoryStateDirs,
@@ -256,6 +258,15 @@ test('child env skips startup reconcile and failures emit diagnostics', async ()
     probe: async () => { throw new Error('probe down'); },
   }));
   assert.ok(diagnosticEvents().some((e) => e.code === 'memory.lifecycle.probe.failed'));
+});
+
+test('startup reconcile budget rejects a hung probe', async () => {
+  assert.equal(STARTUP_RECONCILE_BUDGET_MS, 8000);
+  await assert.rejects(
+    () => withBudget(new Promise(() => {}), 20, 'test budget'),
+    /test budget exceeded 20ms/,
+  );
+  assert.equal(await withBudget(Promise.resolve('ok'), 50, 'test budget'), 'ok');
 });
 
 test('duplicate reconstruction prefers done over failed', () => {

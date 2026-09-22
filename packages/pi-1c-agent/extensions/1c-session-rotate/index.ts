@@ -7,7 +7,6 @@ import {
   buildHandoffInstruction,
   buildKickoff,
   defaultHandoffPath,
-  footerLabel,
   handoffReady,
   parseSessionRotateArgs,
   restoreStateFromEntries,
@@ -17,6 +16,7 @@ import {
   shouldRotateOnIdle,
   statusText,
 } from "../../lib/session-rotate.mjs";
+import { publish, registerAction } from "../../lib/ui/index.mjs";
 import * as rotateLib from "../../lib/session-rotate.mjs";
 
 type RotateState = { enabled: boolean; thresholdPercent: number };
@@ -67,9 +67,8 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
     pi.appendEntry(STATE_CUSTOM_TYPE, { state });
   }
 
-  function updateStatus(ctx: ExtensionContext): void {
-    const color = state.enabled ? "success" : "dim";
-    ctx.ui.setStatus("pi-1c-session-rotate", ctx.ui.theme.fg(color, footerLabel(state)));
+  function updateStatus(_ctx: ExtensionContext): void {
+    publish("rotate", { enabled: state.enabled, thresholdPercent: state.thresholdPercent });
   }
 
   async function requestHandoff(ctx: ExtensionContext): Promise<void> {
@@ -178,23 +177,26 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
     await requestHandoff(ctx);
   }
 
+  async function handleSessionRotate(args: string | undefined, ctx: ExtensionContext) {
+    const parsed = parseSessionRotateArgs(args);
+    if (parsed.action === "continue") return continueRotation(ctx);
+    const result = applyCommand(state, parsed);
+    if (!result.ok) {
+      ctx.ui.notify(result.error ?? "session-rotate: invalid argument", "error");
+      ctx.ui.notify(statusText(state), "info");
+      return;
+    }
+    state = result.state;
+    if (result.changed) persist();
+    updateStatus(ctx);
+    ctx.ui.notify(statusText(state), "info");
+  }
+
   pi.registerCommand("session-rotate", {
     description: "Opt-in session rotation instead of compaction: /session-rotate on|off|status|<percent>",
-    handler: async (args, ctx) => {
-      const parsed = parseSessionRotateArgs(args);
-      if (parsed.action === "continue") return continueRotation(ctx);
-      const result = applyCommand(state, parsed);
-      if (!result.ok) {
-        ctx.ui.notify(result.error ?? "session-rotate: invalid argument", "error");
-        ctx.ui.notify(statusText(state), "info");
-        return;
-      }
-      state = result.state;
-      if (result.changed) persist();
-      updateStatus(ctx);
-      ctx.ui.notify(statusText(state), "info");
-    },
+    handler: handleSessionRotate,
   });
+  registerAction("command:session-rotate", (args: any, ctx: any) => handleSessionRotate(args, ctx));
 
   pi.on("session_start", async (_event, ctx) => {
     state = restoreStateFromEntries(ctx.sessionManager.getEntries());

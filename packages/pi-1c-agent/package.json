@@ -19,7 +19,8 @@
       "extensions/1c-knowledge/index.ts",
       "extensions/1c-init/index.ts",
       "extensions/1c-session-rotate/index.ts",
-      "extensions/1c-memory/index.ts"
+      "extensions/1c-memory/index.ts",
+      "extensions/1c-ui/index.ts"
     ],
     "skills": [
       "skills"

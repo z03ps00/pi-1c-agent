@@ -40,6 +40,25 @@ export function shouldSkipStartupReconcile(env = process.env) {
   return env.PI_1C_CHILD_PROCESS === '1' || env.PI_1C_DISABLE_STARTUP_RECONCILE === '1';
 }
 
+/** Max wait for session-start flush so BUILD print/TUI is not blocked on MCP. */
+export const STARTUP_RECONCILE_BUDGET_MS = 8000;
+
+export async function withBudget(promise, ms = STARTUP_RECONCILE_BUDGET_MS, label = 'startup reconcile') {
+  const budget = Number(ms);
+  const limit = Number.isFinite(budget) && budget > 0 ? budget : STARTUP_RECONCILE_BUDGET_MS;
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} exceeded ${limit}ms`)), limit);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function parsePendingRecord(text, filePath = '') {
   const raw = String(text ?? '');
   const fm = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);

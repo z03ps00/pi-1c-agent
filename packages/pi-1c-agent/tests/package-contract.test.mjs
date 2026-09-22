@@ -9,10 +9,11 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
 test('package registers stabilized extensions', () => {
   assert.equal(pkg.version, '0.7.0');
-  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts']) {
+  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-ui/index.ts']) {
     assert.ok(pkg.pi.extensions.includes(p));
     assert.ok(fs.existsSync(path.join(root, p)));
   }
+  assert.equal(pkg.pi.extensions.at(-1), 'extensions/1c-ui/index.ts');
 });
 
 test('doctor is a command, not a prompt template collision', () => {
@@ -29,17 +30,20 @@ test('project init UX schema is explicit and complete', () => {
   assert.equal(schema.variables.length, 43);
   assert.equal(new Set(schema.variables.map((x) => x.name)).size, 43);
   const initExt = fs.readFileSync(path.join(root, 'extensions', '1c-init', 'index.ts'), 'utf8');
+  const initCopy = fs.readFileSync(path.join(root, 'lib', 'ui', 'init-copy.mjs'), 'utf8');
   assert.match(initExt, /registerCommand\("init"/);
   assert.doesNotMatch(initExt, /registerCommand\("1c-init"/);
-  assert.match(initExt, /Источник проекта \(первый вопрос \/init\)/);
-  assert.match(initExt, /Пустая структура исходников/);
-  assert.match(initExt, /Выгрузка из существующей ИБ \/ \.cf \/ \.dt/);
-  assert.match(initExt, /Подробный/);
+  assert.match(initCopy, /Источник проекта \(первый вопрос \/init\)/);
+  assert.match(initCopy, /Пустая структура исходников/);
+  assert.match(initCopy, /Выгрузка из существующей ИБ \/ \.cf \/ \.dt/);
+  assert.match(initCopy, /Подробный/);
   assert.match(initExt, /collectSiblingSharedEnv/);
-  assert.match(initExt, /Общие значения из соседних проектов/);
-  assert.match(initExt, /Принять все предложенные/);
-  assert.match(initExt, /build\/\{cf,cfe,epf,erf\}/);
-  assert.match(initExt, /docs\/techtask/);
+  assert.match(initCopy, /Общие значения из соседних проектов/);
+  assert.match(initCopy, /Принять все предложенные/);
+  assert.match(initCopy, /build\/\{cf,cfe,epf,erf\}/);
+  assert.match(initCopy, /docs\/techtask/);
+  assert.match(initExt, /SOURCE_QUESTION/);
+  assert.match(initExt, /wizardProgress/);
   assert.match(initExt, /tokens\.includes\("knowledge"\)/);
   assert.match(initExt, /\/init knowledge/);
   const knowledgeStart = initExt.indexOf('if (requested.knowledge)');
@@ -49,7 +53,8 @@ test('project init UX schema is explicit and complete', () => {
   assert.match(knowledgeBlock, /ensureProjectKnowledgeLayout/);
   assert.doesNotMatch(knowledgeBlock, /runBootstrap/);
   assert.doesNotMatch(knowledgeBlock, /applyProjectInitialization/);
-  assert.match(knowledgeBlock, /Не копирует агента/);
+  assert.match(knowledgeBlock, /KNOWLEDGE_NO_AGENT/);
+  assert.match(initCopy, /Не копирует агента/);
 });
 
 test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
@@ -127,11 +132,22 @@ test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   assert.match(mode, /registerCommand\("anon"/);
   assert.match(mode, /registerFlag\("anon"/);
   assert.match(mode, /registerCommand\("approve"/);
-  assert.match(mode, /registerFlag\("approve"/);
+  assert.match(mode, /registerFlag\("1c-approve"/);
+  assert.doesNotMatch(mode, /registerFlag\("approve"/);
   assert.match(mode, /Key\.ctrlAlt\("a"\)/);
   assert.match(mode, /Key\.ctrlAlt\("p"\)/);
   assert.match(mode, /Key\.ctrlAlt\("s"\)/);
   assert.match(mode, /Unknown 1C mode: \$\{requested\}\. Use plan, build, or ask/);
   assert.match(mode, /\[1C MODE CHANGE\]/);
   assert.match(mode, /Memory: skipped — anonymous/);
+  assert.match(mode, /Mode changed:/);
+  assert.match(mode, /overlayModeSelect/);
+  assert.match(mode, /overlayApproval/);
+});
+
+test('1c-ui palette shortcut is Ctrl+Shift+K not Ctrl+K', () => {
+  const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');
+  assert.match(ui, /Key\.ctrlShift\("k"\)/);
+  assert.doesNotMatch(ui, /Key\.ctrl\("k"\)/);
+  assert.match(ui, /Key\.alt\("a"\)/);
 });

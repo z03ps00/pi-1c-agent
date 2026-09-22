@@ -9,7 +9,6 @@ import {
   captureSession,
   CAPTURE_STATE_TYPE,
   distillHeuristic,
-  footerCaptureLabel,
   isSubstantial,
   parseCaptureModelArgs,
   parseWrapArgs,
@@ -22,10 +21,13 @@ import {
   reconcilePending,
   resolveMemoryStateRoots,
   shouldSkipStartupReconcile,
+  STARTUP_RECONCILE_BUDGET_MS,
+  withBudget,
 } from "../../lib/memory-reconcile.mjs";
 import { createMcpAdapters, probeMemoryServers } from "../../lib/memory-mcp.mjs";
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
 import { current1cMode, isBuildMode } from "../../lib/mode-state.mjs";
+import { publish, registerAction } from "../../lib/ui/index.mjs";
 
 type CaptureState = ReturnType<typeof restoreCaptureState>;
 
@@ -122,9 +124,11 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   }
 
   function updateStatus(ctx: ExtensionContext): void {
-    const host = hostOf(ctx);
-    const color = state.idleEnabled && host === "pi" ? "success" : "dim";
-    ctx.ui.setStatus("pi-1c-capture", ctx.ui.theme.fg(color, footerCaptureLabel(state, host)));
+    publish("capture", {
+      idleEnabled: state.idleEnabled,
+      distillerMode: state.distiller?.mode,
+      host: hostOf(ctx),
+    });
   }
 
   function adapters() {
@@ -174,10 +178,13 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     return formatReconcileReport(summary);
   }
 
-  async function runLifecycle(ctx: ExtensionContext): Promise<string> {
+  async function runLifecycle(ctx: ExtensionContext, opts: { budgetMs?: number } = {}): Promise<string> {
     if (lifecycle) return lifecycle;
     lifecycle = (async () => {
       try {
+        if (opts.budgetMs) {
+          return await withBudget(probeAndReconcile(ctx), opts.budgetMs, "startup reconcile");
+        }
         return await probeAndReconcile(ctx);
       } catch (error: any) {
         emitDiagnostic("memory.lifecycle.probe.failed", { reason: error?.message || String(error) });
@@ -233,33 +240,36 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     },
   });
 
+  async function handleWrap(args: string | undefined, ctx: ExtensionContext) {
+    const parsed = parseWrapArgs(args);
+    if (parsed.action === "auto") {
+      const result = applyIdleToggle(state, parsed.value);
+      if (!result.ok) {
+        ctx.ui.notify(result.error ?? "wrap auto: use on|off|status", "error");
+        return;
+      }
+      state = result.state;
+      if (result.changed) persist();
+      updateStatus(ctx);
+      ctx.ui.notify(`wrap auto: ${state.idleEnabled ? "on" : "off"}`, "info");
+      return;
+    }
+    if (parsed.action === "status") {
+      ctx.ui.notify(`wrap auto: ${state.idleEnabled ? "on" : "off"}; ${captureModelStatus(state)}`, "info");
+      return;
+    }
+    if (parsed.action !== "capture") {
+      ctx.ui.notify("wrap: use now | archive | auto on|off|status", "error");
+      return;
+    }
+    await runCapture(ctx, { archive: parsed.archive === true });
+  }
+
   pi.registerCommand("wrap", {
     description: "Capture this dialog now: /wrap | /wrap auto on|off|status | /wrap archive",
-    handler: async (args, ctx) => {
-      const parsed = parseWrapArgs(args);
-      if (parsed.action === "auto") {
-        const result = applyIdleToggle(state, parsed.value);
-        if (!result.ok) {
-          ctx.ui.notify(result.error ?? "wrap auto: use on|off|status", "error");
-          return;
-        }
-        state = result.state;
-        if (result.changed) persist();
-        updateStatus(ctx);
-        ctx.ui.notify(`wrap auto: ${state.idleEnabled ? "on" : "off"}`, "info");
-        return;
-      }
-      if (parsed.action === "status") {
-        ctx.ui.notify(`wrap auto: ${state.idleEnabled ? "on" : "off"}; ${captureModelStatus(state)}`, "info");
-        return;
-      }
-      if (parsed.action !== "capture") {
-        ctx.ui.notify("wrap: use now | archive | auto on|off|status", "error");
-        return;
-      }
-      await runCapture(ctx, { archive: parsed.archive === true });
-    },
+    handler: handleWrap,
   });
+  registerAction("command:wrap", (args: any, ctx: any) => handleWrap(args, ctx));
 
   pi.registerCommand("capture-model", {
     description: "Distiller for session capture: /capture-model status|off|stack|ollama <model>|routerai <model>|chat",
@@ -281,8 +291,12 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     state = restoreCaptureState(ctx.sessionManager.getEntries());
     sessionCorrelation = sessionIdOf(ctx);
     updateStatus(ctx);
-    const report = await runLifecycle(ctx);
-    if (report && !report.includes("skipped")) ctx.ui.notify(report, "info");
+    const reportPromise = runLifecycle(ctx, { budgetMs: STARTUP_RECONCILE_BUDGET_MS });
+    reportPromise.then((report) => {
+      if (ctx.hasUI && report && !report.includes("skipped") && !report.includes("deferred") && !report.includes("probe failed")) {
+        ctx.ui.notify(report, "info");
+      }
+    }).catch(() => {});
   });
 
   pi.on("agent_settled", async (_event, ctx) => {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { childModeGuardText, childToolAllowlist, classifySideEffects, evaluateSubagentRequest, isWriterAgent, parallelSafety, writerNames } from '../lib/agent-policy.mjs';
+import { childModeGuardText, childToolAllowlist, classifySideEffects, evaluateSubagentRequest, isWriterAgent, parallelSafety, resolveDiscoveredAgentName, writerNames } from '../lib/agent-policy.mjs';
 import { current1cMode, resetModeStateForTests, set1cMode } from '../lib/mode-state.mjs';
 
 test('at most one writer may run in parallel', () => {
@@ -91,6 +91,13 @@ test('exclusive project-tree owners cannot share a batch; reviewer and isolated 
     [reviewer, tester],
   );
   assert.equal(ok.ok, true);
+});
+
+test('short agent names resolve when unique', () => {
+  const agents = [{ name: '1c-explorer' }, { name: '1c-developer' }];
+  assert.equal(resolveDiscoveredAgentName('explorer', agents), '1c-explorer');
+  assert.equal(resolveDiscoveredAgentName('1c-explorer', agents), '1c-explorer');
+  assert.equal(resolveDiscoveredAgentName('nope', agents), null);
 });
 
 test('ASK mode guard is not BUILD', () => {

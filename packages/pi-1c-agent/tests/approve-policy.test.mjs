@@ -12,6 +12,8 @@ import {
   isIbMutatingName,
   normalizeApproveLevel,
   parseApproveLevel,
+  parseApproveCliValue,
+  resolveApproveStartup,
   shouldPrompt,
 } from '../lib/approve-policy.mjs';
 import { sanitizeModeState, initialModeState } from '../lib/plan-state.mjs';
@@ -40,6 +42,20 @@ test('approve helpers parse, cycle and name levels', () => {
   assert.equal(approveLevelName(2), 'strict');
   assert.match(describeApprove(1), /non-read-only shell/);
   assert.match(describeApprove(2), /every tool/);
+});
+
+test('CLI approve ignores Pi host --approve boolean and keeps env', () => {
+  assert.equal(parseApproveCliValue(true), null);
+  assert.equal(parseApproveCliValue(false), null);
+  assert.equal(parseApproveCliValue('true'), null);
+  assert.equal(parseApproveCliValue('false'), null);
+  assert.equal(parseApproveCliValue('safe'), 1);
+  assert.equal(parseApproveCliValue('strict'), 2);
+  assert.equal(parseApproveCliValue('off'), 0);
+  assert.equal(resolveApproveStartup({ flag: true, env: 'safe', restored: false }), 1);
+  assert.equal(resolveApproveStartup({ flag: 'safe', env: 'off', restored: false }), 1);
+  assert.equal(resolveApproveStartup({ flag: undefined, env: 'strict', restored: false }), 2);
+  assert.equal(resolveApproveStartup({ flag: undefined, env: 'safe', restored: true }), null);
 });
 
 test('shouldPrompt is off / safe-dangerous / strict-always', () => {

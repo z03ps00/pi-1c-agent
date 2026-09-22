@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Pi TUI layer (`1c-ui`): footer, agent hub, command palette (`Ctrl+Shift+K`), overlays — vanilla Pi 0.85 APIs only (`setFooter`, `setWidget`, `custom({overlay})`).
+- Short unique subagent names resolve (`explorer` → `1c-explorer`); the child prompt requires a schema-2 `## Upstream Handoff`.
+- `--1c-approve` replaces colliding `--approve` (Pi 0.85 uses `--approve`/`-a` for project trust). `PI_1C_APPROVE` still applies on new sessions.
+- Session-start memory reconcile no longer blocks the first BUILD turn; it runs in the background with an 8s budget.
+- `/doctor --global` counts installed `agents/1c-*.md` when the upstream snapshot is absent, instead of failing `0/0`.
+
 ## 0.7.0 — 2026-09-22
 
 First tagged GitHub release (`v0.7.0`). Includes the unpublished 0.6.2 local-patch surface plus fail-closed runtime hardening.

@@ -1,5 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Key } from "@earendil-works/pi-tui";
+import { overlayApproval, overlayModeSelect } from "../1c-ui/overlays.ts";
+import { publish, registerAction, summarizeToolAction, uiAvailable } from "../../lib/ui/index.mjs";
 import {
   approveLevelName,
   approvalScope,
@@ -8,6 +10,7 @@ import {
   describeApprove,
   normalizeApproveLevel,
   parseApproveLevel,
+  resolveApproveStartup,
   shouldPrompt,
 } from "../../lib/approve-policy.mjs";
 import { dockerBlockReason } from "../../lib/docker-policy.mjs";
@@ -263,7 +266,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
 
   pi.registerFlag("1c-mode", { description: "1C primary mode: plan, build, or ask", type: "string" });
   pi.registerFlag("anon", { description: "Anonymous session level: 1 = no memory writes, 2 = no reads, 3 = no local traces", type: "string" });
-  pi.registerFlag("approve", { description: "Approval mode: off, safe (dangerous actions), or strict (every tool)", type: "string" });
+  pi.registerFlag("1c-approve", { description: "1C approval mode: off, safe (dangerous actions), or strict (every tool). Not Pi --approve (project trust).", type: "string" });
 
   function publishSharedState(): void {
     set1cMode(state.mode);
@@ -288,30 +291,14 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     pi.appendEntry("pi-1c-mode-state", { state });
   }
 
-  function updateStatus(ctx: ExtensionContext): void {
-    let label = "1C:BUILD";
-    let color = "success";
-    if (state.mode === "plan") {
-      label = state.phase === "plan-ready" ? "1C:PLAN READY" : "1C:PLAN";
-      color = "warning";
-    } else if (state.mode === "ask") {
-      label = "1C:ASK";
-      color = "accent";
-    } else if (state.phase === "build-executing" && state.plan) {
-      label = `1C:BUILD ${state.plan.id.slice(-6)}`;
-    }
-    ctx.ui.setStatus("pi-1c-mode", ctx.ui.theme.fg(color, label));
-    const anon = anonLevel();
-    ctx.ui.setStatus(
-      "pi-1c-anon",
-      anon > 0
-        ? ctx.ui.theme.fg("warning", `anon:${anon}`)
-        : ctx.ui.theme.fg("dim", "anon:off"),
-    );
-    const approve = approveLevel();
-    const approveName = approveLevelName(approve);
-    const approveColor = approve >= 2 ? "warning" : approve === 1 ? "accent" : "dim";
-    ctx.ui.setStatus("pi-1c-approve", ctx.ui.theme.fg(approveColor, `approve:${approveName}`));
+  function updateStatus(_ctx: ExtensionContext): void {
+    publish("mode", {
+      mode: state.mode,
+      phase: state.phase,
+      planId: state.plan?.id,
+      anonLevel: anonLevel(),
+      approve: approveLevelName(approveLevel()),
+    });
   }
 
   function applyReadOnlyTools(): void {
@@ -374,7 +361,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     const suffix = runningTurnSuffix(ctx);
     state = enterPlan(state) as ModeState;
     sync(ctx);
-    if (notify) ctx.ui.notify(`1C PLAN: investigate and produce a complete plan; project code remains protected${suffix}`, suffix ? "warning" : "info");
+    if (notify) ctx.ui.notify(`Mode changed: PLAN${suffix ? " (next turn)" : ""}`, suffix ? "warning" : "info");
   }
 
   async function switchToBuild(ctx: ExtensionContext, notify = true): Promise<void> {
@@ -385,10 +372,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     const suffix = runningTurnSuffix(ctx);
     state = enterBuild(state) as ModeState;
     sync(ctx);
-    if (notify) {
-      const what = state.plan ? `1C BUILD: executing ${state.plan.id}` : "1C BUILD: implementation enabled";
-      ctx.ui.notify(`${what}${suffix}`, suffix ? "warning" : "info");
-    }
+    if (notify) ctx.ui.notify(`Mode changed: BUILD${suffix ? " (next turn)" : ""}`, suffix ? "warning" : "info");
   }
 
   async function switchToAsk(ctx: ExtensionContext, notify = true): Promise<void> {
@@ -396,7 +380,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     const viaLib = libCall<ModeState>(ANON_LIB.enterAsk, [state]);
     state = (viaLib ?? { ...state, mode: "ask", phase: "ask-idle" }) as ModeState;
     sync(ctx);
-    if (notify) ctx.ui.notify(`1C ASK: read-only research; project changes and file writes are protected${suffix}`, suffix ? "warning" : "info");
+    if (notify) ctx.ui.notify(`Mode changed: ASK${suffix ? " (next turn)" : ""}`, suffix ? "warning" : "info");
   }
 
   async function executeCurrentPlan(ctx: ExtensionContext): Promise<void> {
@@ -418,30 +402,57 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
       if (requested === "build") return switchToBuild(ctx);
       if (requested === "ask") return switchToAsk(ctx);
       if (requested) return ctx.ui.notify(`Unknown 1C mode: ${requested}. Use plan, build, or ask.`, "error");
-      const selected = await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
+      const selected = uiAvailable(ctx)
+        ? await overlayModeSelect(ctx)
+        : await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
       if (selected === "plan") await switchToPlan(ctx);
       if (selected === "build") await switchToBuild(ctx);
       if (selected === "ask") await switchToAsk(ctx);
     },
   });
 
+  registerAction("mode-select", async (ctx: ExtensionContext) => {
+    const selected = uiAvailable(ctx)
+      ? await overlayModeSelect(ctx)
+      : await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
+    if (selected === "plan") await switchToPlan(ctx);
+    if (selected === "build") await switchToBuild(ctx);
+    if (selected === "ask") await switchToAsk(ctx);
+  });
+
+  registerAction("approve-select", async (ctx: ExtensionContext) => {
+    const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
+    if (selected === "off") setApproveLevel(0, ctx);
+    if (selected === "safe") setApproveLevel(1, ctx);
+    if (selected === "strict") setApproveLevel(2, ctx);
+  });
+
+  registerAction("anon-select", async (ctx: ExtensionContext) => {
+    const selected = await ctx.ui.select("Anonymous session", ["off", "1", "2", "3"]);
+    if (!selected) return;
+    setAnonLevel(selected === "off" ? 0 : Number(selected), ctx);
+  });
+
+  async function handleAnon(args: string | undefined, ctx: ExtensionContext) {
+    const parsed = anonParse(args);
+    if (parsed.kind === "invalid") {
+      ctx.ui.notify(`Unknown anon argument: ${String(args ?? "").trim()}. Use 1 | 2 | 3 | off | status.`, "error");
+      return;
+    }
+    if (parsed.kind === "status") {
+      const level = anonLevel();
+      const what = level === 0 ? "off — the shared post-task memory policy applies" : anonDescribe(level);
+      ctx.ui.notify(`anon=${level} · ${what} · session-scoped (new session starts at 0)`, "info");
+      return;
+    }
+    setAnonLevel(parsed.level ?? 0, ctx);
+  }
+
   pi.registerCommand("anon", {
     description: "Anonymous session: /anon 1 (no writes) | 2 (no reads) | 3 (no local traces) | off | status",
-    handler: async (args, ctx) => {
-      const parsed = anonParse(args);
-      if (parsed.kind === "invalid") {
-        ctx.ui.notify(`Unknown anon argument: ${String(args ?? "").trim()}. Use 1 | 2 | 3 | off | status.`, "error");
-        return;
-      }
-      if (parsed.kind === "status") {
-        const level = anonLevel();
-        const what = level === 0 ? "off — the shared post-task memory policy applies" : anonDescribe(level);
-        ctx.ui.notify(`anon=${level} · ${what} · session-scoped (new session starts at 0)`, "info");
-        return;
-      }
-      setAnonLevel(parsed.level ?? 0, ctx);
-    },
+    handler: handleAnon,
   });
+  registerAction("command:anon", (args: any, ctx: any) => handleAnon(args, ctx));
 
   pi.registerShortcut(Key.ctrlAlt("a"), {
     description: "Cycle anonymous session level: off → 1 → 2 → 3",
@@ -451,30 +462,33 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     },
   });
 
+  async function handleApprove(args: string | undefined, ctx: ExtensionContext) {
+    const parsed = parseApproveLevel(args);
+    if (parsed.kind === "invalid") {
+      ctx.ui.notify(`Unknown approve argument: ${String(args ?? "").trim()}. Use off | safe | strict | status.`, "error");
+      return;
+    }
+    if (parsed.kind === "status") {
+      const level = approveLevel();
+      const name = approveLevelName(level);
+      ctx.ui.notify(`approve=${name} · ${describeApprove(level)} · session-scoped (new session starts at off)`, "info");
+      return;
+    }
+    if (parsed.kind === "pick") {
+      const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
+      if (selected === "off") setApproveLevel(0, ctx);
+      if (selected === "safe") setApproveLevel(1, ctx);
+      if (selected === "strict") setApproveLevel(2, ctx);
+      return;
+    }
+    setApproveLevel(parsed.level ?? 0, ctx);
+  }
+
   pi.registerCommand("approve", {
     description: "Approval mode: /approve off | safe | strict | status",
-    handler: async (args, ctx) => {
-      const parsed = parseApproveLevel(args);
-      if (parsed.kind === "invalid") {
-        ctx.ui.notify(`Unknown approve argument: ${String(args ?? "").trim()}. Use off | safe | strict | status.`, "error");
-        return;
-      }
-      if (parsed.kind === "status") {
-        const level = approveLevel();
-        const name = approveLevelName(level);
-        ctx.ui.notify(`approve=${name} · ${describeApprove(level)} · session-scoped (new session starts at off)`, "info");
-        return;
-      }
-      if (parsed.kind === "pick") {
-        const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
-        if (selected === "off") setApproveLevel(0, ctx);
-        if (selected === "safe") setApproveLevel(1, ctx);
-        if (selected === "strict") setApproveLevel(2, ctx);
-        return;
-      }
-      setApproveLevel(parsed.level ?? 0, ctx);
-    },
+    handler: handleApprove,
   });
+  registerAction("command:approve", (args: any, ctx: any) => handleApprove(args, ctx));
 
   pi.registerShortcut(Key.ctrlAlt("s"), {
     description: "Cycle approval mode: off → safe → strict",
@@ -543,14 +557,19 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     if (!shouldPrompt(level, classification.dangerous)) return;
     const scope = approvalScope(event.toolName, classification, event.input ?? {});
     if (approveAllowlist.has(scope)) return;
-    const label = `${event.toolName}: ${classification.reason}`;
     if (!ctx?.hasUI) {
       return {
         block: true,
         reason: `Approval mode (${approveLevelName(level)}) blocked '${event.toolName}': ${classification.reason}. No UI available to confirm.`,
       };
     }
-    const choice = await ctx.ui.select(`Approve action? ${label}`, [APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY]);
+    const choice = uiAvailable(ctx)
+      ? await overlayApproval(ctx, {
+        toolName: event.toolName,
+        action: summarizeToolAction(event.toolName, event.input ?? {}),
+        reason: classification.reason,
+      })
+      : await ctx.ui.select(`Approve action? ${event.toolName}: ${classification.reason}`, [APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY]);
     if (choice === APPROVE_ALL) {
       approveAllowlist.add(scope);
       return;
@@ -647,18 +666,16 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
       state = { ...state, anonLevel: anonNormalize(parsed.kind === "set" ? parsed.level : anonRaw) };
     }
 
-    const approveFlag = pi.getFlag("approve");
-    const approveEnv = process.env.PI_1C_APPROVE;
-    const approveRaw = approveFlag !== undefined && approveFlag !== null && String(approveFlag).trim() !== ""
-      ? String(approveFlag)
-      : (!restored && typeof approveEnv === "string" && approveEnv.trim() ? approveEnv : undefined);
-    if (approveRaw !== undefined) {
-      const parsed = parseApproveLevel(approveRaw);
-      state = { ...state, approveLevel: normalizeApproveLevel(parsed.kind === "set" ? parsed.level : approveRaw) };
-    }
+    const approveOverride = resolveApproveStartup({
+      flag: pi.getFlag("1c-approve"),
+      env: process.env.PI_1C_APPROVE,
+      restored: Boolean(restored),
+    });
+    if (approveOverride != null) state = { ...state, approveLevel: approveOverride };
 
     publishSharedState();
     if (readOnly()) applyReadOnlyTools(); else applyBuildTools();
     updateStatus(ctx);
+    persist();
   });
 }

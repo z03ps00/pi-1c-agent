@@ -27,6 +27,20 @@ import {
 } from "../../lib/project-init.mjs";
 import { loadConfiguration } from "../../lib/knowledge.mjs";
 import { requireBuild as assertBuild } from "../../lib/mode-state.mjs";
+import { registerAction, uiAvailable, wizardProgress } from "../../lib/ui/index.mjs";
+import {
+  APPLY_QUESTION,
+  BUILD_SCAFFOLD_HINT,
+  DOCS_SCAFFOLD_HINT,
+  INIT_DETAILED,
+  INIT_QUICK,
+  KNOWLEDGE_NO_AGENT,
+  SIBLING_ACCEPT_ALL,
+  SIBLING_QUESTION,
+  SOURCE_DUMP,
+  SOURCE_EMPTY,
+  SOURCE_QUESTION,
+} from "../../lib/ui/init-copy.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const schema = loadDevEnvSchema();
@@ -193,16 +207,14 @@ function previewText(project: any, templateRaw: string, values: Record<string, s
   }
   lines.push("", "Будут созданы/обновлены:", "- .dev.env (mode 600 на POSIX)", "- .gitignore (.dev.env, build/)", "- .pi/1c/project.yaml", "- .pi/1c/init-state.json");
   if (sourceScaffoldEnabled) lines.push(`- ${project.sourceLayoutRoot || "src"}/{cf,cfe,epf,erf} — только отсутствующие каталоги; существующие данные не изменяются`);
-  if (buildScaffoldEnabled) lines.push("- build/{cf,cfe,epf,erf} — готовые .cf/.cfe/.epf/.erf, имя + штамп даты");
-  if (docsScaffoldEnabled) lines.push("- docs/ и docs/techtask/ — документация и сырые ТЗ агенту");
+  if (buildScaffoldEnabled) lines.push(`- ${BUILD_SCAFFOLD_HINT} — готовые .cf/.cfe/.epf/.erf, имя + штамп даты`);
+  if (docsScaffoldEnabled) lines.push(`- docs/ и ${DOCS_SCAFFOLD_HINT}/ — документация и сырые ТЗ агенту`);
   lines.push("- .pi/1c/{knowledge,knowledge-drafts,rules} — каркас знаний проекта (агент и OpenSpec не копируются)");
   if (knowledgeEnabled) lines.push("- .pi/1c/configuration.json + fingerprint (если ещё не инициализированы)");
   if (openSpecEnabled && !fs.existsSync(path.join(project.cwd, "openspec"))) lines.push("- OpenSpec помечен как enabled; после init будет предложен /openspec-setup");
   return lines.join("\n");
 }
 
-const SOURCE_EMPTY = "Пустая структура исходников (scaffold) — .dev.env и каталоги, без выгрузки ИБ";
-const SOURCE_DUMP = "Выгрузка из существующей ИБ / .cf / .dt";
 const FROM_IB_FOLLOW_UP = `The user chose dump from an existing infobase / .cf / .dt — the from-infobase scenario of /init. /initproject is this alias.
 
 Do not create an empty cf/cfe/epf/erf scaffold as the primary outcome. Follow the dump procedure: check .dev.env (PLATFORM_PATH, INFOBASE_PATH, EXPORT_PATH, EXTENSION_NAMES), confirm the target infobase, then dump. If .dev.env is missing, collect blocking keys first. Do not run against production without an explicit dump-only confirmation.`;
@@ -277,7 +289,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
         const preview = [
           "# /init knowledge — только каркас знаний проекта",
           "",
-          "Не копирует агента, OpenSpec, .dev.env и не запускает bootstrap --project.",
+          `${KNOWLEDGE_NO_AGENT}, OpenSpec, .dev.env и не запускает bootstrap --project.`,
           "",
           `- project: ${projectName}`,
           `- configuration: ${configurationName || "(пусто)"} ${configurationVersion || ""}`.trim(),
@@ -320,7 +332,8 @@ export default function oneCInit(pi: ExtensionAPI): void {
 
       let sourceChoice = requested.fromIb ? "dump" : (requested.empty || requested.advanced || requested.quick ? "empty" : "");
       if (!sourceChoice) {
-        const selected = await ctx.ui.select("Источник проекта (первый вопрос /init)", [SOURCE_EMPTY, SOURCE_DUMP]);
+        if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(0), "info");
+        const selected = await ctx.ui.select(SOURCE_QUESTION, [SOURCE_EMPTY, SOURCE_DUMP]);
         if (!selected) return;
         sourceChoice = selected === SOURCE_DUMP ? "dump" : "empty";
       }
@@ -349,9 +362,10 @@ export default function oneCInit(pi: ExtensionAPI): void {
 
       let wizard = requested.advanced ? "advanced" : requested.quick ? "quick" : "";
       if (!wizard) {
+        if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(1), "info");
         const selected = await ctx.ui.select("Режим /init", [
-          "Подробный — пройти все переменные .dev.env (рекомендуется)",
-          "Быстрый — только ключевые решения, остальное upstream defaults",
+          INIT_DETAILED,
+          INIT_QUICK,
         ]);
         if (!selected) return;
         wizard = selected.startsWith("Подробный") ? "advanced" : "quick";
@@ -442,8 +456,8 @@ export default function oneCInit(pi: ExtensionAPI): void {
           ].join("\n"),
           display: true,
         }, { triggerTurn: false });
-        const action = await ctx.ui.select("Общие значения из соседних проектов", [
-          "Принять все предложенные",
+        const action = await ctx.ui.select(SIBLING_QUESTION, [
+          SIBLING_ACCEPT_ALL,
           "Разобрать по одной (оставить / поправить / пропустить)",
           "Не использовать соседние проекты",
         ]);
@@ -479,6 +493,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
         ctx.ui.notify("Соседних 1С-проектов с общими .dev.env-подсказками не найдено — спрашиваю переменные по одной.", "info");
       }
 
+      if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(3), "info");
       let knowledgeEnabled = await ctx.ui.confirm("Configuration Knowledge Layer", "Инициализировать fingerprint/knowledge layer для этой конфигурации после подтверждения?");
       if (knowledgeEnabled && !knowledgeIdentity(configurationName, configurationVersion).ready) {
         const FILL = "Указать название и версию сейчас";
@@ -516,6 +531,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
       }
 
       const metas = effectiveVariableMeta(templateRaw, schema);
+      if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(2), "info");
       const selectedMetas = wizard === "advanced" ? metas : metas.filter((m: any) => QUICK_NAMES.has(m.name));
       for (let i = 0; i < selectedMetas.length; i++) {
         if (siblingLock.has(selectedMetas[i].name)) continue;
@@ -527,7 +543,8 @@ export default function oneCInit(pi: ExtensionAPI): void {
       const project = { cwd: ctx.cwd, projectName, configurationName, configurationVersion, sourceRoot, sourceLayoutRoot };
       const preview = previewText(project, templateRaw, values, decisions, knowledgeEnabled, openSpecEnabled, sourceScaffoldEnabled, scaffoldPlan, buildScaffoldEnabled, buildPlan, docsScaffoldEnabled, docsPlan);
       pi.sendMessage({ customType: "pi-1c-init-preview", content: preview, display: true }, { triggerTurn: false });
-      const apply = await ctx.ui.confirm("Применить инициализацию?", "До этого момента файлы проекта не изменялись. Apply создаст/обновит .dev.env, project.yaml, init-state.json и — если включено — отсутствующие каталоги src, build и docs. Секреты в preview/project.yaml не записываются.");
+      if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(4), "info");
+      const apply = await ctx.ui.confirm(APPLY_QUESTION, "До этого момента файлы проекта не изменялись. Apply создаст/обновит .dev.env, project.yaml, init-state.json и — если включено — отсутствующие каталоги src, build и docs. Секреты в preview/project.yaml не записываются.");
       if (!apply) return ctx.ui.notify("Инициализация отменена. Ничего не записано.", "info");
 
       try {
@@ -554,4 +571,6 @@ export default function oneCInit(pi: ExtensionAPI): void {
     description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .dt: /init [empty|from-ib|advanced|quick|status|knowledge]",
     handler: async (args, ctx) => handleInit(args, ctx),
   });
+  registerAction("init-open", (ctx: any) => handleInit(undefined, ctx));
+  registerAction("command:init", (args: any, ctx: any) => handleInit(args, ctx));
 }

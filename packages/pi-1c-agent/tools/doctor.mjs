@@ -63,12 +63,17 @@ add('package version', packageJson.version === '0.7.0', true, packageJson.versio
 add(`Node >=${MIN_NODE_VERSION}`, nodeMeetsMinimum(), true, process.version);
 add('Pi peer ranges bounded', Object.values(packageJson.peerDependencies || {}).every((range) => range && range !== '*'), true, JSON.stringify(packageJson.peerDependencies));
 add('1C PLAN/BUILD extension', exists(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) && extList.includes('extensions/1c-mode/index.ts'));
+const modeSrc = exists(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) : '';
+add('1C approve CLI is --1c-approve', /registerFlag\("1c-approve"/.test(modeSrc) && !/registerFlag\("approve"/.test(modeSrc));
 add('1C subagent extension', exists(path.join(packageRoot, 'extensions', '1c-subagents', 'index.ts')) && extList.includes('extensions/1c-subagents/index.ts'));
 add('1C admin extension', exists(path.join(packageRoot, 'extensions', '1c-admin', 'index.ts')) && extList.includes('extensions/1c-admin/index.ts'));
 add('1C knowledge extension', exists(path.join(packageRoot, 'extensions', '1c-knowledge', 'index.ts')) && extList.includes('extensions/1c-knowledge/index.ts'));
 add('1C project-init extension', exists(path.join(packageRoot, 'extensions', '1c-init', 'index.ts')) && extList.includes('extensions/1c-init/index.ts'));
 add('1C session-rotate extension', exists(path.join(packageRoot, 'extensions', '1c-session-rotate', 'index.ts')) && extList.includes('extensions/1c-session-rotate/index.ts'));
 add('1C memory lifecycle extension', exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) && extList.includes('extensions/1c-memory/index.ts'));
+add('1C UI layer last', exists(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) && extList[extList.length - 1] === 'extensions/1c-ui/index.ts');
+const uiSrc = exists(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) : '';
+add('palette shortcut Ctrl+Shift+K not Ctrl+K', /Key\.ctrlShift\("k"\)/.test(uiSrc) && !/Key\.ctrl\("k"\)/.test(uiSrc) && /Key\.alt\("a"\)/.test(uiSrc));
 const memorySrc = exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) : '';
 add('canonical /memory-flush /wrap /capture-model', /registerCommand\("memory-flush"/.test(memorySrc) && /registerCommand\("wrap"/.test(memorySrc) && /registerCommand\("capture-model"/.test(memorySrc) && !/registerCommand\("1c-wrap"/.test(memorySrc));
 add('memory write helpers', exists(path.join(packageRoot, 'lib', 'redact.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-key.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-reconcile.mjs')));
@@ -76,9 +81,10 @@ const rotateSrc = exists(path.join(packageRoot, 'extensions', '1c-session-rotate
 add('canonical /session-rotate registration', /registerCommand\("session-rotate"/.test(rotateSrc) && !/registerCommand\("1c-session-rotate"/.test(rotateSrc));
 const adminSrc = read(path.join(packageRoot, 'extensions', '1c-admin', 'index.ts'));
 const initSrc = read(path.join(packageRoot, 'extensions', '1c-init', 'index.ts'));
+const initCopy = exists(path.join(packageRoot, 'lib', 'ui', 'init-copy.mjs')) ? read(path.join(packageRoot, 'lib', 'ui', 'init-copy.mjs')) : '';
 add('deterministic /doctor registration', /registerCommand\("doctor"/.test(adminSrc) && !/registerCommand\("1c-doctor"/.test(adminSrc));
 add('canonical /init registration', /registerCommand\("init"/.test(initSrc) && !/registerCommand\("1c-init"/.test(initSrc));
-add('/init TUI first question empty vs from-IB', /Источник проекта \(первый вопрос \/init\)/.test(initSrc) && /Выгрузка из существующей ИБ/.test(initSrc));
+add('/init TUI first question empty vs from-IB', /Источник проекта \(первый вопрос \/init\)/.test(initCopy) && /Выгрузка из существующей ИБ/.test(initCopy));
 add('43-variable .dev.env UX schema', (() => { try { const x = JSON.parse(read(path.join(packageRoot, 'config', 'dev-env.schema.json'))); return x.variables?.length === 43 && new Set(x.variables.map((v) => v.name)).size === 43; } catch { return false; } })());
 add('configuration knowledge rule', exists(path.join(packageRoot, 'rules', 'core', 'knowledge.md')));
 add('PLAN state-machine helper', exists(path.join(packageRoot, 'lib', 'plan-state.mjs')));
@@ -121,11 +127,17 @@ if (!packageOnly) {
   add('prompts', exists(path.join(base, 'prompts')));
   add('installed 1C mode rule', exists(path.join(base, 'rules-1c', 'core', 'modes.md')));
 
+  const installedAgents = files(path.join(base, 'agents'), (p) => /^1c-.+\.md$/i.test(path.basename(p)));
   const upstreamAgents = files(path.join(upstream, 'content', 'agents'), (p) => p.endsWith('.md'));
   const expectedAgentFiles = upstreamAgents.map((src) => `1c-${path.basename(src)}`);
   const adaptedCount = expectedAgentFiles.filter((name) => exists(path.join(base, 'agents', name))).length;
-  add('agent decomposition count', upstreamAgents.length > 0 && adaptedCount === upstreamAgents.length, true, `${adaptedCount}/${upstreamAgents.length}`);
-  if (lock.agentCount) add('locked agent count', upstreamAgents.length === lock.agentCount, true, `${upstreamAgents.length}/${lock.agentCount}`);
+  if (upstreamAgents.length > 0) {
+    add('agent decomposition count', adaptedCount === upstreamAgents.length, true, `${adaptedCount}/${upstreamAgents.length}`);
+    if (lock.agentCount) add('locked agent count', upstreamAgents.length === lock.agentCount, true, `${upstreamAgents.length}/${lock.agentCount}`);
+  } else {
+    const expected = lock.agentCount || 13;
+    add('installed 1C agents', installedAgents.length >= expected, true, `${installedAgents.length}/${expected}`);
+  }
 
   const badRuleFM = [];
   for (const p of files(path.join(base, 'rules-1c', 'rules'), (p) => p.endsWith('.md'))) {

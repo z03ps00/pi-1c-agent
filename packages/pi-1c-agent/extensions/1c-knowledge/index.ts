@@ -20,6 +20,7 @@ import {
   queryKnowledge,
 } from "../../lib/knowledge.mjs";
 import { current1cMode, requireBuild as assertBuild } from "../../lib/mode-state.mjs";
+import { registerAction } from "../../lib/ui/index.mjs";
 
 type Pending = {
   type: "learn" | "config-analyze" | "config-update";
@@ -218,9 +219,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
     },
   });
 
-  pi.registerCommand("config", {
-    description: "Configuration knowledge lifecycle: init|status|analyze|update|apply",
-    handler: async (args, ctx) => {
+  const handleConfig = async (args: string | undefined, ctx: any) => {
       const raw = args?.trim() ?? "";
       const [sub, ...restParts] = raw.split(/\s+/);
       const rest = raw.slice(sub?.length ?? 0).trim();
@@ -292,8 +291,12 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
       }
 
       ctx.ui.notify("Usage: /config init|status|analyze|update|apply", "info");
-    },
+  };
+  pi.registerCommand("config", {
+    description: "Configuration knowledge lifecycle: init|status|analyze|update|apply",
+    handler: handleConfig,
   });
+  registerAction("command:config", (args: any, ctx: any) => handleConfig(args, ctx));
 
   pi.registerCommand("learn", {
     description: "Learn: new fact/rule | approve a draft | reject a draft (no arg opens picker)",
