@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.7.0 — 2026-09-22
+
+First tagged GitHub release (`v0.7.0`). Includes the unpublished 0.6.2 local-patch surface plus fail-closed runtime hardening.
+
+### Product
+- Root README rewritten as a product guide (ASK/PLAN/BUILD, commands, safety, session rotation).
+- Automatic session handoff rotation documented.
+
 ### Security
 - ASK/PLAN tool authorization is fail-closed: only the explicit read-only inventory is allowed. Name fragments such as `get`/`query`/`validate` no longer classify a custom tool as read-only.
 - Session distillation sanitizes exact `.dev.env` secrets and known credential families before any remote provider call.
@@ -33,7 +41,7 @@
 - Child JSON transport flushes a final frame without newline, caps stdout/stderr, and reports structured exit metadata.
 - Process-wide `PI_1C_MAX_SUBAGENTS` budget; MCP agents are side-effect classified (unknown MCP cannot run beside other mutators unless `mcpReadOnly: true`).
 - MCP session initialize is single-flight; knowledge apply is revision/lock guarded; `.dev.env` values are exact-redacted before remote memory writes.
-- GitHub Actions CI (Linux/Windows, Node 22.19 / 22) plus a nightly stress job.
+- GitHub Actions CI (Linux/Windows, Node 22.19 / 22 / 24) plus a nightly stress job.
 
 ## 0.6.2 (local patch)
 

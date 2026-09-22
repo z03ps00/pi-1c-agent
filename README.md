@@ -7,6 +7,7 @@
 Агент разбирает существующую конфигурацию, планирует изменения, выбирает правильный контейнер, работает с метаданными через MCP, делегирует части задачи специализированным агентам, собирает артефакты и помогает проверить результат.
 
 [![CI](https://github.com/z03ps00/pi-1c-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/z03ps00/pi-1c-agent/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/z03ps00/pi-1c-agent)](https://github.com/z03ps00/pi-1c-agent/releases/latest)
 [![Node.js](https://img.shields.io/badge/Node.js-22.19%2B-339933.svg)](#требования)
 [![Pi](https://img.shields.io/badge/Pi-0.85.x-6f42c1.svg)](#требования)
 [![1C](https://img.shields.io/badge/1C-Enterprise-f4c430.svg)](#что-умеет-агент)

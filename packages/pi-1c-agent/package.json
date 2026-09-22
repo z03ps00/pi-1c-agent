@@ -1,6 +1,6 @@
 {
   "name": "pi-1c-agent",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "description": "Multi-agent 1C:Enterprise package for vanilla Pi with PLAN/BUILD, Configuration Knowledge Layer, and detailed project initialization wizard",
   "keywords": [

@@ -1,8 +1,8 @@
-# Pi 1C Agent v0.6.1
+# Pi 1C Agent v0.7.0
 
 Multi-agent пакет для **vanilla Pi** для разработки на 1С:Предприятие.
 
-v0.6.1 сохраняет подробную интерактивную инициализацию v0.6.0 и дополнительно создаёт/контролирует стандартный scaffold исходников `cf/cfe/epf/erf` внутри выбранного source-layout root.
+v0.7.0 — первый tagged GitHub-релиз: fail-closed ASK/PLAN, secret egress до remote distill, `/approve safe` как allowlist для shell, и product README в корне профиля.
 
 ## Базовая архитектура
 

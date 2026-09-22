@@ -127,7 +127,7 @@ async function initializeMcpSession(url, fetchImpl, timeoutMs) {
     params: {
       protocolVersion: '2024-11-05',
       capabilities: {},
-      clientInfo: { name: 'pi-1c-agent', version: '0.6.1' },
+      clientInfo: { name: 'pi-1c-agent', version: '0.7.0' },
     },
   }, fetchImpl, timeoutMs);
   if (!res?.ok) return '';
