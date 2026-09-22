@@ -120,7 +120,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
 
   function requireTrusted(ctx: any): boolean {
     if (trusted(ctx)) return true;
-    ctx.ui.notify("1C configuration/project knowledge is project-scoped and requires project trust.", "error");
+    ctx.ui.notify("Знания конфигурации/проекта привязаны к проекту и требуют доверия к проекту.", "error");
     return false;
   }
 
@@ -129,7 +129,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
       assertBuild(action);
       return true;
     } catch {
-      ctx.ui.notify(`${action} changes canonical knowledge/configuration state and requires BUILD. PLAN may create proposals/drafts only.`, "error");
+      ctx.ui.notify(`${action} меняет канонические знания/конфигурацию и требует BUILD. PLAN может только создавать предложения и черновики.`, "error");
       return false;
     }
   }
@@ -144,7 +144,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   async function pickPendingDraftId(ctx: any, title: string): Promise<string | null> {
     const drafts = pendingDrafts(ctx.cwd);
     if (!drafts.length) {
-      ctx.ui.notify("No pending knowledge drafts.", "info");
+      ctx.ui.notify("Нет черновиков знаний.", "info");
       return null;
     }
     const labels = drafts.map((draft: any) => draftChoiceLabel(draft));
@@ -161,23 +161,23 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
 
   async function approveDraftById(ctx: any, rawId: string): Promise<void> {
     if (!requireBuild(ctx, "/learn approve")) return;
-    const id = await resolveDraftId(ctx, rawId, "Approve knowledge draft");
+    const id = await resolveDraftId(ctx, rawId, "Утвердить черновик знаний");
     if (!id) return;
     try {
       const result = applyDraft(ctx.cwd, id);
-      ctx.ui.notify(`Approved ${id}; ${result.results.length} actions applied.`, "info");
+      ctx.ui.notify(`Утверждён ${id}; применено действий: ${result.results.length}.`, "info");
     } catch (error: any) { ctx.ui.notify(error?.message || String(error), "error"); }
   }
 
   async function rejectDraftById(ctx: any, rawId: string): Promise<void> {
-    const id = await resolveDraftId(ctx, rawId, "Reject knowledge draft");
+    const id = await resolveDraftId(ctx, rawId, "Отклонить черновик знаний");
     if (!id) return;
     const draft = loadDraft(ctx.cwd, id);
-    if (!draft) return ctx.ui.notify(`Draft not found: ${id}`, "error");
+    if (!draft) return ctx.ui.notify(`Черновик не найден: ${id}`, "error");
     draft.status = "rejected";
     draft.rejectedAt = new Date().toISOString();
     fs.writeFileSync(path.join(draftsDir(ctx.cwd), `${id}.json`), `${JSON.stringify(draft, null, 2)}\n`);
-    ctx.ui.notify(`Rejected ${id}.`, "info");
+    ctx.ui.notify(`Отклонён ${id}.`, "info");
   }
 
   function startLearnAnalysis(ctx: any, input: string): void {
@@ -189,18 +189,18 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   }
 
   async function pickLearnAction(ctx: any): Promise<void> {
-    const selected = await ctx.ui.select("Learn", [
-      "new fact/rule",
-      "approve a draft",
-      "reject a draft",
+    const selected = await ctx.ui.select("Обучение", [
+      "новый факт/правило",
+      "утвердить черновик",
+      "отклонить черновик",
     ]);
-    if (selected === "approve a draft") return approveDraftById(ctx, "");
-    if (selected === "reject a draft") return rejectDraftById(ctx, "");
-    if (selected !== "new fact/rule") return;
-    const value = await ctx.ui.input("New fact or rule", "What should be learned?");
+    if (selected === "утвердить черновик") return approveDraftById(ctx, "");
+    if (selected === "отклонить черновик") return rejectDraftById(ctx, "");
+    if (selected !== "новый факт/правило") return;
+    const value = await ctx.ui.input("Новый факт или правило", "Что нужно запомнить?");
     if (value == null) return;
     const trimmed = value.trim();
-    if (!trimmed) return ctx.ui.notify("No text entered; draft not created.", "info");
+    if (!trimmed) return ctx.ui.notify("Текст не введён; черновик не создан.", "info");
     startLearnAnalysis(ctx, trimmed);
   }
 
@@ -281,7 +281,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
 
       if (sub === "apply") {
         if (!requireTrusted(ctx) || !requireBuild(ctx, "/config apply")) return;
-        const draftId = await resolveDraftId(ctx, rest, "Apply knowledge draft");
+        const draftId = await resolveDraftId(ctx, rest, "Применить черновик знаний");
         if (!draftId) return;
         try {
           const result = applyDraft(ctx.cwd, draftId);
@@ -293,13 +293,13 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
       ctx.ui.notify("Usage: /config init|status|analyze|update|apply", "info");
   };
   pi.registerCommand("config", {
-    description: "Configuration knowledge lifecycle: init|status|analyze|update|apply",
+    description: "Жизненный цикл знаний конфигурации: init|status|analyze|update|apply",
     handler: handleConfig,
   });
   registerAction("command:config", (args: any, ctx: any) => handleConfig(args, ctx));
 
   pi.registerCommand("learn", {
-    description: "Learn: new fact/rule | approve a draft | reject a draft (no arg opens picker)",
+    description: "Обучение: новый факт/правило | утвердить черновик | отклонить черновик (без аргумента — меню)",
     handler: async (args, ctx) => {
       if (!requireTrusted(ctx)) return;
       const raw = args?.trim() ?? "";
@@ -311,7 +311,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("rule", {
-    description: "Rule management: add|list|show|audit|conflicts|disable",
+    description: "Правила: add|list|show|audit|conflicts|disable",
     handler: async (args, ctx) => {
       if (!requireTrusted(ctx)) return;
       const raw = args?.trim() ?? "";
@@ -347,7 +347,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
         const draftId = rest.trim();
         if (sub === "audit" && draftId) {
           const draft = loadDraft(ctx.cwd, draftId);
-          if (!draft) return ctx.ui.notify(`Draft not found: ${draftId}`, "error");
+          if (!draft) return ctx.ui.notify(`Черновик не найден: ${draftId}`, "error");
           return pi.sendMessage({ customType: "pi-1c-rule-audit-draft", content: formatDraftSummary(draft, auditDraft(ctx.cwd, draft)), display: true }, { triggerTurn: false });
         }
         const audit = auditKnowledge(ctx.cwd);

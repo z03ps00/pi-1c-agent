@@ -4,6 +4,26 @@ export const AGENT_STATUSES = Object.freeze([
 
 export const ACTIVE_STATUSES = Object.freeze(['starting', 'working', 'waiting', 'testing', 'reviewing']);
 
+export const STATUS_LABELS = Object.freeze({
+  idle: 'простой',
+  starting: 'запуск',
+  working: 'работает',
+  waiting: 'ожидает',
+  testing: 'тесты',
+  reviewing: 'ревью',
+  completed: 'готово',
+  failed: 'ошибка',
+  cancelled: 'отмена',
+});
+
+export function statusLabel(status) {
+  return STATUS_LABELS[status] || String(status || '');
+}
+
+export function kindLabel(kind) {
+  return kind === 'writer' ? 'запись' : 'чтение';
+}
+
 export function mapRunStatus({ event, agentName = '', activity = '', aborted = false, ok = false } = {}) {
   if (aborted) return 'cancelled';
   const ev = String(event || '');
@@ -20,10 +40,10 @@ export function mapRunStatus({ event, agentName = '', activity = '', aborted = f
 
 export function formatDuration(ms) {
   const n = Math.max(0, Math.round(Number(ms) || 0) / 1000);
-  if (n < 60) return `${Math.round(n)}s`;
+  if (n < 60) return `${Math.round(n)}с`;
   const m = Math.floor(n / 60);
   const s = Math.round(n % 60);
-  return s ? `${m}m ${s}s` : `${m}m`;
+  return s ? `${m}м ${s}с` : `${m}м`;
 }
 
 export function shortAgentName(name) {
@@ -52,16 +72,16 @@ export function composeAgentCard(run = {}, now = Date.now()) {
 
 export function composeAgentCardLines(run = {}, now = Date.now()) {
   const card = composeAgentCard(run, now);
-  if (card.status === 'completed') return [`✓ ${card.name}   ${card.duration}   completed`];
+  if (card.status === 'completed') return [`✓ ${card.name}   ${card.duration}   ${statusLabel(card.status)}`];
   if (card.status === 'failed') {
-    const lines = [`✗ ${card.name}   ${card.duration}   failed`];
+    const lines = [`✗ ${card.name}   ${card.duration}   ${statusLabel(card.status)}`];
     if (card.error) lines.push(`  ${card.error}`);
     return lines;
   }
-  if (card.status === 'cancelled') return [`○ ${card.name}   ${card.duration}   cancelled`];
+  if (card.status === 'cancelled') return [`○ ${card.name}   ${card.duration}   ${statusLabel(card.status)}`];
   const lines = [
-    `╭─ AGENT ${card.name} ──────────────────────╮`,
-    `│ ● ${card.status.padEnd(36)}│`,
+    `╭─ АГЕНТ ${card.name} ──────────────────────╮`,
+    `│ ● ${statusLabel(card.status).padEnd(36)}│`,
   ];
   if (card.activity) lines.push(`│ ${card.activity.slice(0, 36).padEnd(36)}│`);
   lines.push(`│ ${card.duration.padEnd(36)}│`, `╰────────────────────────────────────────╯`);
@@ -97,18 +117,18 @@ export function composeHubRows(discovered = [], runs = [], now = Date.now()) {
 }
 
 export function composeHubText(rows = []) {
-  const lines = ['1C AGENTS', ''];
+  const lines = ['АГЕНТЫ 1C', ''];
   if (!rows.length) {
-    lines.push('  No 1C agents discovered. Run /bootstrap.');
+    lines.push('  1C-агенты не найдены. Запустите /bootstrap.');
   } else {
     for (const row of rows) {
       const mark = row.status === 'idle' || row.status === 'cancelled' ? '○' : row.status === 'completed' ? '✓' : row.status === 'failed' ? '✗' : '●';
-      lines.push(`  ${mark} ${row.name.padEnd(16)} ${row.status.padEnd(12)} ${(row.stoppable ? row.duration : '').padEnd(6)} ${row.kind}`);
+      lines.push(`  ${mark} ${row.name.padEnd(16)} ${statusLabel(row.status).padEnd(12)} ${(row.stoppable ? row.duration : '').padEnd(6)} ${kindLabel(row.kind)}`);
       if (row.activity) lines.push(`    ${row.activity}`);
       if (row.error) lines.push(`    ${row.error}`);
     }
   }
-  lines.push('', 'Enter inspect    x stop    Esc close');
+  lines.push('', 'Enter — карточка    x — стоп    Esc — закрыть');
   return lines.join('\n');
 }
 
@@ -119,13 +139,13 @@ export function composeWidgetLines(runs = [], now = Date.now()) {
     if (!recent.length) return [];
     const last = recent[recent.length - 1];
     const card = composeAgentCard(last, now);
-    return [`Agents  ${card.status} · ${card.name}`];
+    return [`Агенты  ${statusLabel(card.status)} · ${card.name}`];
   }
-  const lines = [`Agents  ${active.length} running`];
+  const lines = [`Агенты  ${active.length} в работе`];
   active.forEach((run, i) => {
     const card = composeAgentCard(run, now);
     const branch = i === active.length - 1 ? '└─' : '├─';
-    lines.push(`${branch} ${card.name.padEnd(12)} ● ${card.activity || card.status}`);
+    lines.push(`${branch} ${card.name.padEnd(12)} ● ${card.activity || statusLabel(card.status)}`);
   });
   return lines;
 }

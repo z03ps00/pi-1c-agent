@@ -646,7 +646,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
   registerAction("agents-stop", (id: string) => tracker.stop(id));
 
   pi.registerCommand("agents", {
-    description: "Show trusted/active 1C subagents and their source",
+    description: "Показать доверенных/активных субагентов 1C и их источник",
     handler: async (_args, ctx) => {
       const agents = await publishDiscovered(ctx);
       if (uiAvailable(ctx)) {

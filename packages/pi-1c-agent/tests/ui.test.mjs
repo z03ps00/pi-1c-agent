@@ -73,8 +73,8 @@ test('footer PLAN shows read-only and plan id', () => {
     gitBranch: 'main',
   }, 120);
   assert.match(text, /PLAN/);
-  assert.match(text, /read-only/);
-  assert.match(text, /plan #4f21a8/);
+  assert.match(text, /чтение/);
+  assert.match(text, /план #4f21a8/);
 });
 
 test('footer ASK shows ANON only when enabled', () => {
@@ -130,7 +130,7 @@ test('status screen includes mode, context, and running agents', () => {
   });
   assert.match(text, /BUILD/);
   assert.match(text, /58%/);
-  assert.match(text, /2 running/);
+  assert.match(text, /2 в работе/);
   assert.match(text, /developer/);
   assert.match(text, /tester/);
 });
@@ -151,14 +151,14 @@ test('agent cards collapse success and surface failure', () => {
   const ok = composeAgentCardLines({ agent: '1c-developer', status: 'completed', startedAt: now - 31000, endedAt: now }, now);
   assert.equal(ok.length, 1);
   assert.match(ok[0], /developer/);
-  assert.match(ok[0], /completed/);
+  assert.match(ok[0], /готово/);
   const fail = composeAgentCardLines({ agent: '1c-developer', status: 'failed', startedAt: now - 12000, endedAt: now, error: 'Invalid handoff' }, now);
-  assert.match(fail[0], /failed/);
-  assert.match(fail[0], /12s/);
+  assert.match(fail[0], /ошибка/);
+  assert.match(fail[0], /12с/);
   assert.match(fail[1], /Invalid handoff/);
   const running = composeAgentCard({ agent: '1c-developer', status: 'working', activity: 'ЗагрузкаКурсовВалют', startedAt: now - 24000 }, now);
   assert.equal(running.status, 'working');
-  assert.match(running.duration, /s/);
+  assert.match(running.duration, /с/);
 });
 
 test('hub rows mix discovered idle agents with live runs', () => {
@@ -179,7 +179,7 @@ test('widget lists running agents and hides when idle', () => {
     { agent: '1c-developer', status: 'working', activity: 'editing ЗагрузкаКурсовВалют', startedAt: now },
     { agent: '1c-tester', status: 'testing', activity: 'YaxUnit 14/22', startedAt: now },
   ], now);
-  assert.match(lines[0], /2 running/);
+  assert.match(lines[0], /2 в работе/);
   assert.match(lines.join('\n'), /developer/);
   assert.deepEqual(composeWidgetLines([]), []);
 });
@@ -255,7 +255,7 @@ test('workflow pipeline mid-state and failed stage', () => {
       { agent: 'b', status: 'completed' },
     ],
   }, { expanded: false });
-  assert.match(done[0], /completed/);
+  assert.match(done[0], /завершён/);
 });
 
 test('palette fuzzy match and does not bind ctrl+k', () => {
@@ -285,9 +285,9 @@ test('init wizard copy and progress', () => {
   assert.match(SOURCE_EMPTY, /Пустая структура исходников/);
   assert.match(SOURCE_DUMP, /Выгрузка из существующей ИБ/);
   const progress = wizardProgress(0);
-  assert.match(progress, /Source/);
+  assert.match(progress, /Источник/);
   const preview = composeInitPreviewSummary({ source: 'empty', knowledge: true, files: ['.dev.env'] });
-  assert.match(preview, /Ready to initialize/);
+  assert.match(preview, /Готово к инициализации/);
   assert.match(preview, /\.dev\.env/);
 });
 

@@ -30,12 +30,12 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("doctor", {
-    description: "Run deterministic Pi 1C doctor (no LLM guessing): /doctor [project|global]",
+    description: "Детерминированный doctor Pi 1C (без догадок LLM): /doctor [project|global]",
     handler: async (args, ctx) => handleDoctor(args, ctx),
   });
   registerAction("command:doctor", (args: string | undefined, ctx: any) => handleDoctor(args, ctx));
   pi.registerCommand("bootstrap", {
-    description: "Materialize the pinned ai_rules_1c snapshot into project/global Pi scope",
+    description: "Развернуть закреплённый снимок ai_rules_1c в project/global область Pi",
     handler: async (args, ctx) => {
       const requested = args?.trim().toLowerCase();
       const scope = requested === "global" ? "global" : "project";
@@ -51,7 +51,7 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("openspec-setup", {
-    description: "Initialize the tested OpenSpec baseline for vanilla Pi in the current project",
+    description: "Поставить проверенный OpenSpec baseline для vanilla Pi в текущий проект",
     handler: async (_args, ctx) => {
       if (typeof ctx.isProjectTrusted === "function" && !ctx.isProjectTrusted()) {
         ctx.ui.notify("OpenSpec setup writes project planning artifacts and requires a trusted project.", "error");
@@ -64,7 +64,7 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("agent-scope", {
-    description: "Opt project-local .pi/agents into 1C delegation: /agent-scope on|off",
+    description: "Включить локальные .pi/agents в делегирование 1C: /agent-scope on|off",
     handler: async (args, ctx) => {
       if (typeof ctx.isProjectTrusted === "function" && !ctx.isProjectTrusted()) {
         ctx.ui.notify("Project agent scope can only be changed in a trusted project.", "error");

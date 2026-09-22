@@ -17,6 +17,7 @@ import {
   registerAction,
   subscribe,
   uiAvailable,
+  MODE_CHOICES,
 } from "../../lib/ui/index.mjs";
 import { overlayHub, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
 
@@ -159,27 +160,23 @@ export default function oneCUi(pi: ExtensionAPI): void {
     const id = await overlayPalette(ctx);
     if (id) await runPaletteAction(id, ctx, pi);
   });
-  registerAction("mode-overlay", (ctx: any) => overlaySelect(ctx, "Choose mode", [
-    { value: "build", label: "BUILD", description: "Implementation enabled" },
-    { value: "plan", label: "PLAN", description: "Read-only investigation and planning" },
-    { value: "ask", label: "ASK", description: "Read-only Q&A" },
-  ]));
+  registerAction("mode-overlay", (ctx: any) => overlaySelect(ctx, "Режим", MODE_CHOICES));
 
   pi.registerCommand("status", {
-    description: "Show Pi 1C Agent status (mode, project, memory, agents)",
+    description: "Статус Pi 1C Agent: режим, проект, память, агенты",
     handler: async (_args, ctx) => showStatus(ctx, pi),
   });
   pi.registerCommand("palette", {
-    description: "Open the Pi 1C command palette (Ctrl+Shift+K)",
+    description: "Палитра команд Pi 1C (Ctrl+Shift+K)",
     handler: async (_args, ctx) => invokeAction("palette-open", ctx),
   });
 
   pi.registerShortcut(Key.alt("a"), {
-    description: "Open 1C Agent Hub",
+    description: "Хаб агентов 1C",
     handler: async (ctx) => showHub(ctx),
   });
   pi.registerShortcut(Key.ctrlShift("k"), {
-    description: "Open Pi 1C command palette",
+    description: "Палитра команд Pi 1C",
     handler: async (ctx) => invokeAction("palette-open", ctx),
   });
 

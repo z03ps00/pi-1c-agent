@@ -4,16 +4,16 @@ export const APPROVE_DENY = 'Deny';
 
 export function composeApprovalView({ toolName = '', action = '', reason = '' } = {}) {
   return {
-    title: 'Approval required',
+    title: 'Нужно подтверждение',
     fields: [
-      { label: 'Tool', value: String(toolName || 'unknown') },
-      { label: 'Action', value: String(action || '').trim() || '(no details)' },
-      { label: 'Risk', value: String(reason || '').trim() || '(unspecified)' },
+      { label: 'Инструмент', value: String(toolName || 'неизвестно') },
+      { label: 'Действие', value: String(action || '').trim() || '(нет деталей)' },
+      { label: 'Риск', value: String(reason || '').trim() || '(не указано)' },
     ],
     choices: [
-      { id: 'once', label: 'Allow once', value: APPROVE_ONCE },
-      { id: 'session', label: 'Allow similar actions this session', value: APPROVE_ALL },
-      { id: 'deny', label: 'Deny', value: APPROVE_DENY },
+      { id: 'once', label: 'Разрешить один раз', value: APPROVE_ONCE },
+      { id: 'session', label: 'Разрешить похожие до конца сеанса', value: APPROVE_ALL },
+      { id: 'deny', label: 'Отклонить', value: APPROVE_DENY },
     ],
   };
 }

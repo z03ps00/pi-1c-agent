@@ -10,6 +10,8 @@ import {
   invokeAction,
   subscribe,
   statusIcon,
+  statusLabel,
+  kindLabel,
 } from "../../lib/ui/index.mjs";
 import { MODE_CHOICES } from "../../lib/ui/mode-choices.mjs";
 
@@ -23,7 +25,7 @@ function selectTheme(theme: any) {
   };
 }
 
-function frame(theme: any, title: string, body: string[], width: number, footer = "Enter select    Esc cancel") {
+function frame(theme: any, title: string, body: string[], width: number, footer = "Enter — выбрать    Esc — отмена") {
   const inner = Math.max(24, width - 2);
   const titleText = ` ${title} `;
   const dash = Math.max(0, inner - titleText.length - 2);
@@ -58,7 +60,7 @@ export async function overlaySelect(
 }
 
 export async function overlayModeSelect(ctx: any): Promise<string | undefined> {
-  return overlaySelect(ctx, "Choose mode", MODE_CHOICES.map((m) => ({
+  return overlaySelect(ctx, "Режим", MODE_CHOICES.map((m) => ({
     value: m.value,
     label: m.label,
     description: m.description,
@@ -82,7 +84,7 @@ export async function overlayApproval(ctx: any, input: { toolName: string; actio
           ...view.fields.flatMap((f) => [colorize(theme, "dim", f.label), f.value, ""]),
           ...list.render(Math.max(20, width - 4)),
         ];
-        return frame(theme, view.title, body, width, "Enter confirm    Esc deny");
+        return frame(theme, view.title, body, width, "Enter — подтвердить    Esc — отклонить");
       },
     };
   }, { overlay: true, overlayOptions: { width: "72%", minWidth: 42, maxHeight: "80%", anchor: "center" } });
@@ -95,7 +97,7 @@ export async function overlayStatus(ctx: any, text: string): Promise<void> {
       if (matchesKey(data, "escape") || matchesKey(data, "enter") || matchesKey(data, "ctrl+c")) done(null);
     },
     render(width: number) {
-      return frame(theme, "PI 1C Agent", text.split("\n"), width, "Esc close");
+      return frame(theme, "PI 1C Agent", text.split("\n"), width, "Esc — закрыть");
     },
   }), { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "85%", anchor: "center" } });
 }
@@ -106,7 +108,7 @@ export async function overlayPalette(ctx: any): Promise<string | undefined> {
     let list = new SelectList(PALETTE_ACTIONS.map((a) => ({ value: a.id, label: a.label, description: a.command })), 12, selectTheme(theme));
     const rebuild = () => {
       const items = filterPaletteActions(query).map((a) => ({ value: a.id, label: a.label, description: a.command }));
-      list = new SelectList(items.length ? items : [{ value: "", label: "No matches", description: "" }], 12, selectTheme(theme));
+      list = new SelectList(items.length ? items : [{ value: "", label: "Нет совпадений", description: "" }], 12, selectTheme(theme));
       list.onSelect = (item: { value: string }) => { if (item.value) done(item.value); };
       list.onCancel = () => done(null);
     };
@@ -122,7 +124,7 @@ export async function overlayPalette(ctx: any): Promise<string | undefined> {
       },
       render(width: number) {
         const body = [`> ${query}`, "", ...list.render(Math.max(20, width - 4))];
-        return frame(theme, "PI 1C", body, width, "Type to filter    Enter run    Esc close");
+        return frame(theme, "PI 1C", body, width, "Пишите для фильтра    Enter — выполнить    Esc — закрыть");
       },
     };
   }, { overlay: true, overlayOptions: { width: "56%", minWidth: 36, maxHeight: "70%", anchor: "center" } });
@@ -140,9 +142,9 @@ export async function overlayHub(ctx: any): Promise<void> {
       const items = rows().map((r) => ({
         value: r.agent,
         label: `${statusIcon(r.status)} ${r.name}`,
-        description: `${r.status.padEnd(10)} ${r.activity || r.kind}`,
+        description: `${statusLabel(r.status).padEnd(10)} ${r.activity || kindLabel(r.kind)}`,
       }));
-      list = new SelectList(items.length ? items : [{ value: "", label: "No 1C agents discovered", description: "Run /bootstrap" }], 14, selectTheme(theme));
+      list = new SelectList(items.length ? items : [{ value: "", label: "1C-агенты не найдены", description: "Запустите /bootstrap" }], 14, selectTheme(theme));
       list.onSelect = (item: { value: string }) => {
         if (!item.value) return;
         detail = rows().find((r) => r.agent === item.value) || null;
@@ -185,21 +187,21 @@ export async function overlayHub(ctx: any): Promise<void> {
         if (detail) {
           const live = rows().find((r) => r.agent === detail?.agent) || detail;
           const body = [
-            `${live.name}  ${live.status}`,
-            `kind     ${live.kind}`,
-            live.mode ? `mode     ${live.mode}` : "",
-            live.model ? `model    ${live.model}` : "",
-            `elapsed  ${live.duration}`,
-            live.activity ? `activity ${live.activity}` : "",
-            live.error ? `error    ${live.error}` : "",
+            `${live.name}  ${statusLabel(live.status)}`,
+            `тип      ${kindLabel(live.kind)}`,
+            live.mode ? `режим    ${live.mode}` : "",
+            live.model ? `модель   ${live.model}` : "",
+            `время    ${live.duration}`,
+            live.activity ? `сейчас   ${live.activity}` : "",
+            live.error ? `ошибка   ${live.error}` : "",
             "",
-            "Steering a live child is not available (no stdin). x stops a running agent.",
+            "Управление живым субагентом недоступно (нет stdin). x останавливает работающего агента.",
           ].filter(Boolean);
-          return frame(theme, "AGENT", body, width, "Esc back    x stop");
+          return frame(theme, "АГЕНТ", body, width, "Esc — назад    x — стоп");
         }
         const body = list.render(Math.max(20, width - 4));
         if (!body.length) body.push(...composeHubText(rows()).split("\n"));
-        return frame(theme, "1C AGENTS", body, width, "Enter inspect    x stop    Esc close");
+        return frame(theme, "АГЕНТЫ 1C", body, width, "Enter — карточка    x — стоп    Esc — закрыть");
       },
     };
   }, { overlay: true, overlayOptions: { width: "78%", minWidth: 44, maxHeight: "85%", anchor: "center" } });
