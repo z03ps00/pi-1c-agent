@@ -53,13 +53,13 @@ test('bootstrap adapts all synthetic categories and preserves MCP capability', (
 
   const bin = path.join(tmp, 'bin');
   fs.mkdirSync(bin, {recursive:true});
-  const pi = path.join(bin, 'pi');
-  fs.writeFileSync(pi, '#!/bin/sh\necho 0.85.1\n');
-  fs.chmodSync(pi, 0o755);
+  fs.writeFileSync(path.join(bin, 'pi'), '#!/bin/sh\necho 0.85.1\n');
+  fs.chmodSync(path.join(bin, 'pi'), 0o755);
+  fs.writeFileSync(path.join(bin, 'pi.cmd'), '@echo off\r\necho 0.85.1\r\n');
   const doctor = spawnSync(process.execPath, [path.join(root, 'tools/doctor.mjs'), '--project'], {
     cwd: project,
     encoding: 'utf8',
-    env: {...process.env, PATH: `${bin}:${process.env.PATH}`},
+    env: {...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`},
   });
   assert.equal(doctor.status, 0, doctor.stderr || doctor.stdout);
   assert.match(doctor.stdout, /CORE: PASS/);
