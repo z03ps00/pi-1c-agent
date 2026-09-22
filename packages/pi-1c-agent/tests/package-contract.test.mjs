@@ -94,10 +94,10 @@ test('session-rotate command and compaction hooks are registered', () => {
 test('knowledge commands pick pending drafts without /1c- names', () => {
   const src = fs.readFileSync(path.join(root, 'extensions', '1c-knowledge', 'index.ts'), 'utf8');
   assert.match(src, /registerCommand\("learn"/);
-  assert.match(src, /ctx\.ui\.select\("Обучение"/);
-  assert.match(src, /"новый факт\/правило"/);
-  assert.match(src, /"утвердить черновик"/);
-  assert.match(src, /"отклонить черновик"/);
+  assert.match(src, /ctx\.ui\.select\("Learn"/);
+  assert.match(src, /"new fact\/rule"/);
+  assert.match(src, /"approve a draft"/);
+  assert.match(src, /"reject a draft"/);
   assert.match(src, /ctx\.ui\.input/);
   assert.match(src, /function pendingDrafts/);
   assert.doesNotMatch(src, /listDrafts/);
@@ -137,10 +137,10 @@ test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   assert.match(mode, /Key\.ctrlAlt\("a"\)/);
   assert.match(mode, /Key\.ctrlAlt\("p"\)/);
   assert.match(mode, /Key\.ctrlAlt\("s"\)/);
-  assert.match(mode, /Неизвестный режим 1C: \$\{requested\}\. Нужен plan, build или ask/);
+  assert.match(mode, /Unknown 1C mode: \$\{requested\}\. Use plan, build, or ask/);
   assert.match(mode, /\[1C MODE CHANGE\]/);
   assert.match(mode, /Memory: skipped — anonymous/);
-  assert.match(mode, /Режим: PLAN/);
+  assert.match(mode, /Mode changed:/);
   assert.match(mode, /overlayModeSelect/);
   assert.match(mode, /overlayApproval/);
 });

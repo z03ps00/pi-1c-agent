@@ -264,9 +264,9 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   let cwd = process.cwd();
   const approveAllowlist = new Set<string>();
 
-  pi.registerFlag("1c-mode", { description: "Основной режим 1C: plan, build или ask", type: "string" });
-  pi.registerFlag("anon", { description: "Анонимный сеанс: 1 = без записи в память, 2 = без чтения, 3 = без локальных следов", type: "string" });
-  pi.registerFlag("1c-approve", { description: "Режим подтверждения 1C: off, safe (опасные действия) или strict (каждый tool). Не путать с Pi --approve (доверие к проекту).", type: "string" });
+  pi.registerFlag("1c-mode", { description: "1C primary mode: plan, build, or ask", type: "string" });
+  pi.registerFlag("anon", { description: "Anonymous session level: 1 = no memory writes, 2 = no reads, 3 = no local traces", type: "string" });
+  pi.registerFlag("1c-approve", { description: "1C approval mode: off, safe (dangerous actions), or strict (every tool). Not Pi --approve (project trust).", type: "string" });
 
   function publishSharedState(): void {
     set1cMode(state.mode);
@@ -332,7 +332,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   function runningTurnSuffix(ctx: ExtensionContext): string {
     const isIdle = (ctx as { isIdle?: () => boolean }).isIdle;
     const idle = typeof isIdle === "function" ? isIdle.call(ctx) : true;
-    return idle ? "" : " (сработает на следующем ходе — текущий остаётся в режиме, с которым начался)";
+    return idle ? "" : " (takes effect on the next turn — the running turn keeps the mode it started with)";
   }
 
   function setAnonLevel(level: number, ctx: ExtensionContext, notify = true): void {
@@ -340,7 +340,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     state = { ...state, anonLevel: next };
     sync(ctx);
     if (notify) {
-      if (next === 0) ctx.ui.notify("anon: off — политика общей памяти восстановлена", "info");
+      if (next === 0) ctx.ui.notify("anon: off — shared memory policy restored", "info");
       else ctx.ui.notify(`anon:${next} — ${anonDescribe(next)}`, "warning");
     }
   }
@@ -361,7 +361,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     const suffix = runningTurnSuffix(ctx);
     state = enterPlan(state) as ModeState;
     sync(ctx);
-    if (notify) ctx.ui.notify(`Режим: PLAN${suffix ? " (следующий ход)" : ""}`, suffix ? "warning" : "info");
+    if (notify) ctx.ui.notify(`Mode changed: PLAN${suffix ? " (next turn)" : ""}`, suffix ? "warning" : "info");
   }
 
   async function switchToBuild(ctx: ExtensionContext, notify = true): Promise<void> {
@@ -372,7 +372,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     const suffix = runningTurnSuffix(ctx);
     state = enterBuild(state) as ModeState;
     sync(ctx);
-    if (notify) ctx.ui.notify(`Режим: BUILD${suffix ? " (следующий ход)" : ""}`, suffix ? "warning" : "info");
+    if (notify) ctx.ui.notify(`Mode changed: BUILD${suffix ? " (next turn)" : ""}`, suffix ? "warning" : "info");
   }
 
   async function switchToAsk(ctx: ExtensionContext, notify = true): Promise<void> {
@@ -380,12 +380,12 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     const viaLib = libCall<ModeState>(ANON_LIB.enterAsk, [state]);
     state = (viaLib ?? { ...state, mode: "ask", phase: "ask-idle" }) as ModeState;
     sync(ctx);
-    if (notify) ctx.ui.notify(`Режим: ASK${suffix ? " (следующий ход)" : ""}`, suffix ? "warning" : "info");
+    if (notify) ctx.ui.notify(`Mode changed: ASK${suffix ? " (next turn)" : ""}`, suffix ? "warning" : "info");
   }
 
   async function executeCurrentPlan(ctx: ExtensionContext): Promise<void> {
     if (!state.plan || state.phase !== "plan-ready") {
-      ctx.ui.notify("Нет артефакта PLAN_READY. Сначала завершите или уточните план, либо явно переключитесь /mode build.", "warning");
+      ctx.ui.notify("No PLAN_READY artifact exists. Finish/refine the plan first or use /mode build to override explicitly.", "warning");
       return;
     }
     state = executePlan(state) as ModeState;
@@ -395,16 +395,16 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("mode", {
-    description: "Режим 1C: /mode plan | /mode build | /mode ask",
+    description: "Switch 1C mode: /mode plan | /mode build | /mode ask",
     handler: async (args, ctx) => {
       const requested = args?.trim().toLowerCase();
       if (requested === "plan") return switchToPlan(ctx);
       if (requested === "build") return switchToBuild(ctx);
       if (requested === "ask") return switchToAsk(ctx);
-      if (requested) return ctx.ui.notify(`Неизвестный режим 1C: ${requested}. Нужен plan, build или ask.`, "error");
+      if (requested) return ctx.ui.notify(`Unknown 1C mode: ${requested}. Use plan, build, or ask.`, "error");
       const selected = uiAvailable(ctx)
         ? await overlayModeSelect(ctx)
-        : await ctx.ui.select("Режим 1C", ["build", "plan", "ask"]);
+        : await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
       if (selected === "plan") await switchToPlan(ctx);
       if (selected === "build") await switchToBuild(ctx);
       if (selected === "ask") await switchToAsk(ctx);
@@ -414,21 +414,21 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   registerAction("mode-select", async (ctx: ExtensionContext) => {
     const selected = uiAvailable(ctx)
       ? await overlayModeSelect(ctx)
-      : await ctx.ui.select("Режим 1C", ["build", "plan", "ask"]);
+      : await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
     if (selected === "plan") await switchToPlan(ctx);
     if (selected === "build") await switchToBuild(ctx);
     if (selected === "ask") await switchToAsk(ctx);
   });
 
   registerAction("approve-select", async (ctx: ExtensionContext) => {
-    const selected = await ctx.ui.select("Подтверждение", ["off", "safe", "strict"]);
+    const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
     if (selected === "off") setApproveLevel(0, ctx);
     if (selected === "safe") setApproveLevel(1, ctx);
     if (selected === "strict") setApproveLevel(2, ctx);
   });
 
   registerAction("anon-select", async (ctx: ExtensionContext) => {
-    const selected = await ctx.ui.select("Анонимный сеанс", ["off", "1", "2", "3"]);
+    const selected = await ctx.ui.select("Anonymous session", ["off", "1", "2", "3"]);
     if (!selected) return;
     setAnonLevel(selected === "off" ? 0 : Number(selected), ctx);
   });
@@ -436,26 +436,26 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   async function handleAnon(args: string | undefined, ctx: ExtensionContext) {
     const parsed = anonParse(args);
     if (parsed.kind === "invalid") {
-      ctx.ui.notify(`Неизвестный аргумент /anon: ${String(args ?? "").trim()}. Нужен 1 | 2 | 3 | off | status.`, "error");
+      ctx.ui.notify(`Unknown anon argument: ${String(args ?? "").trim()}. Use 1 | 2 | 3 | off | status.`, "error");
       return;
     }
     if (parsed.kind === "status") {
       const level = anonLevel();
-      const what = level === 0 ? "off — действует общая post-task политика памяти" : anonDescribe(level);
-      ctx.ui.notify(`anon=${level} · ${what} · только этот сеанс (новый начинается с 0)`, "info");
+      const what = level === 0 ? "off — the shared post-task memory policy applies" : anonDescribe(level);
+      ctx.ui.notify(`anon=${level} · ${what} · session-scoped (new session starts at 0)`, "info");
       return;
     }
     setAnonLevel(parsed.level ?? 0, ctx);
   }
 
   pi.registerCommand("anon", {
-    description: "Анонимный сеанс: /anon 1 (без записи) | 2 (без чтения) | 3 (без локальных следов) | off | status",
+    description: "Anonymous session: /anon 1 (no writes) | 2 (no reads) | 3 (no local traces) | off | status",
     handler: handleAnon,
   });
   registerAction("command:anon", (args: any, ctx: any) => handleAnon(args, ctx));
 
   pi.registerShortcut(Key.ctrlAlt("a"), {
-    description: "Цикл анонимности: off → 1 → 2 → 3",
+    description: "Cycle anonymous session level: off → 1 → 2 → 3",
     handler: async (ctx) => {
       const current = anonLevel();
       setAnonLevel(current >= 3 ? 0 : current + 1, ctx);
@@ -465,17 +465,17 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   async function handleApprove(args: string | undefined, ctx: ExtensionContext) {
     const parsed = parseApproveLevel(args);
     if (parsed.kind === "invalid") {
-      ctx.ui.notify(`Неизвестный аргумент /approve: ${String(args ?? "").trim()}. Нужен off | safe | strict | status.`, "error");
+      ctx.ui.notify(`Unknown approve argument: ${String(args ?? "").trim()}. Use off | safe | strict | status.`, "error");
       return;
     }
     if (parsed.kind === "status") {
       const level = approveLevel();
       const name = approveLevelName(level);
-      ctx.ui.notify(`approve=${name} · ${describeApprove(level)} · только этот сеанс (новый начинается с off)`, "info");
+      ctx.ui.notify(`approve=${name} · ${describeApprove(level)} · session-scoped (new session starts at off)`, "info");
       return;
     }
     if (parsed.kind === "pick") {
-      const selected = await ctx.ui.select("Подтверждение", ["off", "safe", "strict"]);
+      const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
       if (selected === "off") setApproveLevel(0, ctx);
       if (selected === "safe") setApproveLevel(1, ctx);
       if (selected === "strict") setApproveLevel(2, ctx);
@@ -485,20 +485,20 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("approve", {
-    description: "Режим подтверждения: /approve off | safe | strict | status",
+    description: "Approval mode: /approve off | safe | strict | status",
     handler: handleApprove,
   });
   registerAction("command:approve", (args: any, ctx: any) => handleApprove(args, ctx));
 
   pi.registerShortcut(Key.ctrlAlt("s"), {
-    description: "Цикл подтверждения: off → safe → strict",
+    description: "Cycle approval mode: off → safe → strict",
     handler: async (ctx) => {
       setApproveLevel(cycleApproveLevel(approveLevel()), ctx);
     },
   });
 
   pi.registerShortcut(Key.ctrlAlt("p"), {
-    description: "Цикл режимов BUILD/PLAN/ASK",
+    description: "Cycle 1C BUILD/PLAN/ASK mode",
     handler: async (ctx) => {
       if (state.mode === "build") return switchToPlan(ctx);
       if (state.mode === "plan") return switchToAsk(ctx);
@@ -569,7 +569,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
         action: summarizeToolAction(event.toolName, event.input ?? {}),
         reason: classification.reason,
       })
-      : await ctx.ui.select(`Подтвердить действие? ${event.toolName}: ${classification.reason}`, [APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY]);
+      : await ctx.ui.select(`Approve action? ${event.toolName}: ${classification.reason}`, [APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY]);
     if (choice === APPROVE_ALL) {
       approveAllowlist.add(scope);
       return;

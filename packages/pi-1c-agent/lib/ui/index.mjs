@@ -5,10 +5,9 @@ export { ICONS, statusIcon } from './icons.mjs';
 export { composeFooter, footerSegments, FOOTER_DROP_ORDER } from './footer.mjs';
 export { composeStatus } from './status.mjs';
 export {
-  AGENT_STATUSES, ACTIVE_STATUSES, STATUS_LABELS, statusLabel, kindLabel, mapRunStatus, formatDuration, shortAgentName,
+  AGENT_STATUSES, ACTIVE_STATUSES, mapRunStatus, formatDuration, shortAgentName,
   composeAgentCard, composeAgentCardLines, composeHubRows, composeHubText, composeWidgetLines, RunTracker,
 } from './agents.mjs';
-export { MODE_CHOICES } from './mode-choices.mjs';
 export { composeWorkflowView, composeWorkflowResult } from './workflow.mjs';
 export { PALETTE_ACTIONS, PALETTE_SHORTCUT, filterPaletteActions, paletteBindsCtrlK } from './palette.mjs';
 export { composeApprovalView, summarizeToolAction, APPROVE_ONCE, APPROVE_ALL, APPROVE_DENY } from './approval.mjs';

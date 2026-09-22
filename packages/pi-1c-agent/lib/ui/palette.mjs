@@ -1,17 +1,17 @@
 export const PALETTE_SHORTCUT = 'ctrl+shift+k';
 
 export const PALETTE_ACTIONS = Object.freeze([
-  { id: 'mode', label: 'Сменить режим', keywords: 'режим mode build plan ask', command: '/mode' },
-  { id: 'agents', label: 'Агенты', keywords: 'хаб субагент roster hub subagent', command: '/agents' },
-  { id: 'status', label: 'Статус проекта', keywords: 'статус status health', command: '/status' },
-  { id: 'config', label: 'Знания конфигурации', keywords: 'config knowledge fingerprint знания', command: '/config status' },
-  { id: 'init', label: 'Инициализация проекта', keywords: 'init wizard setup инициализация', command: '/init' },
-  { id: 'memory', label: 'Память', keywords: 'wrap capture cognee память', command: '/wrap auto status' },
-  { id: 'session', label: 'Ротация сеанса', keywords: 'session rotate context ротация', command: '/session-rotate status' },
-  { id: 'approve', label: 'Режим подтверждения', keywords: 'approve safe strict подтверждение', command: '/approve' },
-  { id: 'anon', label: 'Анонимный режим', keywords: 'anon privacy анон', command: '/anon' },
-  { id: 'doctor', label: 'Doctor', keywords: 'doctor health check доктор', command: '/doctor' },
-  { id: 'settings', label: 'Настройки', keywords: 'settings approve anon capture настройки', command: '/approve' },
+  { id: 'mode', label: 'Change mode', keywords: 'mode build plan ask', command: '/mode' },
+  { id: 'agents', label: 'Agents', keywords: 'hub subagent roster', command: '/agents' },
+  { id: 'status', label: 'Project status', keywords: 'status health', command: '/status' },
+  { id: 'config', label: 'Configuration knowledge', keywords: 'config knowledge fingerprint', command: '/config status' },
+  { id: 'init', label: 'Init project', keywords: 'init wizard setup', command: '/init' },
+  { id: 'memory', label: 'Memory', keywords: 'wrap capture cognee', command: '/wrap auto status' },
+  { id: 'session', label: 'Session rotation', keywords: 'session rotate context', command: '/session-rotate status' },
+  { id: 'approve', label: 'Approval mode', keywords: 'approve safe strict', command: '/approve' },
+  { id: 'anon', label: 'Anonymous mode', keywords: 'anon privacy', command: '/anon' },
+  { id: 'doctor', label: 'Doctor', keywords: 'doctor health check', command: '/doctor' },
+  { id: 'settings', label: 'Settings', keywords: 'settings approve anon capture', command: '/approve' },
 ]);
 
 function score(action, query) {

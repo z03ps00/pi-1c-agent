@@ -10,14 +10,12 @@ export const KNOWLEDGE_NO_AGENT = 'Не копирует агента';
 export const BUILD_SCAFFOLD_HINT = 'build/{cf,cfe,epf,erf}';
 export const DOCS_SCAFFOLD_HINT = 'docs/techtask';
 
-export const WIZARD_STEPS = Object.freeze(['Источник', 'Проект', '1С', 'Знания', 'Запись']);
+export const WIZARD_STEPS = Object.freeze(['Source', 'Project', '1C', 'Knowledge', 'Apply']);
 
 export function wizardProgress(stepIndex) {
   const i = Math.max(0, Math.min(WIZARD_STEPS.length - 1, Number(stepIndex) || 0));
   return WIZARD_STEPS.map((name, idx) => `${idx === i ? '●' : (idx < i ? '✓' : '○')} ${idx + 1} ${name}`).join(' → ');
 }
-
-const SOURCE_LABEL = Object.freeze({ empty: 'пусто', dump: 'выгрузка' });
 
 export function composeInitPreviewSummary({
   source = 'empty',
@@ -30,17 +28,17 @@ export function composeInitPreviewSummary({
   files = [],
 } = {}) {
   const lines = [
-    'Готово к инициализации',
+    'Ready to initialize',
     '',
-    `Источник    ${SOURCE_LABEL[source] || source}`,
-    `Конфиг      ${configuration || '—'}`,
+    `Source      ${source}`,
+    `Config      ${configuration || '—'}`,
     `src         ${sourceScaffold ? '✓' : '○'}`,
     `build       ${buildScaffold ? '✓' : '○'}`,
     `docs        ${docsScaffold ? '✓' : '○'}`,
-    `Знания      ${knowledge ? '✓' : '○'}`,
+    `Knowledge   ${knowledge ? '✓' : '○'}`,
     `OpenSpec    ${openSpec ? '✓' : '○'}`,
     '',
-    'Будет создано/обновлено:',
+    'Will create/update:',
   ];
   for (const file of files.length ? files : ['.dev.env', '.pi/1c/project.yaml', '.pi/1c/init-state.json']) {
     lines.push(`  ${file}`);

@@ -1,7 +1,7 @@
 import { formatDuration, shortAgentName } from './agents.mjs';
 
 export function composeWorkflowView(state = {}) {
-  const name = state.workflow || 'конвейер';
+  const name = state.workflow || 'workflow';
   const stages = Array.isArray(state.stages) ? state.stages : [];
   const current = Number.isInteger(state.currentIndex) ? state.currentIndex : stages.findIndex((s) => s.status === 'working' || s.status === 'starting' || s.status === 'testing' || s.status === 'reviewing');
   const failed = stages.find((s) => s.status === 'failed');
@@ -10,11 +10,11 @@ export function composeWorkflowView(state = {}) {
 
   const lines = [];
   if (failed) {
-    lines.push(`✗ Конвейер остановлен · ${shortAgentName(failed.agent || failed.name)} · ${failed.error || 'ошибка'}`);
+    lines.push(`✗ Workflow stopped · ${shortAgentName(failed.agent || failed.name)} · ${failed.error || 'failed'}`);
   } else if (allDone) {
-    lines.push(`✓ Конвейер завершён · ${duration}`);
+    lines.push(`✓ Workflow completed · ${duration}`);
   } else {
-    lines.push(`Конвейер: ${name}`);
+    lines.push(`Workflow: ${name}`);
     lines.push('');
     stages.forEach((stage, i) => {
       const mark = stage.status === 'completed' ? '✓' : (stage.status === 'failed' ? '✗' : (i === current || ['working', 'starting', 'testing', 'reviewing'].includes(stage.status) ? '●' : '○'));

@@ -31,16 +31,16 @@ export function footerSegments(snapshot = {}) {
 
   if (anon > 0) {
     segs.push({ id: 'anon', text: `ANON ${anon}` });
-    segs.push({ id: 'memory', text: 'память изолирована' });
+    segs.push({ id: 'memory', text: 'memory isolated' });
   } else if (mode === 'plan' || mode === 'ask') {
-    segs.push({ id: 'readonly', text: 'чтение' });
+    segs.push({ id: 'readonly', text: 'read-only' });
   } else if (approve && approve !== 'off') {
     segs.push({ id: 'approve', text: approve });
   }
 
   if (mode === 'plan' && snapshot.planId) {
     const id = String(snapshot.planId);
-    segs.push({ id: 'plan', text: `план #${id.slice(-6)}` });
+    segs.push({ id: 'plan', text: `plan #${id.slice(-6)}` });
   }
 
   if (snapshot.projectName) segs.push({ id: 'project', text: String(snapshot.projectName) });
@@ -59,10 +59,10 @@ export function footerSegments(snapshot = {}) {
 
   if (snapshot.rotateEnabled) {
     const th = Number(snapshot.rotateThreshold);
-    segs.push({ id: 'rotate', text: Number.isFinite(th) ? `ротация ${th}%` : 'ротация вкл' });
+    segs.push({ id: 'rotate', text: Number.isFinite(th) ? `rotate ${th}%` : 'rotate on' });
   }
   if (snapshot.captureEnabled) {
-    const cap = snapshot.captureMode ? `захват ${snapshot.captureMode}` : 'захват вкл';
+    const cap = snapshot.captureMode ? `capture ${snapshot.captureMode}` : 'capture on';
     segs.push({ id: 'capture', text: cap });
   }
 

@@ -248,12 +248,12 @@ function knowledgeResultLine(layout: any, knowledgeEnabled: boolean) {
 
 export default function oneCInit(pi: ExtensionAPI): void {
   async function handleInit(args: string | undefined, ctx: any, aliasName?: string) {
-      if (aliasName) ctx.ui.notify(`/${aliasName} — алиас /init`, "info");
-      if (!trusted(ctx)) return ctx.ui.notify("/init привязан к проекту и требует доверия к проекту.", "error");
+      if (aliasName) ctx.ui.notify(`/${aliasName} is an alias of /init`, "info");
+      if (!trusted(ctx)) return ctx.ui.notify("/init is project-scoped and requires a trusted project.", "error");
       try {
         assertBuild("/init");
       } catch {
-        return ctx.ui.notify("/init пишет .dev.env и состояние проекта. Сначала /mode build. PLAN для инициализации только на чтение.", "error");
+        return ctx.ui.notify("/init writes .dev.env and project state. Switch to BUILD first. PLAN remains read-only for project initialization.", "error");
       }
 
       const requested = parseInitRequest(args);
@@ -347,14 +347,14 @@ export default function oneCInit(pi: ExtensionAPI): void {
         const ok = await ctx.ui.confirm("1C rules bootstrap required", "Не найден .dev.env.example из ai_rules_1c. Запустить pinned /bootstrap project сейчас?");
         if (!ok) return;
         const r = runBootstrap(ctx.cwd);
-        if (r.status !== 0) return ctx.ui.notify(`Bootstrap не удался: ${(r.stderr || r.stdout || "").slice(-1000)}`, "error");
+        if (r.status !== 0) return ctx.ui.notify(`Bootstrap failed: ${(r.stderr || r.stdout || "").slice(-1000)}`, "error");
         example = locateDevEnvExample(ctx.cwd);
         if (!example) return ctx.ui.notify("Bootstrap завершился, но .dev.env.example всё ещё не найден.", "error");
       }
 
       const templateRaw = fs.readFileSync(example, "utf8");
       const audit = auditDevEnvSchema(templateRaw, schema);
-      if (audit.duplicates.length) return ctx.ui.notify(`В upstream .dev.env.example дубли переменных: ${audit.duplicates.join(", ")}`, "error");
+      if (audit.duplicates.length) return ctx.ui.notify(`Upstream .dev.env.example contains duplicate variables: ${audit.duplicates.join(", ")}`, "error");
       if (audit.unknown.length || audit.missing.length) {
         const proceed = await ctx.ui.confirm("Upstream/schema drift", `Обнаружено отличие от UX-схемы. Новые upstream: ${audit.unknown.join(", ") || "нет"}; отсутствуют ожидаемые: ${audit.missing.join(", ") || "нет"}. Неизвестные переменные будут показаны generic-вопросом. Продолжить?`);
         if (!proceed) return;
@@ -568,7 +568,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("init", {
-    description: "Инициализация 1C-проекта — пустой каркас или выгрузка из ИБ / .cf / .dt: /init [empty|from-ib|advanced|quick|status|knowledge]",
+    description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .dt: /init [empty|from-ib|advanced|quick|status|knowledge]",
     handler: async (args, ctx) => handleInit(args, ctx),
   });
   registerAction("init-open", (ctx: any) => handleInit(undefined, ctx));

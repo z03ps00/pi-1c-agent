@@ -233,7 +233,7 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("memory-flush", {
-    description: "Повторить отложенные записи Cognee/OpenViking: /memory-flush",
+    description: "Replay pending Cognee/OpenViking records: /memory-flush",
     handler: async (_args, ctx) => {
       const report = await runLifecycle(ctx);
       ctx.ui.notify(report, "info");
@@ -266,13 +266,13 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("wrap", {
-    description: "Захватить этот диалог сейчас: /wrap | /wrap auto on|off|status | /wrap archive",
+    description: "Capture this dialog now: /wrap | /wrap auto on|off|status | /wrap archive",
     handler: handleWrap,
   });
   registerAction("command:wrap", (args: any, ctx: any) => handleWrap(args, ctx));
 
   pi.registerCommand("capture-model", {
-    description: "Дистиллятор захвата сеанса: /capture-model status|off|stack|ollama <model>|routerai <model>|chat",
+    description: "Distiller for session capture: /capture-model status|off|stack|ollama <model>|routerai <model>|chat",
     handler: async (args, ctx) => {
       const parsed = parseCaptureModelArgs(args);
       const result = applyCaptureModel(state, parsed);
