@@ -23,6 +23,16 @@ This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already c
 3. If `settings.json` `packages[0]` still points at an old path outside this clone, point it at `$PI_CODING_AGENT_DIR/packages/pi-1c-agent` (or restore the placeholder and re-run `scripts/setup.mjs`).
 4. Check with `/doctor`. Do not run `pi install` as part of the update.
 
+**Dev clone and installed profile — keep them in sync.** When development and the running agent are two different clones, editing the dev clone does **not** change the running agent. The desktop launcher / control script starts the *installed* profile at `$PI_CODING_AGENT_DIR`, which may be a separate config fork that holds this machine's local `settings.json` / `mcp.json` / `auth.json`. After committing and pushing dev changes, propagate them to the installed profile in the same task:
+
+```
+# in the installed profile ($PI_CODING_AGENT_DIR)
+git fetch <dev-remote>        # add the dev clone's push remote once (e.g. named `source`)
+git merge --ff-only <sha>     # fast-forward; never touches settings.json / mcp.json / auth.json / state/
+```
+
+Fast-forward is clean while the installed profile sits on the dev clone's parent commit. If histories diverge (local config commits), merge the dev branch and keep local `settings.json` / `mcp.json` / `auth.json`, or run `scripts/update-profile.mjs` (it preserves those and restores the package path). New prompt commands appear only after `/reload` or a session restart — reload the running agent after a sync.
+
 If the user asks to install or update this agent, **run the matching steps**. Do not stop after describing them.
 
 Install scope: rules, agents, skills, prompts, the in-repo `packages/pi-1c-agent` runtime, and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
