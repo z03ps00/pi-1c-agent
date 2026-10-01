@@ -24,7 +24,7 @@
 
 ## Timeouts and transport retries
 
-The published beta of 2026-08-24 bounds a whole upstream operation by one budget (`ONEC_AI_OPERATION_TIMEOUT`, default 300 s) and retries a transport failure — network error, single-request timeout, HTTP 5xx/429 — up to `ONEC_AI_TRANSPORT_RETRIES` times (default 2) on a fresh discussion, inside that budget. `ONEC_AI_TIMEOUT` (30 s) no longer cuts the event stream, so a large module no longer fails with an empty `Ошибка сети при отправке сообщения:`.
+The image published since 2026-08-24 bounds a whole upstream operation by one budget (`ONEC_AI_OPERATION_TIMEOUT`, default 300 s) and retries a transport failure — network error, single-request timeout, HTTP 5xx/429 — up to `ONEC_AI_TRANSPORT_RETRIES` times (default 2) on a fresh discussion, inside that budget. `ONEC_AI_TIMEOUT` (30 s) no longer cuts the event stream, so a large module no longer fails with an empty `Ошибка сети при отправке сообщения:`.
 
 - A check of a large module may legitimately run for minutes. Do not re-issue the same call because it is slow — the server is already retrying, and a manual retry spends the call budget above on nothing.
 - When a call does fail, the diagnostic, the fallback reason and the telemetry state how many attempts were made and name the exception class. Report that instead of guessing, and treat a budget-exhausted failure as an operator/configuration matter, not something to work around by resending.
@@ -52,4 +52,4 @@ The published beta of 2026-08-24 bounds a whole upstream operation by one budget
 
 ## Call limit
 
-`check_1c_code` and `review_1c_code` require one clean pass on the latest relevant module state. A blocking result (`critical` / `error` for `check_1c_code`, `error` for `review_1c_code`, or a reported logic / metadata / data-integrity / security / transaction / lock / performance-critical defect) must be fixed and followed by a clean confirming run. `full` allows 3 calls total per validator; `standard` allows the initial call plus one confirmation (2 total); promotion-trigger changes always use `full`. Style warnings, naming nits, and BSLLS noise do **not** justify re-running the same AI validator; refresh final syntax evidence after any BSL edit. Never re-call against unchanged code. If the budget ends without a clean confirmation after a blocking fix, the gate fails and the module remains unverified. For pure metadata-XML changes with no BSL touched, these tools are usually irrelevant — use `verify_xml`. Full policy: `AGENTS.md → MCP Tool Calling → B. Limits and non-determinism`.
+Budget, blocking severities (`critical` / `error` for `check_1c_code`, `error` for `review_1c_code`) and the confirmation rule are owned by `rules-1c/rules/verification-policy.md → Validator budget`. Tool-specific: never re-call against unchanged code; for pure metadata-XML changes with no BSL touched use `verify_xml` instead.

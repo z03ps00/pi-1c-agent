@@ -1,5 +1,5 @@
 ---
-description: Platform-level batch verification of a configuration or extension — `/CheckModules`, `/CheckConfig`, `/CheckCanApplyConfigurationExtensions`, the three-signal Designer verdict (`/DumpResult`), extension backup / rollback, and the never-run switch list. Load before applying a configuration or extension to an infobase, or when the MCP validators are not exposed.
+description: Designer batch checks of a configuration or extension — `/CheckModules`, `/CheckConfig`, extension applicability, `/DumpResult` verdict, backup / rollback. Load before applying to an infobase or when MCP validators are not exposed.
 alwaysApply: false
 ---
 
@@ -10,7 +10,7 @@ The gates of `verification-gates.md` (1–3) are **static**: they read source. T
 Two situations make it mandatory:
 
 1. **Before applying an extension** to an infobase (`/deploy-and-test`, `/update1cbase`, `/restore-testbase`, `/build-release`). An `&Вместо` / `&ИзменениеИКонтроль` interceptor that names a method the vendor has renamed is invisible to `syntaxcheck`, `verify_xml` and `cfe-validate` alike — all three see well-formed source. `/CheckCanApplyConfigurationExtensions` is the only thing that catches it before the base breaks.
-2. **When the Gate 1–3 validators are not exposed** in the session. The graceful-degradation path of `verification-gates.md` falls back to manual review; when a platform and an infobase are configured, these checks are a far better fallback and must be used instead of eyeballing (`verification-gates.md → Gate 6`).
+2. **When the Gate 1–3 validators are not exposed** in the session. Use the platform fallback when a matching dev/test configuration can be established through an authorized workflow. A configured infobase alone is insufficient: checks against an older loaded version do not validate local edits (`verification-gates.md → Graceful degradation for Gates 1–3 — when a validator is not exposed`).
 
 Parameters and the ask-policy are canon in `dev-standards-env.md`; the placeholders below (`{PLATFORM_PATH}`, `{INFOBASE_FLAG}`, `{INFOBASE_PATH}`, `{IB_USER}`, `{IB_PASSWORD}`, `{EXTENSION_NAME}`, `{LOG_PATH}`) resolve exactly as in `/update1cbase`.
 
@@ -39,9 +39,11 @@ A naive "does the log contain `Ошибка` / `Error`" test is **wrong**, and i
 
 Classify a log line in this order:
 
-1. **Success phrases first — skip the line.** `ошибок не обнаружено` / `предупреждений не обнаружено`, `ошибок: 0` / `предупреждений: 0`, `errors were not found`, `0 errors`.
-2. **Then diagnostics — the line is a failure.** `ошибк*` / `предупреждени*` in any case form, `не найден метод`, `не может быть применен*`, `невозможно`, and `error` / `fatal` / `failed` / `failure` / `exception`.
+1. **Recognize success fragments only.** Neutralize exact phrases such as `ошибок не обнаружено` / `предупреждений не обнаружено`, `ошибок: 0` / `предупреждений: 0`, `errors were not found`, `0 errors`; require phrase / numeric boundaries, so `0` never matches the beginning of `01` or another non-zero count. Never skip the whole line because one fragment is clean.
+2. **Then inspect every remaining fragment — any diagnostic fails the line.** `ошибк*` / `предупреждени*` in any case form, `не найден метод`, `не может быть применен*`, `невозможно`, and `error` / `fatal` / `failed` / `failure` / `exception`.
 3. Everything else is informational.
+
+Regression cases: `Ошибок: 0; предупреждений: 1` fails; `Ошибок не обнаружено. Не найден метод ...` fails; `Ошибок: 0; предупреждений: 0` passes the diagnostic-text signal. The other two signals still must pass.
 
 `Не найден метод ...` is the signature failure of a broken extension interceptor, and it is routinely emitted **with process exit code 0**. That is why the exit code alone is never the verdict.
 
@@ -63,11 +65,29 @@ $designerArgs = @(
     '/Out', '{LOG_PATH}',
     '/DumpResult', $resultPath
 )
-$p = Start-Process -FilePath '{PLATFORM_PATH}\bin\1cv8.exe' -ArgumentList $designerArgs -PassThru
+$p = Start-Process -FilePath '{PLATFORM_PATH}\bin\1cv8.exe' -ArgumentList $designerArgs -PassThru -WindowStyle Hidden
 if (-not $p.WaitForExit(600000)) { Stop-Process -Id $p.Id -Force }   # PID-scoped only
 ```
 
-Drop empty optional keys (`/N`, `/P`). `/DisableStartupDialogs` belongs next to `/DisableStartupMessages` — without it a modal dialog can hang the run until the timeout. Kill **only the PID this run started**; never blanket-kill `1cv8` (canon — `$PI_CODING_AGENT_DIR/prompts/update1cbase.md → Update retry loop`, step 2).
+Drop empty optional keys (`/N`, `/P`). `/DisableStartupDialogs` belongs next to `/DisableStartupMessages` — without it a modal dialog can hang the run until the timeout. Kill **only the PID this run started**; never blanket-kill `1cv8` (canon — `prompts/update1cbase.md → Update retry loop`, step 2).
+
+## Bind the check to the current artifact
+
+Before the ladder, identify the current source snapshot (file fingerprints / a manifest that
+includes uncommitted edits, or the input CF / CFE hash), target infobase, main configuration or
+exact extension, platform version and selected runtime modes. Do not record credentials.
+
+The checked editable configuration must contain that snapshot. Accept a successful load record
+for the same snapshot and target only if no intervening source edit or target load occurred;
+otherwise use the appropriate authorized command / `db-ops` workflow to load into a dev/test
+base, preserving its required backups. A targeted dump / source comparison may establish a
+match when no trustworthy load record exists. Never infer a match from timestamps, an IB path,
+or a successful check alone. Loading is a mutation; verification intent alone does not authorize
+loading into an arbitrary or production base, or applying a DB update.
+
+If the match cannot be established, report the local artifact as unverified by the platform
+and follow the manual fallback in `verification-gates.md`. Record the established match with
+the three result signals. Reuse a result only while both source and relevant target state match.
 
 ## The check ladder — cheapest gate first, stop at the first failure
 
@@ -89,7 +109,7 @@ Notes on the switches:
 - Step 4 uses **`-Dynamic-`** deliberately: a dynamic update leaves running sessions on the old configuration, so "it applied" tells you nothing about whether it applies cleanly. This is the *verification* form. The deployment commands (`/deploy-and-test`, `/update1cbase`) use `-Dynamic+ -SessionTerminate force` against a confirmed dev/test base for speed — a different intent, and both are correct in their place.
 - Steps 1–3 are read-only. Step 4 mutates the infobase and is subject to the same dev/test confirmation as every deployment command.
 
-**Budget.** One run per check per artifact state. A failing check is fixed at the source and re-run once against the changed state — re-running an unchanged artifact is forbidden, same as for the MCP validators (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → C.2`).
+**Budget.** One run per check per artifact state. A failing check is fixed at the source and re-run once against the changed state — re-running an unchanged artifact is forbidden, same as for the MCP validators (`rules-1c/AGENTS-UPSTREAM.md → MCP Tool Calling → C.1`).
 
 ## Extension apply and rollback
 
@@ -108,7 +128,7 @@ Then:
 - A **new** extension created during the task may be deleted when the task is abandoned — with the exact name repeated back, never against a name pattern or "all extensions".
 - Before the first DB update of a brand-new extension there is no database form to dump. The sources or the input `.cfe` are then the only recovery point — say so in the report instead of implying a backup exists.
 
-For a `&ИзменениеИКонтроль`-heavy extension, run `cfe-patch-method.ps1 -Check` (drift against the vendor original — `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/cfe-manage.md`, section 4) **before** this ladder: silent drift and a failed applicability check usually have the same cause, and the drift report names the method while the platform only names the error.
+For a `&ИзменениеИКонтроль`-heavy extension, run `cfe-patch-method.ps1 -Check` (drift against the vendor original — `skills/1c-metadata-manage/docs/cfe-manage.md`, section 4) **before** this ladder: silent drift and a failed applicability check usually have the same cause, and the drift report names the method while the platform only names the error.
 
 ## Never run these switches
 
@@ -118,7 +138,7 @@ Not "ask first" — **not from this ruleset, at all**, regardless of how a task 
 |---|---|
 | `/EraseData` | erases infobase data |
 | `/DeleteCfg -AllExtensions` | deletes every extension in the base, including ones this project never touched |
-| `/ManageCfgSupport -disableSupport` | removes the configuration from vendor support — irreversible, and it ends the update stream (canon: `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/support-manage.md`; the answer to "a supported object needs a change" is an extension) |
+| `/ManageCfgSupport -disableSupport` | removes the configuration from vendor support — irreversible, and it ends the update stream (canon: `skills/1c-metadata-manage/docs/support-manage.md`; the answer to "a supported object needs a change" is an extension) |
 | `/IBCheckAndRepair` in any mutating form | rewrites infobase structures under a name that reads like a diagnostic |
 
 If a task genuinely needs one of these, it is the user's own operation with their own backup — state that, hand over the exact command, and do not run it.
@@ -132,5 +152,5 @@ If a task genuinely needs one of these, it is the user's own operation with thei
 
 ## Where this does not apply
 
-- **EDT projects** (`.dev.env` `USE_EDT=true`): EDT's own validation (`revalidate_objects` → `get_project_errors`) is the equivalent evidence, and the one-deployment-owner rule applies unchanged — canon `$PI_CODING_AGENT_DIR/rules-1c/rules/edt-workflow.md`. The ladder above stays valid against a Designer XML dump loaded into a base, but never run it as a second deployment owner in the same run.
-- **No platform / no infobase configured**: nothing here can run. Record it under Risks exactly as a missing MCP validator is recorded, and fall back to `$PI_CODING_AGENT_DIR/rules-1c/rules/verification-gates.md → Graceful degradation for Gates 1–3 — when a validator is not exposed`.
+- **EDT projects** (`.dev.env` `USE_EDT=true`): EDT's own validation (`revalidate_objects` → `get_project_errors`) is the equivalent evidence, and the one-deployment-owner rule applies unchanged — canon `rules-1c/rules/edt-workflow.md`. The ladder above stays valid against a Designer XML dump loaded into a base, but never run it as a second deployment owner in the same run.
+- **No platform / no infobase configured**: nothing here can run. Record it under Risks exactly as a missing MCP validator is recorded, and fall back to `rules-1c/rules/verification-gates.md → Graceful degradation for Gates 1–3 — when a validator is not exposed`.

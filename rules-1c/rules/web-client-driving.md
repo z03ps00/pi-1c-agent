@@ -1,5 +1,5 @@
 ---
-description: Driving the 1C web client during UI tests — what the accessibility snapshot shows, how lists / trees / grids / reports behave, field filling, dialogs, keyboard shortcuts, and the anti-loop discipline. Load after the `ui-testing-tools.md` preflight, before the first action against `INFOBASE_PUBLISH_URL`.
+description: Driving the 1C web client in UI tests — accessibility snapshot, lists / grids / reports, field filling, dialogs, shortcuts, anti-loop discipline. Load after the `ui-testing-tools.md` preflight, before the first action on the web client.
 alwaysApply: false
 ---
 
@@ -107,6 +107,6 @@ UI automation degenerates into retry loops faster than any other work in this ru
 |---|---|
 | Which browser / desktop driver to use, and the mandatory preflight | `ui-testing-tools.md` |
 | `UI_TESTING`, `INFOBASE_PUBLISH_URL` and the rest of the test parameters | `dev-standards-env.md` |
-| Test workflow, scenario template, report format | `$PI_CODING_AGENT_DIR/agents/1c-tester.md` |
-| Deploy step that precedes UI testing | `$PI_CODING_AGENT_DIR/prompts/deploy-and-test.md` |
-| Publishing the infobase for the web client | `$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/web-manage.md` |
+| Test workflow, scenario template, report format | `agents/1c-tester.md` |
+| Deploy step that precedes UI testing | `prompts/deploy-and-test.md` |
+| Publishing the infobase for the web client | `skills/1c-metadata-manage/docs/web-manage.md` |

@@ -1,56 +1,40 @@
 ---
-description: Model profile for Claude Sonnet 5 (AGENT_MODEL=sonnet5) — literal instruction following and explicit scope, effort calibration, keeping adaptive thinking on for tool use, coverage-first review briefs, token-budget awareness
+description: Model profile for Claude Sonnet 5 (AGENT_MODEL=sonnet5) — literal instruction following and explicit scope, effort calibration, keeping adaptive thinking on for tool use, coverage-first review briefs, token-budget awareness and lean context
 alwaysApply: false
 ---
 
 # Model profile — Claude Sonnet 5
 
-**When to load this file:** `AGENT_MODEL=sonnet5` in `.dev.env`, or you know you are running as Claude Sonnet 5. Load once per session, before the first non-trivial task. Routing, precedence and the invariants this file may not touch — `$PI_CODING_AGENT_DIR/rules-1c/rules/model-adaptation.md`. Everything below tunes **initiative and communication only**; every hard gate of `AGENTS.md` stays exactly as written.
-
-Baseline: Sonnet 5 runs this ruleset well without tuning, and is more agentic than Sonnet 4.6 by default. The items below are the documented behaviours that most often need it.
+**Load:** `AGENT_MODEL=sonnet5`, or you know you run as Claude Sonnet 5; once per session, before the first non-trivial task. Contract and invariants — `rules-1c/rules/model-adaptation.md`. Tunes initiative and communication only; every `rules-1c/AGENTS-UPSTREAM.md` gate stays as written.
 
 ## 1. Literal instruction following — state scope explicitly
 
-Sonnet 5 reads instructions literally and does **not** silently generalise one item to another or infer a request that was not made. That is precision, not laziness, and it changes how you write briefs.
+The model reads instructions literally: it does not generalise one item to another or infer an unmade request.
 
-- When a task spans several objects, state the scope for **each**: "перепроверь все три модуля из списка, не только первый", "примени маркеры изменения ко всем правкам типового кода в этом файле". A brief that names one example and expects the pattern to spread will get exactly the one example.
-- The same when briefing subagents (`$PI_CODING_AGENT_DIR/rules-1c/rules/subagents.md → Bounded sidecar task templates`): enumerate the files / objects / checks in scope, and say explicitly what is out of scope.
-- Apply the same literalism to this ruleset when you read it: when a rule says "load X before Y", load X. Do not treat a mandated step as a suggestion because the task feels small — triage (`$PI_CODING_AGENT_DIR/rules-1c/rules/verification-policy.md`) is what decides size, not intuition.
-- Ambiguity handling is unchanged: material fork → `CONFUSION`; low-risk ambiguity → state the assumption in one line and proceed (`rules-1c/AGENTS-UPSTREAM.md` → Development Procedure → 1`).
+- For a task spanning several objects, state the scope for **each** («перепроверь все три модуля из списка, не только первый»); one example does not spread. Briefing subagents: enumerate files / objects / checks in scope and say what is out of scope.
+- Explicit scope is not worked examples: describe the interface (options and their meaning); an example only pins an exact output format. Point at code rather than paraphrasing it.
+- The same literalism applies to the ruleset: "load X before Y" means load X. Triage, not intuition, sizes the task.
 
-## 2. Effort calibration (client-side setting)
+## 2. Effort calibration (client-side)
 
-- `high` is the default and the right setting for BSL / metadata work. Raise to `xhigh` for the hardest coding and agentic tasks (multi-module refactor, architecture, metadata surgery, hard debugging).
-- Sonnet 5 respects effort **strictly**, especially at the low end: at `low` and `medium` it scopes work to exactly what was asked. Good for cost, but on a moderately complex task `low` risks under-thinking. Do not use `low` for a full-cycle change; keep it for docs-fix, triage and lookups.
-- If you see shallow reasoning on a hard problem, the fix is **raising effort**, not padding the prompt. When effort must stay low for latency, add one targeted line: "это многошаговая задача, продумай последовательность до начала правок".
-- Cross-model note for anyone porting settings: Sonnet 5 at `medium` is comparable to Sonnet 4.6 at `high`, and `high` to Sonnet 4.6 at `max`.
+`high` for BSL / metadata work; `xhigh` for the hardest coding and agentic tasks. At `low` / `medium` the model scopes work to exactly what was asked — good for docs-fix, triage and lookups, risky for full-cycle. Shallow reasoning on a hard problem is fixed by raising effort, not padding the prompt; when effort must stay low, add «это многошаговая задача, продумай последовательность до начала правок». Porting: Sonnet 5 `medium` ≈ Sonnet 4.6 `high`; `high` ≈ 4.6 `max`.
 
 ## 3. Keep adaptive thinking on
 
-Adaptive thinking is on by default on Sonnet 5 (a change from Sonnet 4.6). **With thinking disabled the model reaches for tools noticeably less** — which directly breaks the MCP-first discipline this ruleset is built on (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling`, `$PI_CODING_AGENT_DIR/rules-1c/rules/mcp-first-search.md`).
-
-- Keep thinking on. If cost is the concern, lower `effort` instead of turning thinking off.
-- If thinking is off for reasons outside your control, compensate explicitly: name the required MCP calls in the plan before you start, and treat every skipped call as a defect to report rather than an economy.
-- If the model produces thinking blocks more often than the work warrants (large system prompts can cause this), the steer is "думай только когда это меняет качество ответа; на простых вопросах отвечай сразу" — not disabling thinking.
-- Note for whoever configures the client: manual extended thinking (`budget_tokens`) is removed on Sonnet 5, and `temperature` / `top_p` / `top_k` are rejected — tone and variety come from instructions, not sampling.
+With thinking disabled the model reaches for tools noticeably less, which breaks MCP-first work. Lower `effort` for cost, never disable thinking. If thinking is off beyond your control, name the required MCP calls in the plan up front and report every skipped call as a defect. `budget_tokens`, `temperature`, `top_p` and `top_k` are unavailable — tone and variety come from instructions.
 
 ## 4. Progress updates and verbosity
 
-- Sonnet 5 already gives regular, well-calibrated updates during long agentic runs. Do **not** add scaffolding that forces interim summaries ("итог после каждых трёх вызовов") — it is redundant here. Keep the evidence one-liners the ruleset requires (`Template:`, `Memory:`, `Metadata tooling:`, `IB tooling:`).
-- Response length tracks task complexity on this model: short answers on lookups, longer on open analysis. That is the wanted behaviour; if a specific answer runs long, ask for concision on that answer rather than installing a global brevity rule.
+Updates during long runs are already well calibrated: add no scaffolding that forces interim summaries. Length tracking task complexity is wanted; ask for concision on a specific answer rather than a global brevity rule.
 
-## 5. Review tasks — brief for coverage
+## 5. Review briefs — ask for coverage
 
-Sonnet 5 honours a stated severity bar more faithfully than earlier models: "only high-severity" makes it investigate just as deeply and then **withhold** the lower-severity findings.
-
-- When you review BSL yourself or brief `1c-code-reviewer` / `1c-arch-reviewer`: ask for every finding, with severity and confidence attached, and filter in your own report. Never write "only critical", "be conservative" or "не мелочись" in the brief.
-- If you do want a single-pass self-filter, define the bar concretely ("сообщай всё, что может привести к неверному поведению, ошибке проведения или неверному результату; опускай только чисто стилевые придирки") instead of a qualitative word like "important".
-- Gate semantics are unchanged: `critical` / `error` from `check_1c_code` / `review_1c_code` block per `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`.
+A stated severity bar makes the model withhold lower-severity findings it did investigate. When reviewing BSL or briefing `1c-code-reviewer` / `1c-arch-reviewer`, ask for every finding with severity and confidence and filter in your own report; for a single-pass self-filter define the bar concretely («сообщай всё, что может привести к неверному поведению или ошибке проведения; опускай только стилевые придирки»), never "important". Gate semantics are unchanged.
 
 ## 6. Token budget and context
 
-Sonnet 5 tracks its remaining context window (context awareness), and its tokenizer emits roughly 30% more tokens than Sonnet 4.6 for the same text.
+The model tracks its remaining context, and its tokenizer emits ~30 % more tokens than Sonnet 4.6.
 
-- **Do not wrap up work early because context feels tight.** Finish the task; when the window genuinely runs short, save state first — `$PI_CODING_AGENT_DIR/skills/handoff` for a session handoff, `remember` for facts worth keeping (`rules-1c/AGENTS-UPSTREAM.md` → Project memory) — then continue or hand off cleanly.
-- Spend the budget on evidence that matters: keep MCP queries narrow (`detail_level="L0"`, `names_only`, `project_name` / category filters per `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → C.3`) instead of pulling whole modules "to be safe". This is the same rule as always; on this model the cost of ignoring it is higher.
-- In `ORCHESTRATION=economy`, the offloading of reading to subagents (`$PI_CODING_AGENT_DIR/rules-1c/rules/orchestrator-economy.md`) is a good fit with this constraint — but delegation criteria are unchanged.
+- Do not wrap up early because context feels tight: finish; when the window genuinely runs short, save state (`skills/handoff`, `remember`) and continue or hand off cleanly.
+- Load the always-on layer plus what triage selects — nothing "for context"; an obligation restated in several files is one obligation.
+- Keep MCP queries narrow (`detail_level="L0"`, `names_only`, `project_name` / category filters) instead of pulling whole modules. `ORCHESTRATION=economy` fits well; delegation criteria are unchanged.

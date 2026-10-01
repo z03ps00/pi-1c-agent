@@ -10,7 +10,7 @@ Applies to integration code: HTTP services, REST clients, web services, file exc
 ## 1. Before writing code
 
 - Check whether a ready-made solution already exists in БСП via `ssl_search` (subsystems "Интернет-поддержка пользователей", "Обмен данными", "Получение файлов из Интернета", "Цифровая подпись"). The required scheme is often already implemented.
-- Check whether the **platform itself** ships the mechanism before designing a custom exchange: collaboration system and bots (СистемаВзаимодействия), integration bus / message queues, cryptography / digital signatures — `docsearch` by capability description → `docinfo` per found name on `1C-docs-mcp`. Canon and trigger domains — `rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → A.7`, `$PI_CODING_AGENT_DIR/skills/mcp-1c-tools/docs/1C-docs-mcp.md → Platform capability discovery`.
+- Check whether the **platform itself** ships the mechanism before designing a custom exchange: collaboration system and bots (СистемаВзаимодействия), integration bus / message queues, cryptography / digital signatures — `docsearch` by capability description → `docinfo` per found name on `1C-docs-mcp`. Canon and trigger domains — `rules-1c/AGENTS-UPSTREAM.md → MCP Tool Calling → A.7`, `skills/mcp-1c-tools/docs/1C-docs-mcp.md → Platform capability discovery`.
 - Find existing integrations in the configuration via `templatesearch` and `search_code` (semantic mode, queries like "HTTP запрос", "отправка JSON", "парсинг ответа").
 - Agree the contract with the user explicitly: method, URL/endpoint, payload format, authentication scheme, timeouts, retry policy, and logging.
 - For EmplDocs / PA Docs integrations, use the product documentation at <https://padocs.empldocs.app/> as the authoritative external contract source before writing or changing requests, payloads, or authentication logic.
@@ -19,14 +19,14 @@ For the full MCP playbook see `tooling-playbooks.md → Integrations`.
 
 ## 2. Long-running and blocking operations
 
-- Network calls are potentially long-running. Run all integration operations in the background through the БСП **"Long-running operations"** subsystem (`ДлительныеОперации.ВыполнитьФункцию`), not through a direct `ФоновыеЗадания` call. See `platform-solutions.md §2 → "Long-running operations"`.
-- On the client — no synchronous HTTP calls; use `НачатьВыполнение*` or an async wrapper (template — `platform-solutions.md §8 → "External components on the thin client"`).
+- Network calls are potentially long-running. Run all integration operations in the background through the БСП **"Long-running operations"** subsystem (`ДлительныеОперации.ВыполнитьФункцию`), not through a direct `ФоновыеЗадания` call. See `standards(name="platform-solutions") §2 → "Long-running operations"`.
+- On the client — no synchronous HTTP calls; use `НачатьВыполнение*` or an async wrapper (template — `standards(name="platform-solutions") §8 → "External components on the thin client"`).
 
 ## 3. HTTP client
 
-- Use platform `HTTPСоединение` / `HTTPЗапрос` or the БСП wrapper. `КомпонентаHTTPСервисы` and third-party COM objects are forbidden (see `dev-standards-architecture.md §3 → "Cross-Platform Compatibility"`).
+- Use platform `HTTPСоединение` / `HTTPЗапрос` or the БСП wrapper. `КомпонентаHTTPСервисы` and third-party COM objects are forbidden (see `standards(name="dev-standards-architecture") §3 → "Cross-Platform Compatibility"`).
 - Connection timeout and read timeout MUST be set **explicitly** — use values from `.dev.env` or configuration constants, not magic numbers in code.
-- Any response code different from the expected one MUST be turned into a meaningful exception with `ПодробноеПредставлениеОшибки(ИнформацияОбОшибке())` written to the event log. See `dev-standards-architecture.md §3 → "Error Handling"`.
+- Any response code different from the expected one MUST be turned into a meaningful exception with `ПодробноеПредставлениеОшибки(ИнформацияОбОшибке())` written to the event log. See `standards(name="dev-standards-architecture") §3 → "Error Handling"`.
 
 ## 4. Serialization and data contract
 
@@ -36,7 +36,7 @@ For the full MCP playbook see `tooling-playbooks.md → Integrations`.
 
 ## 5. Security
 
-- Credentials, tokens, API keys — only via **write-protected configuration constants** or the БСП "Безопасное хранение паролей" subsystem. Hardcoding is forbidden (`dev-standards-architecture.md §3 → "Security"`).
+- Credentials, tokens, API keys — only via **write-protected configuration constants** or the БСП "Безопасное хранение паролей" subsystem. Hardcoding is forbidden (`standards(name="dev-standards-architecture") §3 → "Security"`).
 - Validate the token/session before each request; implement token refresh centrally.
 
 ## 6. Idempotency and retries

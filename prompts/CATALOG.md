@@ -12,6 +12,8 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/installtools` | Guided installer menu (asks before any MCP install) |
 | `/checkmcp` | MCP status only (repair is explicit) |
 | `/mode plan` / `/mode build` / `/mode ask` | Pi ASK/PLAN/BUILD switch (not a prompt file; default ASK) |
+| `/taskmode` | Pin the 1C work path for this session (does not replace `/mode`, does not waive gates) |
+| `/resume` | Continue an active task from its handoff after checking workspace state and evidence |
 | `/loadfrom1cbase` | Dump configuration from the configured infobase into the repo |
 | `/update1cbase` | Load repository into the named infobase (confirm target) |
 | `/deploy-and-test` | Load into the test infobase and optionally run UI tests |
@@ -45,8 +47,16 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/approve` | Pi approval mode: `off` do not ask, `safe` ask on dangerous BUILD actions, `strict` approve every tool (`Ctrl+Alt+S`) |
 | `/theme` | Pi TUI theme: picker, `standard` (VS Code Dark+), `dracula`, `list`, `status` |
 | `/litemode` | `VERIFICATION_DEPTH` |
+| `/sdlc` | Named SDLC QA profile (`lite` / `standard` / `full` / `status`) |
+| `/uitests` | UI testing + test-client window toggle, independent of verification depth |
+| `/previewmode` | `METADATA_PREVIEW` (on\|auto\|off) or a one-off preview |
 | `/economymode` | Orchestrator economy mode |
 | `/rulesmodel` | `AGENT_MODEL` profile |
+| `/setupmcp` | Wire already-installed MCP servers and memory providers into this repo |
+| `/install-atlassian-mcp` | Opt-in: `mcp-atlassian` (Jira / Confluence) |
+| `/install-officecli` | Opt-in: OfficeCLI (Word / Excel / PowerPoint without MS Office) |
+| `/install-rtk` | Opt-in: `rtk` shell-output compression proxy |
+| `/installfilesupdatescript` | Create an IB→MCP XML export script + Windows Task Scheduler job |
 | `/restore-testbase` | Rebuild the named test infobase from snapshot (confirm target) |
 | `/getconfigfiles` | Partial object dump |
 | `/check-uuid` | Duplicate UUID check in a dump |
@@ -57,6 +67,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | Command | Purpose |
 |---|---|
 | `/evolve` | Propose `LLM-RULES.md` updates from friction signals |
+| `/ponytail-review` | Read-only simplification review of the current diff / selected files |
 | `/review-airules` | Read-only review of `comol/ai_rules_1c` vs this profile pin |
 | `/support` | Support ticket about MCP / ruleset |
 | `/supportstatus` | Status of support tickets |

@@ -8,7 +8,7 @@ category: development
 
 **When to load this file:** before writing or reviewing BSL when formatting, naming, forbidden constructs, quality limits, public procedure documentation, typography, comment quality, or the internal review baseline is relevant.
 
-Section numbers 2 and 5–8 are preserved from the former monolithic `dev-standards-core.md` for stable references.
+Section numbers 2 and 5–8 are preserved from the former monolithic `coding-standards.md` for stable references.
 
 ## 2. Code Style (single source of truth — referenced from `AGENTS.md`)
 

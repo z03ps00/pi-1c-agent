@@ -2,7 +2,7 @@
 
 Search over the 1C Standard Subsystems Library (БСП/SSL) documentation and runtime observability.
 
-> Load this file only if `1c-ssl-mcp` is actually exposed in the current session. The expanded surface below is published in beta; stable tags retain the older `ssl_search(query)` contract. `tools/list` is authoritative.
+> Load this file only if `1c-ssl-mcp` is actually exposed in the current session. The expanded surface below is published in the current images (since 27.09.2026); older images retain the `ssl_search(query)` contract. `tools/list` is authoritative.
 
 ## Search
 

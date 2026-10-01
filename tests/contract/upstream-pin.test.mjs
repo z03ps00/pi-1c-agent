@@ -4,9 +4,9 @@ import path from 'node:path';
 import test from 'node:test';
 import { profileRoot } from '../lib/profile-root.mjs';
 
-const SEEDED_PIN = '410951e74fd3e6b7a763cf49757935b9a34d3f31';
+const SEEDED_PIN = 'c1fb8e687be5b9d71d5a05c6f5d32cf6a6919dcb';
 
-test('upstream.lock.json carries the seeded pin', () => {
+test('upstream.lock.json carries the applied pin', () => {
   const lockPath = path.join(profileRoot(), 'upstream.lock.json');
   assert.ok(fs.existsSync(lockPath), `${lockPath} missing`);
   const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));

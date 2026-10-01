@@ -1,5 +1,5 @@
 ---
-description: Form-module code (`Form.Module.bsl` / ФормаМодуль) — client-server interaction, wiring event handlers into `Form.xml`, reserved property names forbidden as local variables, async pointers, form-data conversion. Load from `forms.md` when editing form-module logic or adding event handlers.
+description: Form-module code (`Form.Module.bsl`) — client-server interaction, event handlers wired into `Form.xml`, reserved names, async calls, form-data conversion. Load from `forms.md` when editing form-module logic or adding handlers.
 alwaysApply: false
 ---
 
@@ -9,15 +9,17 @@ This file owns form-module-specific topics: event-handler wiring, reserved names
 
 ## Client-Server Interaction and Compilation Directives
 
-Single source of truth — `dev-standards-architecture.md §3 → "Client-Server Interaction"`; examples and severity — `anti-patterns.md §6–§7`. Not duplicated here.
+Single source of truth — `standards(name="dev-standards-architecture") §3 → "Client-Server Interaction"`; examples and severity — `standards(name="anti-patterns") §6–§7`. Not duplicated here.
 
 ## Async Programming
 
-Patterns, pitfalls, and platform-version mapping (8.3.18+ `Асинх` / `Ждать` vs older `ОписаниеОповещения`) live in `async-methods.md`. Load it before writing client-side async code.
+Patterns, pitfalls, and platform-version mapping (8.3.18+ `Асинх` / `Ждать` vs older `ОписаниеОповещения`) live in `standards(name="async-methods")`. Load it before writing client-side async code.
 
 ## Adding Form Event Handlers
 
 > **IMPORTANT.** A handler procedure in `Form.Module.bsl` does nothing until the event hook is added to the form XML file (usually `Form.xml` in the parent directory of the module code).
+
+The reverse holds too: every handler and command `Action` named in `Form.xml` must exist in the module exactly once, with the directive of its event — `&НаКлиенте` for client events and commands, `&НаСервере` for `*AtServer` events — and no more mandatory parameters than the platform passes. `form-validate` checks this (check 13).
 
 Event hooks in XML look like:
 
@@ -84,6 +86,9 @@ In 1C form modules, local variables **must not** be named after standard form-el
 ## Form Data
 
 - Use `ДанныеФормыВЗначение()` / `ЗначениеВДанныеФормы()` to convert between form data and actual objects.
+- The form methods `РеквизитФормыВЗначение()` / `ЗначениеВРеквизитФормы()` need the form context on the server: call them only from `&НаСервере` procedures — never from `&НаКлиенте`, `&НаСервереБезКонтекста` or `&НаКлиентеНаСервереБезКонтекста`. `form-validate` rejects such a call (check 14). Reading `Объект.<Имя>` / `Запись.<Имя>` as form data is fine in client and server procedures alike.
+- **Never pass an object to `ЗначениеЗаполнено()`** — the result of `РеквизитФормыВЗначение("Объект")`, a `СправочникОбъект` / `ДокументОбъект`, a record set. The platform raises «Проверка мутабельных значений на заполненность не поддерживается» at run time (the call compiles). Check what you actually mean: the reference (`ЗначениеЗаполнено(Объект.Ссылка)`), a specific attribute, or `ЭтоНовый()`.
+- Bind object fields through the main attribute — `Объект.<Имя>` (`Запись.<Имя>` in a register record form) — and never add a form attribute with the same name as an object field: the value stays in the form and never reaches the object, and in a record form a flat copy costs the standard write commands (details — `forms-add.md → Main attribute and standard commands`).
 - Remember that form attributes are not the same as object attributes — they are form-specific representations.
 - Always check methods, functions, procedures, attributes, and elements for availability in the context of the directive when using directives from the directives table (`&НаКлиенте`, `&НаСервере`, `&НаСервереБезКонтекста`, `&НаКлиентеНаСервереБезКонтекста`)
 

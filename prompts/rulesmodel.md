@@ -1,12 +1,12 @@
 ---
-description: [settings] Adapt the ruleset to the model that is actually running — normalize a free-form model name to a profile slug and write AGENT_MODEL (opus5|sonnet5|fable5|gpt56) into .dev.env
+description: [settings] Adapt the ruleset to the model that is actually running — normalize a free-form model name to a profile slug and write AGENT_MODEL (opus5|sonnet5|fable5|gpt56|gpt6) into .dev.env
 ---
 
 # /rulesmodel — adapt the rules to the active model
 
 Bind the ruleset to the model that executes it by writing the `AGENT_MODEL` key in `.dev.env`. Canonical behaviour of the layer — `$PI_CODING_AGENT_DIR/rules-1c/rules/model-adaptation.md` and the profile files `$PI_CODING_AGENT_DIR/rules-1c/rules/model-<slug>.md` (installed copies; match by file name per the path convention in `AGENTS.md`). **Load `model-adaptation.md` before acting.**
 
-Supported profiles: `opus5` (Claude Opus 5), `sonnet5` (Claude Sonnet 5), `fable5` (Claude Fable 5 / Mythos 5), `gpt56` (GPT-5.6). Any other model runs the base ruleset, which is model-neutral by design — that is a valid state, not a degraded one.
+Supported profiles: `opus5` (Claude Opus 5), `sonnet5` (Claude Sonnet 5), `fable5` (Claude Fable 5 / Mythos 5), `gpt56` (GPT-5.6), `gpt6` (GPT-6 Astra). Any other model runs the base ruleset, which is model-neutral by design — that is a valid state, not a degraded one.
 
 The command edits **only** the `AGENT_MODEL` line in `.dev.env` — never other keys, never other files.
 
@@ -16,25 +16,25 @@ The command edits **only** the `AGENT_MODEL` line in `.dev.env` — never other 
 
 The user may write the model name any way they like. Resolve free-form input to a canonical slug **yourself** — no script has to be fed an exact string:
 
-1. **Empty or `auto`** — identify the model you are actually running from your own self-knowledge and map it to a slug. If you are not one of the four supported models, treat it as `off` (see below) and say which model you identified.
-2. **A model name in any spelling** — normalize by family + major version: lowercase; strip spaces, dashes, dots, underscores; strip vendor prefixes (`anthropic/`, `openai/`, `claude-`, `gpt-`) and client-side suffixes (`-thinking`, `-high`, `#xhigh`, `-max`, `-fast`, date stamps); accept Russian spellings (`клод опус 5`, `сонет 5`, `фейбл 5`, `гпт 5.6`). The alias table lives in `model-adaptation.md → §3`; use it, and use judgement for spellings it does not list.
+1. **Empty or `auto`** — identify the model you are actually running from your own self-knowledge and map it to a slug. If you are not one of the five supported models, treat it as `off` (see below) and say which model you identified.
+2. **A model name in any spelling** — normalize by family + major version: lowercase; strip spaces, dashes, dots, underscores; strip vendor prefixes (`anthropic/`, `openai/`, `claude-`, `gpt-`) and client-side suffixes (`-thinking`, `-high`, `#xhigh`, `-max`, `-fast`, date stamps); accept Russian spellings (`клод опус 5`, `сонет 5`, `фейбл 5`, `гпт 5.6`, `гпт 6`). The alias table lives in `model-adaptation.md → §3`; use it, and use judgement for spellings it does not list.
 3. **`status`** — report without editing anything.
 4. **`off` / `none` / `generic` / `сброс`** — clear the value (base ruleset).
 
-**Unsupported or ambiguous input is never silently coerced.** `gpt-5.5`, `opus 4.8`, `sonnet 4.6`, `haiku`, a bare `claude`, `gemini`, `glm`, `qwen`, a bare version number: report the four supported slugs, explain that the base ruleset applies unchanged for other models, and ask which the user wants. Offer the nearest same-family profile only as an explicit choice they confirm — never map one family onto another.
+**Unsupported or ambiguous input is never silently coerced.** `gpt-5.5`, `opus 4.8`, `sonnet 4.6`, `haiku`, a bare `claude`, `gemini`, `glm`, `qwen`, a bare version number: report the five supported slugs, explain that the base ruleset applies unchanged for other models, and ask which the user wants. Offer the nearest same-family profile only as an explicit choice they confirm — never map one family onto another.
 
 **Requested slug ≠ the model you are running** is allowed (the user may be configuring the project for a teammate or for another client): write the requested value, and state in one line that the active session is a different model, so the profile you apply right now is the one matching your own identity per `model-adaptation.md → §2`.
 
 ## Setting the profile (`auto`, a slug, or a free-form name)
 
 1. Read `.dev.env`: the `AGENT_MODEL` key.
-2. Set `AGENT_MODEL=<slug>`. If the key line exists — replace its value; if absent — append the line at the end of the file with a one-line comment `# Модель головного агента для адаптации правил: opus5 | sonnet5 | fable5 | gpt56 (переключается командой /rulesmodel)`.
+2. Set `AGENT_MODEL=<slug>`. If the key line exists — replace its value; if absent — append the line at the end of the file with a one-line comment `# Модель головного агента для адаптации правил: opus5 | sonnet5 | fable5 | gpt56 | gpt6 (переключается командой /rulesmodel)`.
 3. If `.dev.env` does not exist: do **not** create a partial file (the installer's `Place-DevEnv` places the full template only when the file is missing — a stub would permanently block it). Apply the profile for the current session only, and tell the user to run `install.ps1 init` (or copy `.dev.env.example` to `.dev.env`) to make it persistent.
-4. **No re-render needed.** `AGENT_MODEL` is read from `.dev.env` at task time and all four profile files are already installed as on-demand rules — no `install.ps1 update`, no client restart.
+4. **No re-render needed.** `AGENT_MODEL` is read from `.dev.env` at task time and all five profile files are already installed as on-demand rules — no `install.ps1 update`, no client restart.
 5. Load `$PI_CODING_AGENT_DIR/rules-1c/rules/model-<slug>.md` and apply it immediately — from this message on, in this session.
 6. Confirm to the user in 3–5 lines, in Russian:
    - что записано в `.dev.env` (`AGENT_MODEL=<slug>`, модель — `<полное имя>`) и что действует для проекта, включая новые чаты;
-   - 2–3 главных изменения поведения из профиля (например для `opus5`: короче ответы и отчёты, меньше нарратива, никаких самопридуманных перепроверок и субагентов-верификаторов; для `sonnet5`: явное указание области в заданиях, thinking не выключаем; для `fable5`: каждое утверждение о прогрессе подтверждается результатом инструмента, не завершать ход обещанием; для `gpt56`: минимальный набор правил на задачу, инструкция один раз, границы автономии);
+   - 2–3 главных изменения поведения из профиля (например для `opus5`: короче ответы и отчёты, меньше нарратива, никаких самопридуманных перепроверок и субагентов-верификаторов; для `sonnet5`: явное указание области в заданиях, thinking не выключаем; для `fable5`: каждое утверждение о прогрессе подтверждается результатом инструмента, не завершать ход обещанием; для `gpt56`: минимальный набор правил на задачу, инструкция один раз, границы автономии; для `gpt6`: контекстное следование инструкциям, довести авторизованную работу до конца, без ранней остановки и лишних перепроверок);
    - что **не** меняется: хард-гейты (`1c-metadata-manage`, операции с ИБ, MCP-first, цепочка валидаторов и её бюджет, `templatesearch` / `recall`, `CONFUSION`) — профиль их не ослабляет;
    - рекомендуемая клиентская настройка усилия / verbosity из профиля, если её задаёт пользователь (эти параметры обычно вне доступа агента);
    - как сменить или выключить — `/rulesmodel <модель>` / `/rulesmodel off`.

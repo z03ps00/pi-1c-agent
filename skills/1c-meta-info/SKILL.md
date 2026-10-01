@@ -1,0 +1,49 @@
+---
+name: 1c-meta-info
+description: "Facts about 1C metadata objects — passport, typed attributes, tabular-part columns, forms, predefined items, objects by category or Russian description — from the graph and code-metadata MCP. Use before code or metadata that depends on an object's structure, and to find objects by synonym."
+argument-hint: "<Kind.Name | description> [sections]"
+allowed-tools: mcp__1c-graph-metadata-mcp__get_object_dossier, mcp__1c-graph-metadata-mcp__search_metadata, mcp__1c-graph-metadata-mcp__search_metadata_by_description, mcp__1c-graph-metadata-mcp__business_search, mcp__1c-graph-metadata-mcp__resolve_qualified_name, mcp__1c-graph-metadata-mcp__find_by_guid, mcp__1c-graph-metadata-mcp__run_graph_cypher_template, mcp__1c-code-metadata-mcp__metadatasearch, mcp__1c-code-metadata-mcp__get_metadata_details
+---
+
+# 1c-meta-info — facts about a metadata object
+
+Facts only; a verdict about an object needs the validators of `1c-validate`. Search discipline and freshness — `rules-1c/rules/mcp-first-search.md`.
+
+For each graph call, explicitly pass the returned `project_id` verified against the current source roots; substitute `<resolved-project-id>` below. Discover through `list_graph_projects` using the `mcp-1c-tools` router first when needed. Keep project scope outside JSON `query` operations and template `arguments`. An extension requires verified layer coverage/provenance; neither the first project nor the base-only response is an extension lookup. Code-server selectors use their own live schema and mappings (`rules-1c/rules/multi-contour-search.md`).
+
+## Address
+
+Graph object lookups accept qualified names such as `Справочник.Контрагенты`, `Документ.РеализацияТоваровУслуг`, `РегистрНакопления.ТоварыНаСкладах`, `ОбщийМодуль.РаботаСКонтрагентами`. For Code `get_metadata_details`, reuse the canonical `full_path` from `metadatasearch`, for example `Документы.НачислениеЗарплаты`; a Graph-style singular prefix may cause a slower live-XML fallback. Both calls name the argument `object_name`, never `full_name` or `object_full_name`. Identity tools have their own arguments (`resolve_qualified_name` takes `qualified_name`). `Invoke-1CEdit.ps1 -Object` uses the singular qualified form.
+
+## Tools and exact arguments
+
+| Need | Call | Arguments |
+|---|---|---|
+| Passport of a known object | `get_object_dossier` (graph) | `object_name`, optional `sections` as a list of `structure`, `forms`, `subscriptions`, `roles`, `dependencies`, `code`, `business_info` |
+| Header attributes, properties, predefined | `get_metadata_details` (code) | `object_name`, `sections="attributes,tabular_parts,properties,predefined"`, `detail_level="outline" \| "full"`, `max_items`, `cursor`, `include_provenance=false` |
+| Tabular-part **columns** | `get_metadata_details` (code) | `sections="tabular_parts"` or `tabular_part="<name>"` — current graph generations can include columns; `tabular_part_columns_not_indexed` on an older/incomplete generation routes here in one step |
+| Objects by category / structure | `search_metadata` (graph) | `query` = JSON operation, e.g. `{"operation":"list_objects_by_category","category_name":"Документы"}` |
+| Object by synonym / description | `search_metadata_by_description` (graph) | `query`, `top_k=10`, `filter_type` = Russian plural category (`Документы`, `Справочники`), `use_fuzzy`, `alpha` |
+| Business-meaning search | `business_search` (graph) | `query`, `top_k`, `filter_type`, `include_structure` — only when `list_graph_capabilities` shows the lane |
+| Identification fallback | `metadatasearch` (code) | `query`, `names_only=true`, `limit=5`, `object_type` |
+| Identity | `resolve_qualified_name(qualified_name)`, `find_by_guid(guid)` | — |
+| Cypher template | `run_graph_cypher_template` | `template_id`, `arguments.object_name` = bare name (`Контрагенты`), optional `arguments.category_name` |
+
+## Calls
+
+```json
+{"tool": "get_object_dossier", "args": {"project_id": "<resolved-project-id>", "object_name": "Документ.НачислениеЗарплаты", "sections": ["structure", "forms"]}}
+{"tool": "get_metadata_details", "args": {"object_name": "Документы.НачислениеЗарплаты", "sections": "tabular_parts", "detail_level": "outline", "max_items": 200}}
+{"tool": "search_metadata_by_description", "args": {"project_id": "<resolved-project-id>", "query": "начисление премии сотрудникам", "filter_type": "Документы", "top_k": 5}}
+{"tool": "search_metadata", "args": {"project_id": "<resolved-project-id>", "query": "{\"operation\": \"list_attributes_with_type\", \"type_name\": \"СправочникСсылка.Контрагенты\"}"}}
+{"tool": "metadatasearch", "args": {"query": "Контрагенты", "names_only": true, "limit": 5}}
+```
+
+## Rules
+
+- Retrieve the smallest projection that answers: names for identification, one section for a field list; never expand a hit into a full dossier without need.
+- Page with `cursor` until complete before claiming an exhaustive list; an empty page section does not prove absence.
+- Configurations with extensions: when the graph covers the relevant layers, use one discovered base `project_id`; effective source version via `resolve_effective_entity`, layer diff via `compare_base_and_extension(object_name, extension_name)` — `1c-impact`. Uncovered contours use their mapped index or own files; scope and evidence boundaries — `rules-1c/rules/multi-contour-search.md`.
+- Typed answers map to actions by code — `rules-1c/rules/mcp-policy.md → C. Server answers → actions`.
+
+Paging contract, JSON operation catalogue, template list: `skills/mcp-1c-tools/docs/1c-graph-metadata-mcp.md`, `skills/mcp-1c-tools/docs/1c-code-metadata-mcp.md → Reading large metadata objects`.

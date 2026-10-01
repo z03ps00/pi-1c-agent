@@ -70,7 +70,7 @@ Default level when active: **full**. Switch with `/caveman lite`, `/caveman full
 - **Language stays Russian.** AGENTS.md requires "Answer always in Russian". caveman compresses Russian prose; it does not switch the answer to English. This covers **every emitted line** — the opening sentence, status lines between tool calls, the final report — not just the summary. The examples in this file and the English wording of the rules must not drag the reply into English.
 - **Code is sacred.** BSL code, identifiers, metadata names, error texts, file paths, query text, configuration object names, region headers, procedure/function signatures: rendered verbatim, never abbreviated or paraphrased.
 - **Tone & Output structure.** The required final-summary structure from AGENTS.md ("what was done", "files changed", "real risks") is preserved. Mandatory reporting elements from AGENTS.md (for example context sources used before non-trivial BSL / metadata changes) are also preserved. caveman only tightens the prose inside those parts; it does not drop required parts.
-- **Procedure/function documentation headers**, code comments, commit messages, PR descriptions: written in normal grammar per `dev-standards-core.md`, not in caveman.
+- **Procedure/function documentation headers**, code comments, commit messages, PR descriptions: written in normal grammar per `coding-standards.md`, not in caveman.
 - **Five-step development procedure** (Clarify Scope → Simplicity First → Surgical Changes → Verification → Deliver Clearly): narration around the steps is compressed, the steps themselves still happen.
 - **Tool-calling rules** are not affected. caveman shortens the report, not the work.
 
@@ -136,7 +136,7 @@ Under `CAVEMAN=auto`, if the entire task is analysis / documentation / review (s
 
 - BSL code blocks and inline code references.
 - Commit messages, PR descriptions.
-- Procedure/function header documentation per `dev-standards-core.md`.
+- Procedure/function header documentation per `coding-standards.md`.
 - Comments inside `.bsl` modules.
 - Generated XML / metadata files.
 - Quoted error messages and platform-side text.

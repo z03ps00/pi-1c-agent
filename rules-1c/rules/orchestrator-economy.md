@@ -10,13 +10,13 @@ alwaysApply: false
 ## When the mode is on
 
 - **State** — the `ORCHESTRATION` key in `.dev.env` (**Defaulted**: missing file / missing key / empty / invalid value = `standard`, mode off; **never ask** for the value). `economy` switches the mode on for the whole project, including new chats.
-- **Enable / disable** — the `/economymode` command (`on` writes `ORCHESTRATION=economy`, `off` writes `ORCHESTRATION=standard`); the command is the canonical editor of this key. An explicit user phrase in chat ("режим экономии" / "включи экономию" / "выключи экономию") overrides the setting **for the current session** without editing `.dev.env`.
+- **Enable / disable** — the `/economymode` command (`on` writes `ORCHESTRATION=economy`, `off` writes `ORCHESTRATION=standard`); the command is the canonical editor of this key. An explicit request in chat to enable or disable it ("включи экономию" / "выключи экономию") overrides the setting **for the current session** without editing `.dev.env`. Asking about the mode or checking its consistency does not switch it.
 - **Detection** — when deciding whether to delegate (loading `subagents.md`) on a non-trivial task, check `ORCHESTRATION` in `.dev.env`; on `economy`, apply this rule.
 - **Models are out of scope** — the mode does not choose models. Concrete models per tier stay in `SUBAGENT_MODEL_CODING` / `SUBAGENT_MODEL_ANALYSIS` / `SUBAGENT_MODEL_LIGHT` and are resolved by the installer per `subagents.md → Model-tier routing`; the mode only shifts **who executes** toward subagents on those tiers. When the tier models are **empty**, subagents inherit the parent's model and the savings shrink to context offloading — that is why `/economymode on` checks the keys and offers to configure them (benchmark profiles or custom slugs) before enabling; the question is part of the command's explicit flow and does not weaken the never-ask policy for regular tasks.
 
 ## Principle
 
-Parent-agent (orchestrator) tokens are the most expensive resource of the session — typically several times the price of a subagent on the `analysis` / `light` tier. While the mode is on, the parent **does not do anything itself that a subagent of an appropriate tier can do**: the parent thinks, decides, writes specs, and verifies; subagents do the reading and the writing.
+Parent-agent (orchestrator) tokens are the most expensive resource of the session — typically several times the price of a subagent on the `analysis` / `light` tier. Within the triage and delegation boundaries below, the parent thinks, decides, writes delegation briefs, and verifies; subagents do the reading and the writing.
 
 ## Division of labor
 
@@ -34,7 +34,7 @@ Delegated while the mode is on (tier per `subagents.md → Model-tier routing`):
 - implementation from a ready plan — `1c-developer` / `1c-metadata-manager` (`coding`);
 - planning, analysis, documentation — `1c-planner` / `1c-analytic` / `1c-doc-writer` (`analysis`);
 - mechanical multi-file edits — a bounded worker with a non-overlapping write scope (`worker-bounded-edit` template);
-- quick error fixes — `1c-error-fixer` (`light`).
+- quick error fixes — `1c-error-fixer` (`coding` — it authors production code).
 
 Output rule: the parent's own text stays minimal — decisions, specs, summaries. While the mode is on, the parent does not write file bodies for non-trivial changes; the quick-fix exception below still applies.
 
@@ -43,11 +43,13 @@ Output rule: the parent's own text stays minimal — decisions, specs, summaries
 The mode changes **who executes**, never **which gates apply**. On any conflict, the stricter existing rule wins. Explicitly:
 
 - **`subagent-pipeline.md` stays intact** — same stages, same hard gates. The mode only makes stage 2/3 delegation the default for full-cycle tasks and pushes bulk reads of stage 2 scouting to `1c-explorer`. Stages 4a (spec-compliance review) and 5 (verification gate) remain the parent's own work.
-- **Triage from `AGENTS.md` is unchanged** — quick-fix and docs-fix tasks are still executed directly by the parent: launching a subagent for a trivial edit costs more than it saves (`subagents.md → Delegation principle`). The mode never forces delegation of trivial work.
-- **`1c-code-reviewer` still runs only on an explicit user request** — the mode must not auto-trigger reviews.
-- **UI testing is still gated** by `UI_TESTING` and `INFOBASE_PUBLISH_URL` — the mode does not enable `1c-tester` runs.
+- **Triage from `rules-1c/AGENTS-UPSTREAM.md` is unchanged** — quick-fix and docs-fix tasks are still executed directly by the parent: launching a subagent for a trivial edit costs more than it saves (`subagents.md → Delegation principle`). The mode never forces delegation of trivial work.
+- **Spec-authoring stays outside the implementation pipeline.** The parent owns decisions and acceptance of the specification; bounded research and artifact drafting may be delegated by `sdd-integrations.md → Subagent → OpenSpec artifact mapping`. "The parent keeps specs" means ownership and delegation briefs, not a ban on those artifact writers. Authoring a spec does not authorize apply.
+- **QA profiles are independent.** Any `VERIFICATION_DEPTH` (`lite`, `standard`, `full`) combines with either orchestration value. Select the applicable gates by task risk and depth before assigning their executor; delegation neither adds optional validators nor removes mandatory ones. Economy mode changes neither `VERIFICATION_DEPTH` nor `UI_TESTING`.
+- **Reviewers still require an explicitly selected model** (`subagents.md → Reviewer model gate`), and `1c-code-reviewer` still requires an explicit user review request — economy mode neither enables inherited-model reviewers nor auto-triggers reviews.
+- **UI testing is still gated** by `UI_TESTING` and an available route (QA MCP or `INFOBASE_PUBLISH_URL`) — the mode does not enable `1c-tester` runs.
 - **Model-tier routing from `subagents.md` still applies** — light-tier output remains working material, never the final authority for architecture, transactions, registers, security, or data integrity.
-- **Validator obligations are unchanged** — whoever edits BSL / metadata runs the applicable chain (`syntaxcheck` → `check_1c_code` → `review_1c_code` / `verify_xml`); the parent still owns the closing gate from `verification-checklist.md`.
+- **Validator obligations are unchanged** — whoever edits BSL / metadata runs the applicable chain (`syntaxcheck` → `check_1c_code` → `review_1c_code` / `verify_xml`); the parent still owns the closing gate from `verification-gates.md`.
 - **CONFUSION protocol is unchanged** — under-specified or conflicting requirements go to the user.
 
 ## Mode discipline

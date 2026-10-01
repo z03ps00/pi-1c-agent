@@ -1,23 +1,23 @@
 ---
-description: 1C:EDT branch of the ruleset — activation via USE_EDT, EDT project format vs Designer XML dump, what the metadata / infobase hard gates mean inside an EDT workspace, EDT-MCP routing, model-vs-disk synchronization, validation, DB update, tests, forms and git. Load when the project uses EDT, when the sources are in EDT format, or when EDT-MCP tools are exposed.
+description: 1C:EDT branch of the ruleset — EDT project format, metadata / infobase gates, EDT-MCP routing, validation and DB update in an EDT workspace. Load when USE_EDT=true, the sources are in EDT format, or EDT-MCP tools are exposed.
 alwaysApply: false
 ---
 
 # 1C:EDT workflow
 
-This file is the **EDT branch** of the ruleset. Everything else in `$PI_CODING_AGENT_DIR/rules-1c/rules/` is written for the Designer-oriented default; this file states exactly what changes when the project is developed in **1C:EDT**, and nothing more.
+This file is the **EDT branch** of the ruleset. Everything else in `rules-1c/rules/` is written for the Designer-oriented default; this file states exactly what changes when the project is developed in **1C:EDT**, and nothing more.
 
 ## Activation — the master switch
 
-`.dev.env` `USE_EDT` is the project's explicit statement about EDT (canon — `$PI_CODING_AGENT_DIR/rules-1c/rules/dev-standards-env.md → USE_EDT — project uses 1C:EDT`):
+`.dev.env` `USE_EDT` is the project's explicit statement about EDT (canon — `rules-1c/rules/dev-standards-env.md → USE_EDT — project uses 1C:EDT`):
 
 - **`USE_EDT=true`** → this file applies. Load it before the first metadata mutation, infobase operation, or source-format-sensitive action in the session.
 - **`USE_EDT=false` or missing** → this file does **not** apply. Do not propose EDT, do not offer EDT-MCP, do not reshape a task around EDT. An EDT installation found on the workstation, or an `edt-mcp` entry left in some client config, is **not** a project preference — only `USE_EDT` is.
 - **User says the project moved to EDT** (or explicitly asks for EDT work) → ask once, set `USE_EDT=true` without touching other keys, then continue under this file.
 
-`USE_EDT=true` **without** EDT-MCP installed is a normal state: every existing rule, skill and slash command keeps working, and the parts of this file that need EDT-MCP simply do not apply. Recommend `/install-edt-mcp` **once** per session when a task would genuinely benefit (live workspace state, EDT validation markers, native refactoring, EDT-driven DB update, form snapshots) — then drop the topic.
+`USE_EDT=true` without EDT-MCP is valid. Generic work continues; dependent steps use the alternatives below or remain unverified. Recommend `/install-edt-mcp` at most once per session when relevant and policy permits; never recommend it for `TOOL_EDT=off`.
 
-EDT-MCP counts as available only when its tools are exposed in the current tool schema. An entry in a client config, or a reachable `http://127.0.0.1:8765/health`, proves the plugin — not the session. Tool catalog and routing details — `$PI_CODING_AGENT_DIR/skills/mcp-1c-tools/docs/edt-mcp.md`.
+Apply `TOOL_EDT` (`rules-1c/rules/mcp-policy.md → Tool availability`): `off` suppresses calls and installation recommendations; `required` blocks an EDT-MCP-dependent step if its capability is missing. Neither activates `USE_EDT`. Tools must be callable in this session; config/health alone is insufficient. Catalog: `skills/mcp-1c-tools/docs/edt-mcp.md`.
 
 ## The one thing that really changes: source format
 
@@ -31,7 +31,7 @@ EDT and Designer store the same configuration in **two different on-disk formats
 
 Hard rules for the EDT format:
 
-- **Never hand-edit `*.mdo`, `*.form`, or anything under `DT-INF/`.** They are a generated projection of EDT's model; a hand edit is the same class of defect as hand-editing metadata XML (`rules-1c/AGENTS-UPSTREAM.md` → Skills and Subagents), with none of the recovery tooling.
+- **Never hand-edit `*.mdo`, `*.form`, or anything under `DT-INF/`.** They are a generated projection of EDT's model; a hand edit is the same class of defect as hand-editing metadata XML (`rules-1c/AGENTS-UPSTREAM.md → Skills and Subagents`), with none of the recovery tooling.
 - **Never point the `1c-metadata-manage` XML tools at `src/`.** They expect Designer XML; feeding MDO to them produces a broken tree, not an error message you can trust.
 - BSL modules are ordinary `.bsl` files in **both** formats. Reading and editing BSL is unchanged — subject to *Model vs disk* below.
 
@@ -43,20 +43,20 @@ In order of preference:
 2. **The EDT UI, by the user** — when EDT-MCP is absent, hand the user a precise, ordered instruction (object, properties, exact names) instead of editing files. Slower for the user, but it is the only correct path left inside EDT format.
 3. **Export → XML toolchain → import** — only when the change genuinely requires the XML tools and the user accepts the round trip. `export_configuration_to_xml` produces a Designer dump; work on it with `1c-metadata-manage`; bring it back with the platform / EDT import path. **Confirm first:** `import_configuration_from_xml` creates a **new** EDT project rather than updating the current one, so an unconfirmed round trip can strand the workspace. Never start this silently to route around option 1 or 2.
 
-The **vendor-support** rules (`$PI_CODING_AGENT_DIR/skills/1c-metadata-manage/docs/support-manage.md`) and the **extension-first** answer for typical configurations are unchanged in EDT — only the mechanism differs (`adopt_metadata_object` instead of `cfe-borrow`).
+The **vendor-support** rules (`skills/1c-metadata-manage/docs/support-manage.md`) and the **extension-first** answer for typical configurations are unchanged in EDT — only the mechanism differs (`adopt_metadata_object` instead of `cfe-borrow`).
 
 ## Model vs disk — the synchronization rule
 
 EDT's authority is its **in-memory model**, not the files in `src/`. `resync_to_disk` flushes model → disk and reports desync; there is no symmetrical "disk wins" operation you may assume.
 
 - **While an EDT workspace is open on this project, EDT-MCP writes are the default** for anything EDT owns (metadata, module source). A file written behind EDT's back is at best invisible to EDT until it refreshes, at worst overwritten by the model.
-- **Before** reading `src/` with native tools, feeding files to the 1C MCP index, or running the BSL validators on them — run `resync_to_disk` and act on the reported desync. A validator verdict on a stale file is not evidence.
+- **Before** reading `src/` with native tools, indexing or validating it — use `resync_to_disk` when eligible. With EDT-MCP absent/disabled in `auto`/`off`, obtain the user's save/synchronization in EDT and confirmation of the current disk state; until then dependent reads/checks remain unverified. `required` cannot be satisfied by this substitute. Never invent a disk-to-model sync or trust stale files.
 - **After** an external change to the tree (git checkout, a script, a slash command), EDT-MCP results are stale until the workspace is refreshed; re-establish state before trusting `get_project_errors` or a module read.
 - **One owner per artifact per session.** Do not alternate between EDT-MCP writes and direct file writes on the same module — pick the path, state it in the report.
 
 ## Search and navigation
 
-`$PI_CODING_AGENT_DIR/rules-1c/rules/mcp-first-search.md` is unchanged: the 1C project-index servers (`1c-graph-metadata-mcp`, `1c-code-metadata-mcp`) stay the first pick for code / metadata / usage / impact search, and native discovery tools stay the justified last resort.
+`rules-1c/rules/mcp-first-search.md` is unchanged: the 1C project-index servers (`1c-graph-metadata-mcp`, `1c-code-metadata-mcp`) stay the first pick for code / metadata / usage / impact search, and native discovery tools stay the justified last resort.
 
 EDT-MCP is the better source when the question is about the **live workspace** rather than the indexed snapshot:
 
@@ -72,19 +72,19 @@ EDT-MCP is the better source when the question is about the **live workspace** r
 
 ## Validation
 
-BSL validation is **format-agnostic**: Gates 1–3 (`syntaxcheck` → `check_1c_code` → `review_1c_code`) run unchanged on every touched `.bsl`, in EDT projects too (`$PI_CODING_AGENT_DIR/rules-1c/rules/verification-gates.md`).
+BSL validation is **format-agnostic**: Gates 1–3 (`syntaxcheck` → `check_1c_code` → `review_1c_code`) run unchanged on every touched `.bsl`, in EDT projects too (`rules-1c/rules/verification-gates.md`).
 
 What changes:
 
-- **Gate 5 (`verify_xml`) does not apply to MDO.** In an EDT-format tree the equivalent evidence is EDT's own validation: `revalidate_objects` on the changed objects → `get_project_errors` (filter by project / severity / check) or `get_problem_summary` for counts. Record it in the report exactly as `verify_xml` evidence is recorded.
+- **Gate 5 (`verify_xml`) does not apply to MDO.** Use EDT's validation: `revalidate_objects` → `get_project_errors` / `get_problem_summary`. In `auto`/`off` without MCP, request the corresponding validation in EDT by the user, bound to the current saved state; until results arrive it is unverified. `required` remains blocked without its tool evidence. Report the actual source of validation.
 - **`apply_quick_fix`** applies EDT's official auto-fix to **one** marker. Apply deliberately, one at a time, and re-validate — it is a code change like any other, not a formatting nicety. `get_check_description` explains what a check code actually means before you "fix" it.
-- **Budget discipline is unchanged** (`rules-1c/AGENTS-UPSTREAM.md` → MCP Tool Calling → B.1`): re-validating unchanged state is forbidden, and EDT markers do not open a new retry loop of their own.
+- **Budget discipline is unchanged** (`rules-1c/AGENTS-UPSTREAM.md → MCP Tool Calling → B.1`): re-validating unchanged state is forbidden, and EDT markers do not open a new retry loop of their own.
 - `validate_query` (EDT-MCP) checks query text against the **project's metadata** — syntax and semantic errors with line numbers, without touching an infobase. It satisfies Gate 3a's query branch when `1c-data-mcp` is not exposed, and complements it when it is: EDT resolves tables and fields, `1c-data-mcp` answers what the live base returns. State which one produced the evidence.
 
 ## DB update, launches, external objects
 
 - **`update_database`** applies configuration changes to an infobase from EDT (full or incremental, targeted by launch configuration or project + application). It is a **destructive** operation in EDT-MCP's own classification and requires consent.
-- The infobase hard gate (`rules-1c/AGENTS-UPSTREAM.md` → Skills and Subagents) is unchanged in intent: **one owner per deployment**. Either the EDT path (`update_database`, launch configurations, `create_infobase` / `set_infobase_credentials`) or the platform path (`/update1cbase`, `/deploy-and-test`, `db-ops`) — never both against the same infobase in one flow, and never an ad-hoc `1cv8.exe` line. State which path ran in the mandatory `IB tooling:` line.
+- The infobase hard gate (`rules-1c/AGENTS-UPSTREAM.md → Skills and Subagents`) is unchanged in intent: **one owner per deployment**. Either the EDT path (`update_database`, launch configurations, `create_infobase` / `set_infobase_credentials`) or the platform path (`/update1cbase`, `/deploy-and-test`, `db-ops`) — never both against the same infobase in one flow, and never an ad-hoc `1cv8.exe` line. State which path ran in the mandatory `IB tooling:` line.
 - The slash commands remain valid for an EDT project **when the tree they load from is a Designer XML dump** (repo-stored dump, or a fresh `export_configuration_to_xml`). They cannot load `src/` MDO directly.
 - **External processors / reports** in an EDT external-object project are built with `build_external_objects` (compiles to `.epf` / `.erf`), not with the `1c-epf-build` tools of `1c-metadata-manage`.
 
@@ -92,7 +92,7 @@ What changes:
 
 - **`get_form_layout_snapshot`** returns the calculated layout as text — the default choice for "what does this form look like / did my change land". It is far cheaper than an image and diffable between states.
 - **`get_form_screenshot`** / `get_template_screenshot` need EDT started with `-DnativeFormBufferedLayoutRender=true` (`/install-edt-mcp`, step 3). Use them for genuine visual questions only.
-- Layout knowledge itself is format-independent — `$PI_CODING_AGENT_DIR/rules-1c/rules/form-patterns.md` applies unchanged.
+- Layout knowledge itself is format-independent — `standards(name="form-patterns")` applies unchanged.
 
 ## Git and the configuration repository
 

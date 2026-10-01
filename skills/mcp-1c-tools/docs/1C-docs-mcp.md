@@ -8,7 +8,7 @@ Four kinds of content behind **four** tools. They are not interchangeable, and t
 |---|---|---|
 | **docsearch** | Platform **syntax reference** + platform **prose** (guides, glossary, query-language book), hybrid vector + BM25 | Find built-in functions by description, look up platform features when the exact name is unknown |
 | **docinfo** | The same two, by exact name | Documentation for a known name (`"ТаблицаЗначений"`, `"Массив.Найти"`, `"Запрос"`) |
-| **standards** | The project's **development standards** (`1c-standards` collection) — the routed rules of `$PI_CODING_AGENT_DIR/rules-1c/rules/` | Retrieve a routed standard before writing or reviewing code — canon: `$PI_CODING_AGENT_DIR/rules-1c/rules/help-corpus-retrieval.md` |
+| **standards** | The project's **development standards** (`1c-standards` collection) — the routed rules of `rules-1c/rules/` | Retrieve a routed standard before writing or reviewing code — canon: `rules-1c/rules/help-corpus-retrieval.md` |
 | **formatspec** | 1C **file-format specifications** — on-disk XML of forms, roles, DCS schemas, spreadsheet documents, extensions | Authoring or debugging metadata XML by hand; next to `metadata-xml-workarounds.md` and the `1c-metadata-manage` skill |
 
 ## Parameters
@@ -19,7 +19,7 @@ Four kinds of content behind **four** tools. They are not interchangeable, and t
 
 ```
 standards()                          # catalogue of standards with their declared descriptions
-standards(name="coding-standards")   # that standard, entire (short name, doc_id, or title)
+standards(name="anti-patterns")     # that standard, entire (short name, returned doc_id, or title)
 standards(query="именование ролей")  # search inside the standards only
 
 formatspec()                         # catalogue of format specifications
@@ -27,9 +27,11 @@ formatspec(name="1c-form-spec")      # that specification, entire
 formatspec(query="реквизиты формы")  # search inside the specifications only
 ```
 
-- **There is no `corpus` argument on any tool of this server.** Passing one is an unknown-argument error and the guessed-parameter defect of `AGENTS.md → MCP Tool Calling → C.5`.
+- **There is no `corpus` argument on any tool of this server.** Passing one is an unknown-argument error and the guessed-parameter defect of `rules-1c/AGENTS-UPSTREAM.md → MCP Tool Calling → C.4`.
 - **`scope` does not reach the collections.** `standards` and `formatspec` are the only routes to them; `docsearch(scope="all")` still searches only the syntax reference and the prose.
 - **Documents are paged, not cut.** A document over `max_chars` returns `collection.parts` and `next_cursor`; continue until you have what you need. A first page is not the whole standard.
+- **Returned identifiers are opaque.** Copy `doc_id` and cursors exactly; do not manufacture them from names, paths, or call expressions.
+- **Routed standards are retrieved through MCP only.** No repository URL or local-body fallback; if unavailable, continue independent work and leave dependent requirements unverified under `rules-1c/rules/help-corpus-retrieval.md → When the server is not exposed`.
 
 ## Response contract 4.0
 
@@ -39,7 +41,7 @@ formatspec(query="реквизиты формы")  # search inside the specifica
 - A result owns the only `score`. `snippet_count` is omitted for a complete hit; on a partial hit it is the total available snippet count and is therefore greater than `len(snippets)`. The removed per-result `truncated` flag must not be expected.
 - Citation fields are conditional: `source`, `doc_type`, `name`/`object_name` and similar fields are omitted when another field already determines them. A single-corpus response carries `corpus` at envelope level; mixed results carry it in each citation.
 - Leave `diagnostics=false` for normal retrieval. The slim response omits lanes, fusion, relevance, detail-level machinery and per-result lane scores; common `filter` remains, and `status` appears whenever the index is not ready. `diagnostics=true` adds retrieval details. Threshold entries name their measured `field`, and relevance reports distinguish `admitted`, `rejected`, `cleared`, `best` and `closest`.
-- The current source contract is `schema_version: "4.0"`, but the published beta image is still `2.1`. Follow the actual tool schema and response of the connected image rather than assuming source-only 4.0 fields.
+- The current source contract is `schema_version: "4.0"`, but a published image may still report `2.1`. Follow the actual tool schema and response of the connected image rather than assuming source-only 4.0 fields.
 
 ## Notes
 
@@ -51,7 +53,7 @@ formatspec(query="реквизиты формы")  # search inside the specifica
 
 ## Platform capability discovery
 
-Canonical procedure for `AGENTS.md → MCP Tool Calling → A.7`: before implementing a specialized capability by hand, check whether the platform already ships it. The platform has many niche built-in mechanisms that model training data routinely misses — this server indexes the real documentation and is the authority.
+Canonical procedure for `rules-1c/AGENTS-UPSTREAM.md → MCP Tool Calling → A.7`: before implementing a specialized capability by hand, check whether the platform already ships it. The platform has many niche built-in mechanisms that model training data routinely misses — this server indexes the real documentation and is the authority.
 
 **Trigger domains** (non-exhaustive — apply to any capability that feels like "a platform could have this built in"):
 
@@ -79,7 +81,7 @@ Skipping this check and hand-rolling a capability from a trigger domain is a def
 
 ## Using a found platform mechanism
 
-> Canon for `AGENTS.md → MCP Tool Calling → A.7` (reuse half). Applies to **`docsearch` / `docinfo`** (and БСП via `ssl_search`) — **not** to **`templatesearch`** (code templates — `1c-templates-mcp.md → Using a found template`).
+> Canon for `rules-1c/AGENTS-UPSTREAM.md → MCP Tool Calling → A.7` (reuse half). Applies to **`docsearch` / `docinfo`** (and БСП via `ssl_search`) — **not** to **`templatesearch`** (code templates — `1c-templates-mcp.md → Using a found template`).
 
 When platform documentation (or БСП) confirms a built-in mechanism fits the task:
 

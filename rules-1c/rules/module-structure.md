@@ -1,5 +1,5 @@
 ---
-description: Canonical region templates for common modules, object / manager modules, and form modules. Single source of truth for `#Область` names, preprocessor directives, and mandatory regions. Load before creating a new module or restructuring an existing one.
+description: Canonical region templates for common, object / manager and form modules — `#Область` names, preprocessor directives, mandatory regions. Load before creating a new module or restructuring an existing one.
 alwaysApply: false
 ---
 
@@ -7,7 +7,7 @@ alwaysApply: false
 
 Canonical region names are **Russian, БСП-style**. English names (`Public` / `Internal` / `Private`) MUST NOT be used — except when the whole configuration is already maintained in English locale with regions defined uniformly across the codebase.
 
-Headlines and anchors for module-region policy — `coding-standards.md → Module Regions` (anchor from `AGENTS.md → Coding Standards`).
+Index row for module-region policy — `coding-standards.md` (reached from `rules-1c/AGENTS-UPSTREAM.md → Coding Standards`).
 
 ## Common Module
 
