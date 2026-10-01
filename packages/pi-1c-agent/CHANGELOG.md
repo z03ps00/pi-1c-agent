@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `/taskmode` is a package command: empty argument opens the same overlay as `/mode` (docs-fix, spec-authoring, analytics, quick-fix, full-cycle, auto); the pin is session-scoped and shown in the footer.
+- Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate` open the same overlay picker; named `.dev.env` keys are written by the package.
+- Option pickers show a description column: what the setting does, and the effect of each choice.
+- Agent turns write pending memory files and start a detached flush worker; they do not wait on Cognee/OpenViking. `/memory-flush` starts the worker without waiting. `recorded` only after verify-by-recall.
 - Inside a 1C subagent view, **↑** (or left) returns to the parent chat, same idea as OpenCode. Esc goes back to the agent list. Click the running-agent widget or `/agents` then Enter to go in.
 - Subagent TUI is one Pi tool block: live duration ticks every second, Ctrl+O / click expands the child tool log, and the ASCII duplicate `AGENT` card is gone.
 - 1C footer always shows connected MCP count (`mcp 2/5`), thinking level (`think high`), and session-rotate on/off plus threshold (`rotate off 85%`). Live MCP counts come from `pi-mcp-adapter` status events.

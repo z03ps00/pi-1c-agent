@@ -257,7 +257,7 @@ node tools/install.mjs --project
 Pinned `comol/ai_rules_1c` commit:
 
 ```text
-8901177ef92b611537fe79a4e4dfe19c600d9cc8
+c1fb8e687be5b9d71d5a05c6f5d32cf6a6919dcb
 ```
 
 Полный upstream snapshot не vendored в публичный ZIP из-за неуточнённой root license, обнаруженной аудитом. Bootstrap получает именно pinned commit.
@@ -268,6 +268,6 @@ Pinned `comol/ai_rules_1c` commit:
 
 Перед внешней distillation (RouterAI / `stack`) и перед записью в Cognee/OpenViking применяется один egress-filter: generic secret rules плюс exact values из ближайшего `.dev.env`. Если после очистки секрет остаётся, remote distill блокируется, а memory write не выполняется.
 
-`recorded` означает подтверждённый read-back. Cognee ACK без read-back — это `accepted` / pending, не `recorded`. OpenViking-отчёт подтверждается read-back по URI/`correlation_id`.
+`recorded` означает подтверждённый read-back. Cognee ACK без read-back — это `accepted` / pending, не `recorded`. OpenViking-отчёт подтверждается read-back по URI/`correlation_id`. Ход агента пишет pending-файл и запускает `lib/memory-flush-worker.mjs`, не дожидаясь MCP; `recorded` ставит воркер после verify recall.
 
 `engines.node` — `>=22.19.0`. CI проверяет Node 22.19, 22 и 24 на Linux и Windows.
