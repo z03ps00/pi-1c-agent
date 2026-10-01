@@ -83,7 +83,7 @@ add('canonical /theme registration', /registerCommand\("theme"/.test(uiSrc) && !
 add('shipped VS Code themes', exists(path.join(packageRoot, 'themes', 'standard.json')) && exists(path.join(packageRoot, 'themes', 'dracula.json')) && Array.isArray(packageJson?.pi?.themes) && packageJson.pi.themes.includes('themes'));
 const memorySrc = exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) : '';
 add('canonical /memory-flush /wrap /capture-model', /registerCommand\("memory-flush"/.test(memorySrc) && /registerCommand\("wrap"/.test(memorySrc) && /registerCommand\("capture-model"/.test(memorySrc) && /overlayCaptureModelSelect/.test(memorySrc) && !/registerCommand\("1c-wrap"/.test(memorySrc));
-add('memory write helpers', exists(path.join(packageRoot, 'lib', 'redact.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-key.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-reconcile.mjs')));
+add('memory write helpers', exists(path.join(packageRoot, 'lib', 'redact.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-key.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-reconcile.mjs')) && exists(path.join(packageRoot, 'lib', 'memory-flush-worker.mjs')));
 const rotateSrc = exists(path.join(packageRoot, 'extensions', '1c-session-rotate', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-session-rotate', 'index.ts')) : '';
 add('canonical /session-rotate registration', /registerCommand\("session-rotate"/.test(rotateSrc) && !/registerCommand\("1c-session-rotate"/.test(rotateSrc) && /overlaySessionRotateSelect/.test(rotateSrc));
 const adminSrc = read(path.join(packageRoot, 'extensions', '1c-admin', 'index.ts'));

@@ -34,3 +34,13 @@ export function anonMutatorFallbackRegex() {
 export function mutatorCoveredByRegex(regex, name) {
   return regex.test(String(name ?? ''));
 }
+
+/** Only Cognee/OpenViking remember calls are diverted to the file queue. */
+export function rememberQueueTarget(toolName, serverName) {
+  const raw = String(toolName ?? '').trim();
+  const server = String(serverName ?? '').trim();
+  const stripped = server && raw.startsWith(`${server}_`) ? raw.slice(server.length + 1) : raw;
+  if (raw === 'memory_remember' || (server === 'memory' && stripped === 'remember')) return 'memory';
+  if (raw === 'knowledge_remember' || (server === 'knowledge' && stripped === 'remember')) return 'knowledge';
+  return null;
+}

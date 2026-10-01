@@ -1,4 +1,3 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
@@ -17,14 +16,12 @@ import {
 } from "../../lib/session-capture.mjs";
 import * as captureLib from "../../lib/session-capture.mjs";
 import {
-  formatReconcileReport,
-  reconcilePending,
-  resolveMemoryStateRoots,
+  enqueueRememberCall,
+  queueItemCounts,
   shouldSkipStartupReconcile,
-  STARTUP_RECONCILE_BUDGET_MS,
-  withBudget,
 } from "../../lib/memory-reconcile.mjs";
-import { createMcpAdapters, probeMemoryServers } from "../../lib/memory-mcp.mjs";
+import { ensureMemoryFlushWorker } from "../../lib/memory-flush-worker.mjs";
+import { rememberQueueTarget } from "../../lib/memory-mutators.mjs";
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
 import { current1cMode, isBuildMode } from "../../lib/mode-state.mjs";
 import { publish, registerAction } from "../../lib/ui/index.mjs";
@@ -118,7 +115,6 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   let state: CaptureState = restoreCaptureState([]);
   let sessionCorrelation = "";
   let captureInFlight = false;
-  let lifecycle: Promise<string> | null = null;
 
   function persist(): void {
     pi.appendEntry(CAPTURE_STATE_TYPE, { state });
@@ -132,8 +128,15 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     });
   }
 
-  function adapters() {
-    return createMcpAdapters();
+  function kickFlushWorker(): { started: boolean; reason?: string; pid?: number } {
+    return ensureMemoryFlushWorker(profileDir());
+  }
+
+  function formatFlushNotify(): string {
+    const counts = queueItemCounts(profileDir());
+    const result = kickFlushWorker();
+    const action = result.started ? "worker started" : (result.reason || "idle");
+    return `memory-flush: ${counts.pending} pending, ${counts.processing} processing (${action})`;
   }
 
   async function stackDistill(opts: { mode?: string; entries?: unknown } = {}): Promise<unknown> {
@@ -150,51 +153,17 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     }
   }
 
-  async function probeAndReconcile(ctx: ExtensionContext): Promise<string> {
+  function flushOrSkip(ctx: ExtensionContext): string {
     if (shouldSkipStartupReconcile()) {
       emitDiagnostic("memory.lifecycle.probe.skipped", { reason: "child-process" });
       return "memory-flush: skipped — child process";
     }
-    if (!isBuildMode()) {
-      emitDiagnostic("memory.lifecycle.probe.skipped", { reason: "not-build", mode: current1cMode() });
-      return "memory-flush: skipped — BUILD required";
-    }
     const anonLevel = restoreAnonLevel(sessionEntries(ctx));
-    try {
-      const roots = resolveMemoryStateRoots(profileDir());
-      fs.mkdirSync(roots.done, { recursive: true });
-      fs.mkdirSync(roots.pending, { recursive: true });
-      fs.mkdirSync(roots.processing, { recursive: true });
-      fs.mkdirSync(roots.failed, { recursive: true });
-    } catch {
-      // ignore
+    if (anonLevel >= 1) {
+      emitDiagnostic("memory.lifecycle.probe.skipped", { reason: "anonymous" });
+      return "memory-flush: skipped — anonymous";
     }
-    const reachable = await probeMemoryServers();
-    const summary = await reconcilePending({
-      profileDir: profileDir(),
-      anonymous: anonLevel >= 1,
-      serversReachable: reachable,
-      ...adapters(),
-    });
-    return formatReconcileReport(summary);
-  }
-
-  async function runLifecycle(ctx: ExtensionContext, opts: { budgetMs?: number } = {}): Promise<string> {
-    if (lifecycle) return lifecycle;
-    lifecycle = (async () => {
-      try {
-        if (opts.budgetMs) {
-          return await withBudget(probeAndReconcile(ctx), opts.budgetMs, "startup reconcile");
-        }
-        return await probeAndReconcile(ctx);
-      } catch (error: any) {
-        emitDiagnostic("memory.lifecycle.probe.failed", { reason: error?.message || String(error) });
-        return `memory-flush: probe failed (${error?.message || String(error)})`;
-      } finally {
-        lifecycle = null;
-      }
-    })();
-    return lifecycle;
+    return formatFlushNotify();
   }
 
   async function runCapture(ctx: ExtensionContext, opts: { archive?: boolean; idle?: boolean } = {}): Promise<void> {
@@ -215,7 +184,6 @@ export default function memoryExtension(pi: ExtensionAPI): void {
       distillWithProvider: stackDistill,
       profileDir: profileDir(),
       correlationId: sessionCorrelation,
-      ...adapters(),
     });
     if (opts.idle) return;
     if (result.status === "skipped") {
@@ -226,18 +194,19 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     }
     const viaLib = callCaptureLib<string>("formatWrapNotify", [result]);
     const message = viaLib || (
-      result.status === "recorded"
-        ? `wrap: recorded (${result.correlation_id})`
-        : `wrap: ${result.status}`
+      result.status === "queued"
+        ? `wrap: queued (${result.correlation_id})`
+        : result.status === "recorded"
+          ? `wrap: recorded (${result.correlation_id})`
+          : `wrap: ${result.status}`
     );
-    ctx.ui.notify(message, result.status === "recorded" ? "info" : "warning");
+    ctx.ui.notify(message, result.status === "queued" || result.status === "recorded" ? "info" : "warning");
   }
 
   pi.registerCommand("memory-flush", {
-    description: "Replay pending Cognee/OpenViking records: /memory-flush",
+    description: "Start background flush of pending Cognee/OpenViking records: /memory-flush",
     handler: async (_args, ctx) => {
-      const report = await runLifecycle(ctx);
-      ctx.ui.notify(report, "info");
+      ctx.ui.notify(flushOrSkip(ctx), "info");
     },
   });
 
@@ -303,16 +272,33 @@ export default function memoryExtension(pi: ExtensionAPI): void {
     },
   });
 
+  pi.on("tool_call", async (event, ctx) => {
+    const target = rememberQueueTarget(event.toolName, (event as { serverName?: string }).serverName);
+    if (!target) return;
+    if (restoreAnonLevel(sessionEntries(ctx)) >= 1) return;
+    if (!isBuildMode()) return;
+    const queued = enqueueRememberCall({
+      profileDir: profileDir(),
+      target,
+      input: event.input ?? {},
+      cwd: ctx.cwd,
+      task: `queued-remember-${sessionIdOf(ctx)}`,
+    });
+    kickFlushWorker();
+    const detail = queued.ok
+      ? (queued.duplicate ? "already in the local queue" : "queued for background flush")
+      : (queued.reason || "queue failed");
+    return {
+      block: true,
+      reason: `Memory write ${detail}. Do not call MCP remember again. Report \`Memory: queued 1\`.`,
+    };
+  });
+
   pi.on("session_start", async (_event, ctx) => {
     state = restoreCaptureState(ctx.sessionManager.getEntries());
     sessionCorrelation = sessionIdOf(ctx);
     updateStatus(ctx);
-    const reportPromise = runLifecycle(ctx, { budgetMs: STARTUP_RECONCILE_BUDGET_MS });
-    reportPromise.then((report) => {
-      if (ctx.hasUI && report && !report.includes("skipped") && !report.includes("deferred") && !report.includes("probe failed")) {
-        ctx.ui.notify(report, "info");
-      }
-    }).catch(() => {});
+    flushOrSkip(ctx);
   });
 
   pi.on("agent_settled", async (_event, ctx) => {

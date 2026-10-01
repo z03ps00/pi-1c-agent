@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  enqueueRememberCall,
   formatReconcileReport,
   listPendingRecords,
   pendingRecordFileName,
@@ -344,5 +345,31 @@ test('reclaim during ACK does not duplicate the record', async () => {
   assert.equal(duplicateQueueIds(profile).length, 0);
   const counts = queueItemCounts(profile);
   assert.equal(counts.pending + counts.processing + counts.done + counts.failed, 1);
+});
+
+test('enqueueRememberCall writes queued files and dedups locally', () => {
+  const profile = tempProfile();
+  const first = enqueueRememberCall({
+    profileDir: profile,
+    target: 'memory',
+    input: { data: 'fact: queue me' },
+    task: 'enqueue-one',
+    agent: 'pi',
+    date: '2026-10-01',
+  });
+  assert.equal(first.ok, true);
+  assert.equal(first.duplicate, false);
+  assert.match(fs.readFileSync(first.filePath, 'utf8'), /status: queued/);
+  const again = enqueueRememberCall({
+    profileDir: profile,
+    target: 'memory',
+    input: { data: 'fact: queue me' },
+    task: 'enqueue-one',
+    agent: 'pi',
+    date: '2026-10-01',
+  });
+  assert.equal(again.ok, true);
+  assert.equal(again.duplicate, true);
+  assert.equal(listPendingRecords(profile).length, 1);
 });
 

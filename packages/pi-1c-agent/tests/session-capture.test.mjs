@@ -57,36 +57,40 @@ test('heuristic distiller extracts files, tools, decisions without a provider', 
   assert.equal(ran.fallback, false);
 });
 
-test('wrap writes paired records with one correlation_id and no raw transcript', async () => {
-  const remembered = [];
+test('wrap queues paired pending files without calling remember', async () => {
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-cap-'));
+  let remembers = 0;
   const result = await captureSession({
     entries: substantialEntries,
     sessionId: 'abc',
     cwd: '/tmp/demo',
     distillerMode: 'off',
-    remember: async (record) => {
-      remembered.push(record);
+    profileDir: profile,
+    ensureWorker: false,
+    remember: async () => {
+      remembers += 1;
       return { ok: true };
     },
-    recall: async () => true,
-    existsByKey: async () => false,
   });
-  assert.equal(result.status, 'recorded');
+  assert.equal(result.status, 'queued');
+  assert.equal(remembers, 0);
   assert.ok(result.correlation_id);
-  assert.equal(remembered.length, 2);
-  assert.equal(remembered[0].correlation_id, remembered[1].correlation_id);
-  assert.equal(remembered[0].correlation_id, result.correlation_id);
-  assert.match(remembered[0].content, new RegExp(`CORRELATION_ID: ${result.correlation_id}`));
-  assert.match(remembered[1].content, new RegExp(result.correlation_id));
-  assert.deepEqual(new Set(remembered.map((r) => r.target)), new Set(['memory', 'knowledge']));
-  assert.doesNotMatch(remembered[0].content, /assistant: decision:/);
-  assert.doesNotMatch(JSON.stringify(remembered), /raw tool output|verbatim transcript/);
-  assert.match(formatFact(result.distilled, { correlation_id: result.correlation_id }), /CORRELATION_ID/);
-  assert.match(formatReport(result.distilled), /Session capture/);
-  const knowledge = remembered.find((r) => r.target === 'knowledge');
-  assert.match(knowledge.uri, /viking:\/\/resources\/session-captures\/demo\/abc\.md/);
-  assert.match(remembered.find((r) => r.target === 'memory').content, /TYPE: session_capture/);
-  assert.match(remembered.find((r) => r.target === 'memory').content, /SCOPE: project:demo/);
+  assert.equal(formatWrapNotify(result), `wrap: queued (${result.correlation_id})`);
+  const pendingDir = path.join(profile, 'state', 'agent-memory', 'pending');
+  const pending = fs.readdirSync(pendingDir);
+  assert.equal(pending.length, 2);
+  const bodies = pending.map((name) => fs.readFileSync(path.join(pendingDir, name), 'utf8'));
+  assert.ok(bodies.some((text) => text.includes('target: memory')));
+  assert.ok(bodies.some((text) => text.includes('target: knowledge')));
+  assert.ok(bodies.every((text) => text.includes('status: queued')));
+  assert.ok(bodies.every((text) => text.includes(result.correlation_id)));
+  const memoryBody = bodies.find((text) => text.includes('target: memory'));
+  assert.match(memoryBody, /TYPE: session_capture/);
+  assert.match(memoryBody, /SCOPE: project:demo/);
+  assert.doesNotMatch(memoryBody, /assistant: decision:/);
+  assert.doesNotMatch(bodies.join('\n'), /raw tool output|verbatim transcript/);
+  const knowledgeBody = bodies.find((text) => text.includes('target: knowledge'));
+  assert.match(knowledgeBody, /viking:\/\/resources\/session-captures\/demo\/abc\.md/);
 });
 
 test('trivial session writes nothing', async () => {
@@ -270,27 +274,33 @@ test('out-of-band contract never touches the main chat', async () => {
   assert.match(src, /captureInFlight/);
 });
 
-test('capture failure isolates to a pending record', async () => {
+test('capture queues pending files without calling remember', async () => {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-cap-'));
+  let remembers = 0;
   const result = await captureSession({
     entries: substantialEntries,
     sessionId: 'fail',
     cwd: '/tmp/demo',
     profileDir: profile,
     distillerMode: 'off',
-    remember: async () => ({ ok: false }),
+    ensureWorker: false,
+    remember: async () => {
+      remembers += 1;
+      return { ok: false };
+    },
     recall: async () => false,
     existsByKey: async () => false,
   });
-  assert.equal(result.status, 'UNCONFIRMED');
+  assert.equal(result.status, 'queued');
   assert.equal(result.wrotePending, true);
+  assert.equal(remembers, 0);
   const pending = fs.readdirSync(path.join(profile, 'state', 'agent-memory', 'pending'));
   assert.equal(pending.length, 2);
   assert.ok(pending.some((name) => name.includes('-memory-')));
   assert.ok(pending.some((name) => name.includes('-knowledge-')));
 });
 
-test('paired pending keeps two files; retry recall records', async () => {
+test('paired pending keeps two files without waiting for recall', async () => {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-cap-'));
   let recalls = 0;
   const result = await captureSession({
@@ -299,16 +309,18 @@ test('paired pending keeps two files; retry recall records', async () => {
     cwd: '/tmp/demo',
     profileDir: profile,
     distillerMode: 'off',
+    ensureWorker: false,
     remember: async () => ({ ok: true }),
     recall: async () => {
       recalls += 1;
-      return recalls >= 2;
+      return true;
     },
     existsByKey: async () => false,
     sleep: async () => {},
   });
-  assert.equal(result.status, 'recorded');
-  assert.ok(recalls >= 2);
+  assert.equal(result.status, 'queued');
+  assert.equal(recalls, 0);
+  assert.equal(fs.readdirSync(path.join(profile, 'state', 'agent-memory', 'pending')).length, 2);
 });
 
 test('report-only confirm is UNCONFIRMED with an honest notify', async () => {

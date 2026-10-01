@@ -25,10 +25,10 @@ Capture only verified or explicitly unresolved information:
 Before the final response for a substantial task:
 
 1. Build the redacted completion summary from the template.
-2. If Cognee/OpenViking are opted in, search them and local pending records by the idempotency key. If they are off, skip remote search.
-3. Write the short durable result to Cognee and the detailed handoff to OpenViking **only when those servers are opted in and connected**.
-4. If they are off, skip memory writes. If a write is unavailable or fails, save a redacted pending record and report `UNCONFIRMED`/`UNVERIFIED` — that is not a task failure.
-5. Put an explicit unified `Memory:` status in the final response (`Memory: recalled …; saved …` / `UNCONFIRMED` / `skipped — anonymous` / `not in use` when MCP is off).
+2. If Cognee/OpenViking are opted in, search local `state/agent-memory/{pending,processing,done,failed}` by the idempotency key. Skip remote search before queueing.
+3. Queue the short durable result (`target: memory`) and the detailed handoff (`target: knowledge`) as `status: queued` files. Do not call MCP `remember` in the turn. Start the memory-flush worker and do not wait.
+4. If they are off, skip memory writes. If the pending file cannot be written, report `UNCONFIRMED` — that is not a task failure.
+5. Put an explicit unified `Memory:` status in the final response (`Memory: recalled …; queued …` / `UNCONFIRMED` / `skipped — anonymous` / `not in use` when MCP is off).
 
 `/wrap` (and Pi idle capture) reuse this same handoff field set. They **distill** — they never dump the raw transcript into Cognee or into OpenViking's decision layer. Optional `/wrap archive` stores a redacted transcript as an OpenViking **document** marked `raw-transcript-document` only.
 

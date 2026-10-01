@@ -74,6 +74,9 @@ test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
   assert.match(src, /formatWrapNotify/);
   assert.match(src, /getContextUsage/);
   assert.match(src, /typeof fn !== "function"/);
+  assert.match(src, /"tool_call"/);
+  assert.match(src, /ensureMemoryFlushWorker/);
+  assert.ok(fs.existsSync(path.join(root, 'lib', 'memory-flush-worker.mjs')));
 });
 
 test('session-rotate command and compaction hooks are registered', () => {

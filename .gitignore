@@ -48,8 +48,12 @@ openspec/changes/
 handoffs/
 state/agent-memory/pending/**
 !state/agent-memory/pending/.gitkeep
+state/agent-memory/processing/**
+state/agent-memory/failed/**
 state/agent-memory/done/**
 !state/agent-memory/done/.gitkeep
+state/agent-memory/worker.lock
+state/agent-memory/worker.log
 .cursor/plans/
 .cursor/commands/opsx-*
 .cursor/skills/openspec-*/

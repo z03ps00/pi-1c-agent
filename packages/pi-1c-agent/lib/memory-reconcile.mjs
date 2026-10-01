@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { parseIdempotencyKey } from './memory-key.mjs';
 import { redact } from './redact.mjs';
-import { writeWithVerify } from './memory-write.mjs';
+import { prepareWrite, writeWithVerify } from './memory-write.mjs';
 import { emitDiagnostic } from './diagnostics.mjs';
 
 export const DEFAULT_CLAIM_TTL_SEC = 300;
@@ -103,7 +103,7 @@ export function serializePendingRecord(record) {
   const lines = [
     '---',
     `idempotency_key: ${record.idempotency_key || ''}`,
-    `status: ${record.status || 'UNCONFIRMED'}`,
+    `status: ${record.status || 'queued'}`,
     `target: ${record.target || 'memory'}`,
     `agent: ${record.agent || ''}`,
     `date: ${record.date || ''}`,
@@ -221,8 +221,72 @@ export function pendingRecordFileName(record) {
 export function queuePendingRecord(profileDir, record) {
   const dirs = ensureMemoryStateDirs(profileDir);
   const filePath = path.join(dirs.pending, pendingRecordFileName(record));
-  fs.writeFileSync(filePath, serializePendingRecord({ ...record, status: record.status || 'UNCONFIRMED' }));
+  fs.writeFileSync(filePath, serializePendingRecord({ ...record, status: record.status || 'queued' }));
   return filePath;
+}
+
+export function findLocalRecordByKey(profileDir, idempotencyKey) {
+  const key = String(idempotencyKey ?? '').trim();
+  if (!key) return null;
+  const dirs = resolveMemoryStateRoots(profileDir);
+  for (const state of ['pending', 'processing', 'done', 'failed']) {
+    for (const rec of listDirRecords(dirs[state])) {
+      if (rec.idempotency_key === key) return { ...rec, queueState: state };
+    }
+  }
+  return null;
+}
+
+export function extractRememberContent(input) {
+  if (input == null) return '';
+  if (typeof input === 'string') return input;
+  if (typeof input.data === 'string') return input.data;
+  if (typeof input.content === 'string') return input.content;
+  if (Array.isArray(input.messages)) {
+    return input.messages
+      .map((m) => (typeof m?.content === 'string' ? m.content : ''))
+      .filter(Boolean)
+      .join('\n');
+  }
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return String(input);
+  }
+}
+
+export function enqueueRememberCall({
+  profileDir,
+  target = 'memory',
+  input,
+  cwd,
+  task,
+  agent,
+  date,
+} = {}) {
+  const content = extractRememberContent(input);
+  if (!String(content).trim()) return { ok: false, reason: 'empty remember payload' };
+  const prep = prepareWrite({
+    content,
+    target,
+    cwd,
+    task: task || 'queued-remember',
+    agent: agent || 'pi-1c-agent',
+    date,
+  });
+  if (!prep.ok) return prep;
+  const existing = findLocalRecordByKey(profileDir, prep.record.idempotency_key);
+  if (existing) {
+    return {
+      ok: true,
+      duplicate: true,
+      record: prep.record,
+      filePath: existing.filePath,
+      queueState: existing.queueState,
+    };
+  }
+  const filePath = queuePendingRecord(profileDir, { ...prep.record, status: 'queued' });
+  return { ok: true, duplicate: false, filePath, record: prep.record };
 }
 
 function transitionClaim(src, destDir, record, status) {

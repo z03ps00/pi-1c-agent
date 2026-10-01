@@ -15,10 +15,10 @@ Every write follows this order (implemented by `packages/pi-1c-agent/lib/redact.
 
 1. Redact via the shared routine (`memory-safety`).
 2. Compute `content_hash` **after** redaction; build `idempotency_key`.
-3. Search Cognee / OpenViking / `state/agent-memory/pending` for that key — skip or supersede, never duplicate.
-4. Write. Attach a `correlation_id` (mint one when pairing a short Cognee fact with an OpenViking report).
-5. Verify by recalling the key. Confirmed → recorded. Failed / offline / no approval → `UNCONFIRMED` + redacted pending record.
-6. End the response with one line: `Memory: recalled N / nothing relevant; saved N / UNCONFIRMED / nothing to save`. Anonymous: `Memory: skipped — anonymous`.
+3. Search local `state/agent-memory/{pending,processing,done,failed}` for that key — skip or supersede, never duplicate. Do not search Cognee/OpenViking before queueing.
+4. Write a redacted file to `$PI_CODING_AGENT_DIR/state/agent-memory/pending/` with `status: queued`. Attach a `correlation_id` (mint one when pairing a short Cognee fact with an OpenViking report).
+5. Start `node "$PI_CODING_AGENT_DIR/packages/pi-1c-agent/lib/memory-flush-worker.mjs"` and do not wait. Do **not** call `memory_remember` / `knowledge_remember` in the turn. The worker verifies by recall; only then is the record `recorded`.
+6. End the response with one line: `Memory: recalled N / nothing relevant; queued N / UNCONFIRMED / nothing to save`. Anonymous: `Memory: skipped — anonymous`.
 
 Canonical scope is `project:<project-id>` from git remote, `.pi/1c/project-id`, or the normalized repo basename (trailing workspace-path space is stripped).
 

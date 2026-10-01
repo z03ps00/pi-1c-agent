@@ -20,7 +20,7 @@ Run at the beginning of a meaningful project work session, not for trivial chat.
    - memory: `project:<project-id>` plus optional `global`;
    - knowledge: project/repository namespace when the provider supports it.
 6. Retrieve only minimal start context that materially affects the task.
-7. If Cognee/OpenViking are opted in and reachable, reconcile `state/agent-memory/pending/**` (or rely on the Pi `/memory-flush` / `session_start` hook). Confirmed records move to `state/agent-memory/done/`. If servers are down, leave the queue intact and do not retry in a loop.
+7. If `state/agent-memory/pending/**` has files, start `packages/pi-1c-agent/lib/memory-flush-worker.mjs` and do not wait (Pi `session_start` and `/memory-flush` do the same). Do not drain the queue inside the turn. Confirmed records move to `state/agent-memory/done/` in the background.
 
 Do not load the entire memory or knowledge base.
 

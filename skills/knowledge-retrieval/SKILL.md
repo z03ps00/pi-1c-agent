@@ -13,9 +13,9 @@ Typical content: documentation, requirements, architecture, AGENTS.md, skills, M
 
 ## Write contract
 
-Same pipeline as Cognee: redact (`lib/redact.mjs`) → `content_hash` after redaction → dedup by `idempotency_key` → write → verify-by-recall. When pairing with a Cognee fact, reuse the same `correlation_id`. Raw transcripts are never stored as decisions; an opt-in `/wrap archive` may store a redacted transcript as a document marked `raw-transcript-document` only.
+Same pipeline as Cognee: redact (`lib/redact.mjs`) → `content_hash` after redaction → local-queue dedup by `idempotency_key` → pending file with `status: queued` → start the memory-flush worker without waiting. Do not call `knowledge_remember` in the turn. When pairing with a Cognee fact, reuse the same `correlation_id`. Raw transcripts are never stored as decisions; an opt-in `/wrap archive` may store a redacted transcript as a document marked `raw-transcript-document` only.
 
-If a write cannot be verified, queue a redacted pending record and report `UNCONFIRMED`.
+If the pending file cannot be written, report `UNCONFIRMED`.
 
 ## Procedure
 

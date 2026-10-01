@@ -50,5 +50,5 @@ If `openspec/` exists, use native Pi OpenSpec resources. Explore/propose belong 
 
 ## Shared memory contract
 
-Redact with `lib/redact.mjs` before any Cognee/OpenViking or pending write. Hash `content_hash` only after redaction. Dedup by `idempotency_key`. Pair Cognee fact + OpenViking report with one `correlation_id`. Scope is `project:<canonical-id>`. Verify by recall; otherwise `UNCONFIRMED` + pending. Report one `Memory:` line (`skipped — anonymous` in anon). `/wrap` distills; it does not dump raw transcripts.
+Redact with `lib/redact.mjs` before any pending write. Hash `content_hash` only after redaction. Dedup by `idempotency_key` against the local queue only. Pair Cognee fact + OpenViking report with one `correlation_id`. Scope is `project:<canonical-id>`. Do not call MCP `remember` in the turn: write `status: queued` under `state/agent-memory/pending/` and start `lib/memory-flush-worker.mjs` without waiting. Report `Memory: …; queued N` (`skipped — anonymous` in anon). `/wrap` distills; it does not dump raw transcripts.
 <!-- PI-1C-AGENT:END -->

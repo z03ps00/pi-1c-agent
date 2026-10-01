@@ -45,11 +45,12 @@ export async function recallWithRetry(recall, record, {
   return false;
 }
 
-export function formatMemoryStatus({ recalled = 0, saved = 0, unconfirmed = 0, anonymous = false, nothingToSave = false } = {}) {
+export function formatMemoryStatus({ recalled = 0, saved = 0, queued = 0, unconfirmed = 0, anonymous = false, nothingToSave = false } = {}) {
   if (anonymous) return 'Memory: skipped — anonymous';
   const recallPart = recalled > 0 ? `recalled ${recalled}` : 'nothing relevant';
   let savePart = 'nothing to save';
-  if (unconfirmed > 0) savePart = 'UNCONFIRMED';
+  if (queued > 0) savePart = `queued ${queued}`;
+  else if (unconfirmed > 0) savePart = 'UNCONFIRMED';
   else if (saved > 0) savePart = `saved ${saved}`;
   else if (nothingToSave) savePart = 'nothing to save';
   return `Memory: ${recallPart}; ${savePart}`;

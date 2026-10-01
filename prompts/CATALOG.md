@@ -41,7 +41,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/caveman` | Pi package: picker for `CAVEMAN` (on\|auto\|off, shipped default `auto`) and session lite\|full\|ultra |
 | `/session-rotate` | Pi package: picker on\|off; threshold stays `/session-rotate 80` |
 | `/wrap` | Capture this dialog now; `/wrap auto on\|off` toggles Pi idle capture (default on) |
-| `/memory-flush` | Replay pending Cognee/OpenViking records (confirmed / still-pending / duplicates) |
+| `/memory-flush` | Start the background worker for pending Cognee/OpenViking records (does not wait for MCP) |
 | `/capture-model` | Pi package: picker off\|stack\|chat\|ollama\|routerai (ollama/routerai ask for a model) |
 | `/anon` | Pi package: picker 1\|2\|3\|off (`Ctrl+Alt+A` cycles) |
 | `/approve` | Pi package: picker off\|safe\|strict (`Ctrl+Alt+S` cycles) |

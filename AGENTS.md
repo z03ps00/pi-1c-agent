@@ -118,19 +118,19 @@ A task is substantial when it creates or changes durable files/configuration, co
 Use these common summary fields: idempotency_key, status, agent, date, content_hash, scope, task, facts, decisions, changed_paths, verification, unconfirmed, next_steps.
 
 Routing (only when the corresponding server is opted in):
-- Cognee (`memory`, host `127.0.0.1:8001`, dataset `main_dataset`): tool `remember` for short durable facts, decisions, preferences, and error lessons (Pi may namespace it as `memory_remember`).
-- OpenViking (`knowledge`, host `127.0.0.1:1933`): tool `remember` for detailed reports, longer handoffs, procedures, design notes, or documentation-like knowledge (Pi may namespace it as `knowledge_remember`).
-- If both apply, store a short Cognee pointer/fact and the detailed report in OpenViking.
-- These are the only permitted shared-context mutating tools. Do not use Cognee `forget` / `call_tool`, or OpenViking `write` / `edit` / `add_resource` / `forget` / `cancel_watch`. A correction is a **new** `remember` that explicitly supersedes the old record.
+- Cognee (`memory`, host `127.0.0.1:8001`, dataset `main_dataset`): short durable facts, decisions, preferences, and error lessons. Queue as `target: memory`.
+- OpenViking (`knowledge`, host `127.0.0.1:1933`): detailed reports, longer handoffs, procedures, design notes, or documentation-like knowledge. Queue as `target: knowledge`.
+- If both apply, store a short Cognee pointer/fact and the detailed report in OpenViking with one `correlation_id`.
+- The turn must **not** call Cognee/OpenViking `remember` (`memory_remember` / `knowledge_remember`). A background worker performs those MCP writes. Do not use Cognee `forget` / `call_tool`, or OpenViking `write` / `edit` / `add_resource` / `forget` / `cancel_watch`. A correction is a **new** queued record that explicitly supersedes the old one.
 
 Safety and idempotency:
-- Redact secrets with the shared routine `packages/pi-1c-agent/lib/redact.mjs` before any MCP tool call or pending-queue write. Tokens, passwords, cookies, API keys, private keys, Authorization headers, credentialed DSNs, and secret-store values become `[REDACTED:<kind>]`. If a leftover secret remains, do not write.
+- Redact secrets with the shared routine `packages/pi-1c-agent/lib/redact.mjs` before any pending-queue write. Tokens, passwords, cookies, API keys, private keys, Authorization headers, credentialed DSNs, and secret-store values become `[REDACTED:<kind>]`. If a leftover secret remains, do not write.
 - Never store credentials, raw secrets, private keys, cookies, or temporary execution output. Tilda passwords, license keys, IB passwords, and `KNOWLEDGE_MCP_AUTHORIZATION` stay in local secret files (`.dev.env`, `auth.json`, installer `config.env` outside git) — never `memory.md`, Cognee, OpenViking, AGENTS, or handoffs.
-- Use task/agent/date/content_hash idempotency: `task=<stable task or plan id>; agent=<agent/runtime>; date=<YYYY-MM-DD>; content_hash=<sha256 of the redacted content>`. Compute the hash only after redaction. Search existing memory/knowledge or pending records for that key before recording; update/merge rather than duplicate.
+- Use task/agent/date/content_hash idempotency: `task=<stable task or plan id>; agent=<agent/runtime>; date=<YYYY-MM-DD>; content_hash=<sha256 of the redacted content>`. Compute the hash only after redaction. Dedup only against local `state/agent-memory/{pending,processing,done,failed}` — do not search Cognee/OpenViking before queueing.
 - Pair a short Cognee fact with an OpenViking report using one `correlation_id`.
 - Derive `project:<project-id>` from git remote, `.pi/1c/project-id`, or the normalized repo basename (strip trailing workspace-path space).
-- After every write, recall by `idempotency_key`. Only a positive read-back is `recorded`. Otherwise report `UNCONFIRMED`, save a redacted pending record under `$PI_CODING_AGENT_DIR/state/agent-memory/pending/`, and continue. `/memory-flush` and session-start reconciliation move confirmed records to `state/agent-memory/done/` (history kept).
-- End a substantial response with one line: `Memory: recalled N / nothing relevant; saved N / UNCONFIRMED / nothing to save`. Anonymous: `Memory: skipped — anonymous`.
+- Write the redacted record to `$PI_CODING_AGENT_DIR/state/agent-memory/pending/` with `status: queued`. Then start `node "$PI_CODING_AGENT_DIR/packages/pi-1c-agent/lib/memory-flush-worker.mjs"` and do not wait. A live worker is a no-op. The worker calls MCP, verifies by recall, and moves the file to `done/`. `recorded` is only after that verify. If the pending file cannot be written, report `UNCONFIRMED`.
+- End a substantial response with one line: `Memory: recalled N / nothing relevant; queued N / UNCONFIRMED / nothing to save`. Anonymous: `Memory: skipped — anonymous`.
 - Keep global memory separate from project-scoped memory.
 <!-- agent-shared-context:global-memory-rule:end -->
 

@@ -13,7 +13,7 @@ import {
   evaluateAnonMcpCall,
   fallbackAnonVerdict,
 } from '../lib/plan-policy.mjs';
-import { MEMORY_MUTATORS, anonMutatorFallbackRegex, isMemoryMutator } from '../lib/memory-mutators.mjs';
+import { MEMORY_MUTATORS, anonMutatorFallbackRegex, isMemoryMutator, rememberQueueTarget } from '../lib/memory-mutators.mjs';
 
 test('redacts each secret kind and blocks leftovers', () => {
   const mixed = [
@@ -196,6 +196,7 @@ test('known token is fully redacted', () => {
 test('unified Memory status line', () => {
   assert.equal(formatMemoryStatus({ anonymous: true }), 'Memory: skipped — anonymous');
   assert.equal(formatMemoryStatus({ recalled: 2, saved: 1 }), 'Memory: recalled 2; saved 1');
+  assert.equal(formatMemoryStatus({ recalled: 0, queued: 2 }), 'Memory: nothing relevant; queued 2');
   assert.equal(formatMemoryStatus({ recalled: 0, unconfirmed: 1 }), 'Memory: nothing relevant; UNCONFIRMED');
   assert.equal(formatMemoryStatus({ nothingToSave: true }), 'Memory: nothing relevant; nothing to save');
 });
@@ -212,4 +213,13 @@ test('every listed mutator is denied at anon >= 1 and covered by the fallback re
       assert.equal(fallbackAnonVerdict(1, { tool: alias }).allowed, false, `${alias} fallback must deny`);
     }
   }
+});
+
+test('only remember aliases are diverted to the file queue', () => {
+  assert.equal(rememberQueueTarget('memory_remember'), 'memory');
+  assert.equal(rememberQueueTarget('remember', 'memory'), 'memory');
+  assert.equal(rememberQueueTarget('knowledge_remember'), 'knowledge');
+  assert.equal(rememberQueueTarget('remember', 'knowledge'), 'knowledge');
+  assert.equal(rememberQueueTarget('memory_forget'), null);
+  assert.equal(rememberQueueTarget('knowledge_write', 'knowledge'), null);
 });

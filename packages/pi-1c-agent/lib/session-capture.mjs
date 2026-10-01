@@ -1,6 +1,7 @@
 import { redact } from './redact.mjs';
 import { buildIdempotencyKey, contentHash, mintCorrelationId } from './memory-key.mjs';
 import { halfConfirmed, prepareWrite, writePaired } from './memory-write.mjs';
+import { ensureMemoryFlushWorker } from './memory-flush-worker.mjs';
 import { queuePendingRecord } from './memory-reconcile.mjs';
 import { deriveProjectId } from './project-id.mjs';
 
@@ -314,6 +315,7 @@ export async function captureSession({
   rawTranscript,
   sleep,
   verify,
+  ensureWorker,
 } = {}) {
   if ((Number(anonLevel) || 0) >= 1) {
     return { status: 'skipped', reason: 'anonymous', memory: 'Memory: skipped — anonymous', wrotePending: false };
@@ -353,8 +355,8 @@ export async function captureSession({
         target: 'memory',
         correlationId: correlation_id,
       });
-      if (pending.ok && profileDir) queuePendingRecord(profileDir, pending.record);
-      return { status: 'UNCONFIRMED', reason: 'distill failed', wrotePending: Boolean(pending.ok), correlation_id };
+      if (pending.ok && profileDir) queuePendingRecord(profileDir, { ...pending.record, status: 'queued' });
+      return { status: 'queued', reason: 'distill failed', wrotePending: Boolean(pending.ok), correlation_id };
     }
   }
 
@@ -372,10 +374,74 @@ export async function captureSession({
     scope,
   });
   const report = formatReport(distilled, { correlation_id, fallback, distiller: used });
+  const task = `session-${sessionId || 'unknown'}`;
+  if (profileDir) {
+    const factPrep = prepareWrite({
+      content: fact,
+      task,
+      agent,
+      date,
+      cwd,
+      target: 'memory',
+      correlationId: correlation_id,
+      sessionId,
+    });
+    const reportPrep = prepareWrite({
+      content: report,
+      task,
+      agent,
+      date,
+      cwd,
+      target: 'knowledge',
+      correlationId: correlation_id,
+      sessionId,
+    });
+    if (!factPrep.ok || !reportPrep.ok) {
+      return { status: 'UNCONFIRMED', reason: factPrep.reason || reportPrep.reason, wrotePending: false, correlation_id };
+    }
+    queuePendingRecord(profileDir, { ...factPrep.record, status: 'queued' });
+    queuePendingRecord(profileDir, { ...reportPrep.record, status: 'queued' });
+    let archived = false;
+    if (archiveTranscript && rawTranscript) {
+      const archivedText = redact(`KIND: raw-transcript-document\nCORRELATION_ID: ${correlation_id}\n\n${rawTranscript}`).text;
+      const prep = prepareWrite({
+        content: archivedText,
+        task: `session-transcript-${sessionId || 'unknown'}`,
+        agent,
+        date,
+        cwd,
+        target: 'knowledge',
+        correlationId: correlation_id,
+        sessionId: `${sessionId || 'unknown'}-transcript`,
+      });
+      if (prep.ok) {
+        queuePendingRecord(profileDir, { ...prep.record, status: 'queued', kind: 'raw-transcript-document' });
+        archived = true;
+      }
+    }
+    if (ensureWorker !== false) {
+      const kick = typeof ensureWorker === 'function' ? ensureWorker : ensureMemoryFlushWorker;
+      kick(profileDir);
+    }
+    const queuedHalf = { status: 'queued', recorded: false, confirmed: false, correlation_id };
+    return {
+      status: 'queued',
+      correlation_id,
+      fallback,
+      archived,
+      distilled,
+      fact: queuedHalf,
+      report: queuedHalf,
+      factRecord: factPrep.record,
+      reportRecord: reportPrep.record,
+      wrotePending: true,
+    };
+  }
+
   const paired = await writePaired({
     fact,
     report,
-    task: `session-${sessionId || 'unknown'}`,
+    task,
     agent,
     date,
     cwd,
@@ -384,7 +450,6 @@ export async function captureSession({
     existsByKey,
     remember,
     recall,
-    queuePending: profileDir ? (record) => queuePendingRecord(profileDir, record) : undefined,
     sleep,
     verify,
   });
@@ -429,6 +494,7 @@ export function formatWrapNotify(result) {
   if (result?.status === 'skipped') {
     return result.reason === 'anonymous' ? 'Memory: skipped — anonymous' : `wrap: ${result.reason || 'skipped'}`;
   }
+  if (result?.status === 'queued') return `wrap: queued (${id})`;
   if (result?.status === 'recorded') return `wrap: recorded (${id})`;
   const factOk = halfConfirmed(result?.fact);
   const reportOk = halfConfirmed(result?.report);

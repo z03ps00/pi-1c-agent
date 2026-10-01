@@ -13,10 +13,10 @@ This profile runs extra Pi child processes. Treat memory queue, knowledge, and s
 | `PI_1C_CHILD_FRAME_MAX_BYTES` | `3145728` | Max JSON-lines frame; oversize frames fail with `child_frame_too_large` |
 | `PI_1C_MEMORY_CLAIM_TTL_SEC` | `300` | Stale `processing/` claim reclaim |
 | `PI_1C_CHILD_PROCESS` | unset | Set to `1` on spawned children |
-| `PI_1C_DISABLE_STARTUP_RECONCILE` | unset | Set to `1` to skip startup memory reconcile |
+| `PI_1C_DISABLE_STARTUP_RECONCILE` | unset | Set to `1` to skip startup memory-worker kick |
 | `PI_1C_MOCK_PI` | unset | Test-only path to a mock `pi` executable |
 
-Child processes are started with `PI_1C_CHILD_PROCESS=1` and `PI_1C_DISABLE_STARTUP_RECONCILE=1` so only the parent does housekeeping.
+Child processes are started with `PI_1C_CHILD_PROCESS=1` and `PI_1C_DISABLE_STARTUP_RECONCILE=1` so only the parent kicks the detached memory-flush worker. The worker itself is a separate Node process and keeps running after the Pi session exits.
 
 ## Lease layout
 
@@ -41,7 +41,7 @@ Release a lease only with the matching owner token. Stale heartbeats are reclaim
 3. Update the package.
 4. Run `/doctor` (or `node packages/pi-1c-agent/tools/doctor.mjs --global`).
 5. Confirm `pending/`, `processing/`, `done/`, and `failed/` exist. Doctor reports duplicate ids if a crash left two copies; it prefers `done|failed` over `processing`.
-6. Run one foreground `/memory-flush`.
+6. Run `/memory-flush` (starts the detached worker; does not wait for MCP).
 7. Inspect `pending/`, `processing/`, `failed/`.
 8. Only then resume parallel subagent work.
 
