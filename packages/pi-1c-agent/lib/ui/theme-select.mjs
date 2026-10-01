@@ -1,6 +1,8 @@
+export const THEME_INTRO = 'Цвета интерфейса Pi. На проверки и файлы проекта не влияет.';
+
 export const SHIPPED_THEMES = Object.freeze([
-  { name: 'standard', label: 'Standard', description: 'VS Code Dark+ / Dark Modern' },
-  { name: 'dracula', label: 'Dracula', description: 'VS Code Dracula' },
+  { name: 'standard', label: 'Standard', description: 'тёмная схема VS Code.' },
+  { name: 'dracula', label: 'Dracula', description: 'схема Dracula.' },
 ]);
 
 export const REQUIRED_COLOR_TOKENS = Object.freeze([
@@ -47,8 +49,7 @@ export function shippedThemeMeta(name) {
 export function describeThemeSource(theme) {
   const shipped = shippedThemeMeta(theme?.name);
   if (shipped) return shipped.description;
-  if (!theme?.path) return 'built-in';
-  return 'custom';
+  return 'установленная тема с этим именем.';
 }
 
 export function currentThemeName(ctx) {

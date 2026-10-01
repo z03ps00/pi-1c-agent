@@ -13,65 +13,89 @@ export const DEFAULTS = Object.freeze({
   AGENT_MODEL: '',
 });
 
+export const SDLC_INTRO = 'Глубина проверок (VERIFICATION_DEPTH). syntaxcheck на задетых модулях остаётся. UI-тесты не меняет.';
+
 export const SDLC_CHOICES = [
-  { value: 'lite', label: 'LITE', description: 'Reduced checks for eligible low-risk edits' },
-  { value: 'standard', label: 'STANDARD', description: 'Default verification depth' },
-  { value: 'full', label: 'FULL', description: 'All three static validators, full retry budget' },
+  { value: 'lite', label: 'lite', description: 'меньше проверок на мелкой правке.' },
+  { value: 'standard', label: 'standard', description: 'обычный набор. Это значение по умолчанию.' },
+  { value: 'full', label: 'full', description: 'все три статические проверки и полный бюджет повторов.' },
 ];
+
+export const LITEMODE_INTRO = 'Та же глубина проверок, но lite ещё выключает UI-тесты.';
+
+export const LITEMODE_CHOICES = [
+  { value: 'lite', label: 'lite', description: 'глубина lite и UI_TESTING=off.' },
+  { value: 'standard', label: 'standard', description: 'обычная глубина. UI-тесты не трогает.' },
+  { value: 'full', label: 'full', description: 'полная глубина. UI-тесты не трогает.' },
+];
+
+export const UITESTS_INTRO = 'Когда гонять UI-тесты и где показывать клиент тестирования. Само окно тесты не запускает.';
 
 export const UITESTS_CHOICES = [
-  { value: 'essential', label: 'ESSENTIAL', description: 'Important new/changed UI only (UI_TESTING)' },
-  { value: 'auto', label: 'AUTO', description: 'Every applicable UI scenario (UI_TESTING=auto)' },
-  { value: 'manual', label: 'MANUAL', description: 'UI tests only on explicit request' },
-  { value: 'off', label: 'OFF', description: 'Do not run UI tests' },
-  { value: 'visible', label: 'VISIBLE', description: 'Test client on the desktop' },
-  { value: 'hidden', label: 'HIDDEN', description: 'Test client on a hidden desktop' },
+  { value: 'essential', label: 'essential', description: 'только важное новое или изменённое поведение.' },
+  { value: 'auto', label: 'auto', description: 'все подходящие UI-сценарии.' },
+  { value: 'manual', label: 'manual', description: 'только по явной просьбе.' },
+  { value: 'off', label: 'off', description: 'UI-тесты не запускать.' },
+  { value: 'visible', label: 'visible', description: 'окно клиента тестирования на рабочем столе.' },
+  { value: 'hidden', label: 'hidden', description: 'клиент на скрытом рабочем столе.' },
 ];
+
+export const PREVIEW_INTRO = 'Показывать ли diff перед записью метаданных.';
 
 export const PREVIEW_CHOICES = [
-  { value: 'on', label: 'ON', description: 'Preview every metadata write' },
-  { value: 'auto', label: 'AUTO', description: 'Preview on the documented case list' },
-  { value: 'off', label: 'OFF', description: 'Do not preview' },
-  { value: 'once', label: 'ONCE', description: 'Session-only: next metadata write' },
+  { value: 'on', label: 'on', description: 'перед каждой такой записью.' },
+  { value: 'auto', label: 'auto', description: 'только в оговорённых случаях. Это значение по умолчанию.' },
+  { value: 'off', label: 'off', description: 'не показывать.' },
+  { value: 'once', label: 'once', description: 'только следующая запись. Файл .dev.env не меняется.' },
 ];
+
+export const CAVEMAN_INTRO = 'Короткий стиль ответов. Проверки и запреты не ослабляет.';
 
 export const CAVEMAN_CHOICES = [
-  { value: 'on', label: 'ON', description: 'Terse style on every task (persisted)' },
-  { value: 'auto', label: 'AUTO', description: 'On for development tasks only (persisted)' },
-  { value: 'off', label: 'OFF', description: 'No automatic activation (persisted)' },
-  { value: 'lite', label: 'LITE', description: 'Session verbosity only' },
-  { value: 'full', label: 'FULL', description: 'Session verbosity only' },
-  { value: 'ultra', label: 'ULTRA', description: 'Session verbosity only' },
+  { value: 'on', label: 'on', description: 'короткий стиль на всех задачах. Пишется в .dev.env.' },
+  { value: 'auto', label: 'auto', description: 'короткий стиль только на разработке. Пишется в .dev.env.' },
+  { value: 'off', label: 'off', description: 'само не включается. Пишется в .dev.env.' },
+  { value: 'lite', label: 'lite', description: 'чуть короче, только эта сессия.' },
+  { value: 'full', label: 'full', description: 'короткий стиль, только эта сессия.' },
+  { value: 'ultra', label: 'ultra', description: 'максимально коротко, только эта сессия.' },
 ];
+
+export const ECONOMY_INTRO = 'Отдавать работу субагентам, чтобы основной агент тратил меньше токенов. Модели субагентов — /economymode models.';
 
 export const ECONOMY_CHOICES = [
-  { value: 'on', label: 'ON', description: 'ORCHESTRATION=economy' },
-  { value: 'off', label: 'OFF', description: 'ORCHESTRATION=standard' },
+  { value: 'on', label: 'on', description: 'режим economy.' },
+  { value: 'off', label: 'off', description: 'обычный режим. Модели субагентов не меняет.' },
 ];
+
+export const ECONOMY_PRESET_INTRO = 'Набор моделей для ролей coding, analysis и light.';
 
 export const ECONOMY_PRESET_CHOICES = [
-  { value: 'economy', label: 'ECONOMY', description: 'Cheapest tier models' },
-  { value: 'balanced', label: 'BALANCED', description: 'Recommended mix' },
-  { value: 'quality', label: 'QUALITY', description: 'Strongest tier models' },
-  { value: 'custom', label: 'CUSTOM', description: 'Type three slugs' },
-  { value: 'inherit', label: 'INHERIT', description: 'Leave SUBAGENT_MODEL_* empty' },
+  { value: 'economy', label: 'economy', description: 'самые дешёвые.' },
+  { value: 'balanced', label: 'balanced', description: 'средний набор.' },
+  { value: 'quality', label: 'quality', description: 'самые сильные.' },
+  { value: 'custom', label: 'custom', description: 'ввести три имени вручную.' },
+  { value: 'inherit', label: 'inherit', description: 'не записывать модели. Субагенты как у родителя.' },
 ];
+
+export const ECONOMY_CLIENT_INTRO = 'Для какого клиента подставить известные модели субагентов.';
 
 export const ECONOMY_CLIENT_CHOICES = [
-  { value: 'cursor', label: 'CURSOR', description: 'Cursor agent ids' },
-  { value: 'claude', label: 'CLAUDE CODE', description: 'opus / sonnet / haiku' },
-  { value: 'codex', label: 'CODEX', description: 'gpt-5.6 family' },
-  { value: 'opencode', label: 'OPENCODE', description: 'provider/model ids' },
-  { value: 'other', label: 'OTHER', description: 'Type three slugs' },
+  { value: 'cursor', label: 'cursor', description: 'имена моделей Cursor.' },
+  { value: 'claude', label: 'claude', description: 'opus / sonnet / haiku.' },
+  { value: 'codex', label: 'codex', description: 'семейство gpt-5.6.' },
+  { value: 'opencode', label: 'opencode', description: 'имена provider/model.' },
+  { value: 'other', label: 'other', description: 'три имени ввести вручную.' },
 ];
 
+export const RULESMODEL_INTRO = 'Какой профиль правил подгружать под модель. Проверки не ослабляет.';
+
 export const RULESMODEL_CHOICES = [
-  { value: 'opus5', label: 'OPUS5', description: 'Claude Opus 5' },
-  { value: 'sonnet5', label: 'SONNET5', description: 'Claude Sonnet 5' },
-  { value: 'fable5', label: 'FABLE5', description: 'Claude Fable 5 / Mythos 5' },
-  { value: 'gpt56', label: 'GPT56', description: 'GPT-5.6' },
-  { value: 'gpt6', label: 'GPT6', description: 'GPT-6 Astra' },
-  { value: 'off', label: 'OFF', description: 'Base model-neutral ruleset' },
+  { value: 'opus5', label: 'opus5', description: 'профиль Claude Opus 5.' },
+  { value: 'sonnet5', label: 'sonnet5', description: 'профиль Claude Sonnet 5.' },
+  { value: 'fable5', label: 'fable5', description: 'профиль Claude Fable 5 / Mythos 5.' },
+  { value: 'gpt56', label: 'gpt56', description: 'профиль GPT-5.6.' },
+  { value: 'gpt6', label: 'gpt6', description: 'профиль GPT-6 Astra.' },
+  { value: 'off', label: 'off', description: 'базовый свод без профиля модели.' },
 ];
 
 export const ECONOMY_PRESETS = Object.freeze({

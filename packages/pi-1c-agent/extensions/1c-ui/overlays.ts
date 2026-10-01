@@ -14,14 +14,19 @@ import {
   statusIcon,
   uiAvailable,
 } from "../../lib/ui/index.mjs";
-import { MODE_CHOICES } from "../../lib/ui/mode-choices.mjs";
+import { MODE_CHOICES, MODE_INTRO } from "../../lib/ui/mode-choices.mjs";
 import {
   ANON_CHOICES,
+  ANON_INTRO,
   APPROVE_CHOICES,
+  APPROVE_INTRO,
   CAPTURE_MODEL_CHOICES,
+  CAPTURE_MODEL_INTRO,
   SESSION_ROTATE_CHOICES,
+  SESSION_ROTATE_INTRO,
 } from "../../lib/ui/option-choices.mjs";
-import { taskmodeChoices } from "../../lib/taskmode-state.mjs";
+import { composePickerLines, pickerSpanAt } from "../../lib/ui/picker-layout.mjs";
+import { TASKMODE_INTRO, taskmodeChoices } from "../../lib/taskmode-state.mjs";
 
 function selectTheme(theme: any) {
   return {
@@ -47,21 +52,56 @@ function frame(theme: any, title: string, body: string[], width: number, footer 
   return [top, ...lines, colorize(theme, "dim", `  ${footer}`), bottom];
 }
 
+type PickerItem = { value: string; label: string; description?: string };
+
 export async function overlaySelect(
   ctx: any,
   title: string,
-  items: { value: string; label: string; description?: string }[],
+  items: PickerItem[],
+  intro = "",
 ): Promise<string | undefined> {
   if (!ctx?.ui?.custom) return undefined;
   return ctx.ui.custom<string | null>((tui: any, theme: any, _kb: unknown, done: (v: string | null) => void) => {
-    const list = new SelectList(items, 12, selectTheme(theme));
-    list.onSelect = (item: { value: string }) => done(item.value);
-    list.onCancel = () => done(null);
+    let selected = 0;
+    let view = composePickerLines({ intro, items, selectedIndex: selected, width: 60 });
+    const move = (next: number) => {
+      if (!items.length) return;
+      selected = (next + items.length) % items.length;
+      tui.requestRender();
+    };
     return {
-      invalidate() { list.invalidate(); },
-      handleInput(data: string) { list.handleInput(data); tui.requestRender(); },
+      invalidate() {},
+      handleInput(data: string) {
+        if (matchesKey(data, "up")) { move(selected - 1); return; }
+        if (matchesKey(data, "down")) { move(selected + 1); return; }
+        if (matchesKey(data, "enter")) { done(items[selected]?.value ?? null); return; }
+        if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) { done(null); }
+      },
+      handleMouse(event: { y: number; type?: string }) {
+        const span = pickerSpanAt(view.spans, event.y - 1);
+        if (!span) return undefined;
+        if (event.type === "press") {
+          selected = span.index;
+          tui.requestRender();
+          return { handled: true, focus: true };
+        }
+        if (event.type === "click") {
+          selected = span.index;
+          done(items[selected]?.value ?? null);
+          return { handled: true };
+        }
+        return undefined;
+      },
       render(width: number) {
-        return frame(theme, title, list.render(Math.max(20, width - 4)), width);
+        const inner = Math.max(24, width - 2);
+        view = composePickerLines({ intro, items, selectedIndex: selected, width: inner });
+        const body = view.lines.map((line, index) => {
+          const span = pickerSpanAt(view.spans, index);
+          if (span?.index === selected) return colorize(theme, "accent", line);
+          if (!span) return colorize(theme, "dim", line);
+          return line;
+        });
+        return frame(theme, title, body, width);
       },
     };
   }, { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "80%", anchor: "center" } });
@@ -71,10 +111,11 @@ export async function overlaySelect(
 export async function pickOverlay(
   ctx: any,
   title: string,
-  items: { value: string; label: string; description?: string }[],
+  items: PickerItem[],
+  intro = "",
 ): Promise<string | undefined> {
   if (uiAvailable(ctx)) {
-    const picked = await overlaySelect(ctx, title, items);
+    const picked = await overlaySelect(ctx, title, items, intro);
     if (picked) return picked;
     return undefined;
   }
@@ -86,31 +127,27 @@ export async function pickOverlay(
 }
 
 export async function overlayApproveSelect(ctx: any): Promise<string | undefined> {
-  return pickOverlay(ctx, "Approve mode", APPROVE_CHOICES);
+  return pickOverlay(ctx, "Approve", APPROVE_CHOICES, APPROVE_INTRO);
 }
 
 export async function overlayAnonSelect(ctx: any): Promise<string | undefined> {
-  return pickOverlay(ctx, "Anonymous session", ANON_CHOICES);
+  return pickOverlay(ctx, "Anon", ANON_CHOICES, ANON_INTRO);
 }
 
 export async function overlayCaptureModelSelect(ctx: any): Promise<string | undefined> {
-  return pickOverlay(ctx, "Capture model", CAPTURE_MODEL_CHOICES);
+  return pickOverlay(ctx, "Capture model", CAPTURE_MODEL_CHOICES, CAPTURE_MODEL_INTRO);
 }
 
 export async function overlaySessionRotateSelect(ctx: any): Promise<string | undefined> {
-  return pickOverlay(ctx, "Session rotation", SESSION_ROTATE_CHOICES);
+  return pickOverlay(ctx, "Session rotate", SESSION_ROTATE_CHOICES, SESSION_ROTATE_INTRO);
 }
 
 export async function overlayModeSelect(ctx: any): Promise<string | undefined> {
-  return overlaySelect(ctx, "Choose mode", MODE_CHOICES.map((m) => ({
-    value: m.value,
-    label: m.label,
-    description: m.description,
-  })));
+  return overlaySelect(ctx, "Mode", MODE_CHOICES, MODE_INTRO);
 }
 
 export async function overlayTaskmodeSelect(ctx: any): Promise<string | undefined> {
-  return overlaySelect(ctx, "Choose work path", taskmodeChoices());
+  return overlaySelect(ctx, "Taskmode", taskmodeChoices(), TASKMODE_INTRO);
 }
 
 export async function overlayApproval(ctx: any, input: { toolName: string; action: string; reason: string }): Promise<string | undefined> {

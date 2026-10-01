@@ -2,7 +2,7 @@ export { publish, getSnapshot, getAllSnapshots, subscribe, registerAction, invok
 export { uiAvailable, hasDialogUi } from './headless.mjs';
 export { colorize, modeColor, statusColor, stripAnsi, visibleWidth, MODE_COLOR } from './theme.mjs';
 export {
-  SHIPPED_THEMES, REQUIRED_COLOR_TOKENS, parseThemeArgs, shippedThemeMeta, describeThemeSource,
+  THEME_INTRO, SHIPPED_THEMES, REQUIRED_COLOR_TOKENS, parseThemeArgs, shippedThemeMeta, describeThemeSource,
   currentThemeName, listThemes, themeSelectItems, sortThemes, formatThemeList, resolveThemeName, applyTheme,
 } from './theme-select.mjs';
 export { ICONS, statusIcon } from './icons.mjs';

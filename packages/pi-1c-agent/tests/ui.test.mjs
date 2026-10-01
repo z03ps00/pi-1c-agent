@@ -442,8 +442,9 @@ test('theme args and shipped VS Code palettes', () => {
   ], 'standard');
   assert.deepEqual(items.map((i) => i.value), ['standard', 'dracula', 'dark', 'light']);
   assert.match(items[0].label, /current/);
-  assert.match(items[0].description, /Dark\+/);
-  assert.match(items[1].description, /Dracula/);
+  assert.match(items[0].description, /тёмная схема VS Code/);
+  assert.match(items[1].description, /схема Dracula/);
+  assert.match(items[2].description, /установленная тема/);
   const listed = formatThemeList(items.map((i) => ({ name: i.value })), 'dracula');
   assert.match(listed, /Current: dracula/);
   const failed = applyTheme({ ui: { setTheme: () => ({ success: false, error: 'missing' }) } }, 'nope');

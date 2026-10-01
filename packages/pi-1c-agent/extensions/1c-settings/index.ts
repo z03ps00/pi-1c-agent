@@ -1,14 +1,24 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
   CAVEMAN_CHOICES,
+  CAVEMAN_INTRO,
   DEFAULTS,
   ECONOMY_CHOICES,
   ECONOMY_CLIENT_CHOICES,
+  ECONOMY_CLIENT_INTRO,
+  ECONOMY_INTRO,
   ECONOMY_PRESET_CHOICES,
+  ECONOMY_PRESET_INTRO,
   ECONOMY_PRESETS,
+  LITEMODE_CHOICES,
+  LITEMODE_INTRO,
   PREVIEW_CHOICES,
+  PREVIEW_INTRO,
   RULESMODEL_CHOICES,
+  RULESMODEL_INTRO,
   SDLC_CHOICES,
+  SDLC_INTRO,
+  UITESTS_INTRO,
   SETTINGS_STATE_TYPE,
   UITESTS_CHOICES,
   detectEconomyClient,
@@ -88,7 +98,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
       return;
     }
     const depth = parsed.kind === "pick"
-      ? await pickOverlay(ctx, "SDLC QA profile", SDLC_CHOICES)
+      ? await pickOverlay(ctx, "SDLC", SDLC_CHOICES, SDLC_INTRO)
       : parsed.depth;
     if (!depth) return;
     const { persisted } = applyKey("VERIFICATION_DEPTH", depth, "# full | standard | lite (/sdlc, /litemode)", "VERIFICATION_DEPTH");
@@ -108,7 +118,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
       return;
     }
     const depth = parsed.kind === "pick"
-      ? await pickOverlay(ctx, "Verification depth", SDLC_CHOICES)
+      ? await pickOverlay(ctx, "Litemode", LITEMODE_CHOICES, LITEMODE_INTRO)
       : parsed.depth;
     if (!depth) return;
     const depthWrite = setDevEnvKey(cwd, "VERIFICATION_DEPTH", depth, "# full | standard | lite (/litemode)");
@@ -141,7 +151,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
     let key = parsed.key;
     let value = parsed.value;
     if (parsed.kind === "pick") {
-      const selected = await pickOverlay(ctx, "UI tests", UITESTS_CHOICES);
+      const selected = await pickOverlay(ctx, "UI tests", UITESTS_CHOICES, UITESTS_INTRO);
       if (!selected) return;
       const next = parseUitestsArgs(selected);
       if (next.kind !== "set") return;
@@ -166,7 +176,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
       return;
     }
     const selected = parsed.kind === "pick"
-      ? await pickOverlay(ctx, "Metadata preview", PREVIEW_CHOICES)
+      ? await pickOverlay(ctx, "Preview", PREVIEW_CHOICES, PREVIEW_INTRO)
       : parsed.kind === "once" ? "once" : parsed.value;
     if (!selected) return;
     if (selected === "once") {
@@ -195,7 +205,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
     let value = parsed.value;
     let persistFile = parsed.persist;
     if (parsed.kind === "pick") {
-      const selected = await pickOverlay(ctx, "Caveman style", CAVEMAN_CHOICES);
+      const selected = await pickOverlay(ctx, "Caveman", CAVEMAN_CHOICES, CAVEMAN_INTRO);
       if (!selected) return;
       const next = parseCavemanArgs(selected);
       if (next.kind !== "set") return;
@@ -215,9 +225,9 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
 
   async function configureModels(ctx: ExtensionContext) {
     let client = detectEconomyClient(cwd);
-    if (!client) client = await pickOverlay(ctx, "AI client for subagent models", ECONOMY_CLIENT_CHOICES);
+    if (!client) client = await pickOverlay(ctx, "Economy client", ECONOMY_CLIENT_CHOICES, ECONOMY_CLIENT_INTRO);
     if (!client) return;
-    const preset = await pickOverlay(ctx, "Subagent model preset", ECONOMY_PRESET_CHOICES);
+    const preset = await pickOverlay(ctx, "Economy preset", ECONOMY_PRESET_CHOICES, ECONOMY_PRESET_INTRO);
     if (!preset) return;
     if (preset === "inherit") {
       ctx.ui.notify("SUBAGENT_MODEL_* не пишу — субагенты наследуют модель родителя", "warning");
@@ -281,7 +291,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
       return;
     }
     const selected = parsed.kind === "pick"
-      ? await pickOverlay(ctx, "Orchestrator economy", ECONOMY_CHOICES)
+      ? await pickOverlay(ctx, "Economy", ECONOMY_CHOICES, ECONOMY_INTRO)
       : parsed.value === "economy" ? "on" : "off";
     if (!selected) return;
     const value = selected === "on" || selected === "economy" ? "economy" : "standard";
@@ -306,7 +316,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
       return;
     }
     const selected = parsed.kind === "pick"
-      ? await pickOverlay(ctx, "Agent model profile", RULESMODEL_CHOICES)
+      ? await pickOverlay(ctx, "Rules model", RULESMODEL_CHOICES, RULESMODEL_INTRO)
       : parsed.value === "" ? "off" : parsed.value;
     if (!selected) return;
     const slug = selected === "off" ? "" : selected;

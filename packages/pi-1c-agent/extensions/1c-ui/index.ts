@@ -26,10 +26,11 @@ import {
   resolveThemeName,
   registerAction,
   subscribe,
+  THEME_INTRO,
   themeSelectItems,
   uiAvailable,
 } from "../../lib/ui/index.mjs";
-import { overlayChild, overlayHub, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
+import { overlayChild, overlayHub, overlayModeSelect, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
 
 let widgetMounted = false;
 
@@ -238,11 +239,7 @@ export default function oneCUi(pi: ExtensionAPI): void {
     const id = await overlayPalette(ctx);
     if (id) await runPaletteAction(id, ctx, pi);
   });
-  registerAction("mode-overlay", (ctx: any) => overlaySelect(ctx, "Choose mode", [
-    { value: "build", label: "BUILD", description: "Implementation enabled" },
-    { value: "plan", label: "PLAN", description: "Read-only investigation and planning" },
-    { value: "ask", label: "ASK", description: "Read-only Q&A" },
-  ]));
+  registerAction("mode-overlay", (ctx: any) => overlayModeSelect(ctx));
 
   async function handleTheme(args: string | undefined, ctx: any) {
     const parsed = parseThemeArgs(args);
@@ -272,7 +269,7 @@ export default function oneCUi(pi: ExtensionAPI): void {
       ctx.ui.notify("No themes discovered. Built-in: dark, light. Package: standard, dracula.", "warning");
       return undefined;
     }
-    if (uiAvailable(ctx)) return overlaySelect(ctx, "Choose theme", items);
+    if (uiAvailable(ctx)) return overlaySelect(ctx, "Choose theme", items, THEME_INTRO);
     return ctx.ui.select("Theme", items.map((i: { value: string }) => i.value));
   }
 

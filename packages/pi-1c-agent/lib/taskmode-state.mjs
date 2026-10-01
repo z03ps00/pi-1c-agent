@@ -90,11 +90,22 @@ export function parseTaskmode(arg) {
   return { kind: 'invalid' };
 }
 
+export const TASKMODE_INTRO = 'Рабочий путь этой сессии. Не заменяет режим и не отменяет проверки.';
+
+const TASKMODE_PICKER = Object.freeze({
+  'docs-fix': 'только текст: структура, ссылки, согласованность. Проверки BSL не запускаются.',
+  'spec-authoring': 'требования и план. Факты 1С подтверждаются, код пишется позже.',
+  analytics: 'объяснить или сравнить. Исходники не меняются.',
+  'quick-fix': 'одна локальная правка, короткий план и нужные проверки.',
+  'full-cycle': 'требования, реализация, проверка результата и ревью.',
+  auto: 'снять метку пути. Дальше путь выбирается по задаче.',
+});
+
 export function taskmodeChoices() {
   return TASKMODES.map((value) => ({
     value,
     label: TASKMODE_META[value].label,
-    description: TASKMODE_META[value].description,
+    description: TASKMODE_PICKER[value],
   }));
 }
 
