@@ -4,7 +4,7 @@ Default profile `mcp.json` has an empty `mcpServers` object. Merge **one family*
 
 | Fragment | Server family | Command |
 |---|---|---|
-| `knowledge.json` + `memory.json` | Our OpenViking + Cognee pair (ports 1933 / 8001, dataset `main_dataset`) | `/install-memory-mcp` (also `/install-cognee` / `/install-openviking`) |
+| `knowledge.json` + `memory.json` | Our OpenViking + Cognee pair (ports 1933 / 8001, dataset `main_dataset`) | `/install-memory-mcp` |
 | `1c-bundle.json` | purchased 1C MCP ports 8002–8008 | `/installmcp` |
 | `vanessa.json` | Vanessa Automation MCP (separate extra family, **not** the 1C bundle) | `/install-vanessa-mcp` |
 

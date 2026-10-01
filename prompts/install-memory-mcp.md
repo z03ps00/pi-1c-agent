@@ -4,7 +4,7 @@ description: "[settings] Install the paired OpenViking + Cognee memory MCP stack
 
 # /install-memory-mcp — portable OpenViking + Cognee
 
-One command that provisions **both** OpenViking (`knowledge`) and Cognee (`memory`) from assets in `mcp.optional/memory-stack/`. This is **our** stack. Do **not** install the upstream `comol/ai_rules_1c` Cognee MCP. `/install-cognee` and `/install-openviking` delegate here.
+One command that provisions **both** OpenViking (`knowledge`) and Cognee (`memory`) from assets in `mcp.optional/memory-stack/`. This is **our** stack. Do **not** install the upstream `comol/ai_rules_1c` Cognee MCP. A request to install Cognee or OpenViking runs this command once and still brings up both servers.
 
 Memory stays opt-in: do not write `memory` / `knowledge` into default `mcp.json` until the user confirms.
 

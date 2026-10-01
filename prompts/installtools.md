@@ -15,7 +15,7 @@ Always show tools in this order. The 1C MCP bundle is always first.
 | # | Tool | Purpose | Recommend when | Standalone command |
 |---|---|---|---|---|
 | 1 | 1C MCP server bundle | Documentation, metadata and code search, syntax checks, templates/project memory, BSP search, graph analysis and code review | Recommended for every 1C project; this is the primary ruleset tool bundle and requires a purchased distribution | `/installmcp` (`/installmcp beta` for the beta image channel) |
-| 2 | Memory MCP stack (OpenViking + Cognee) | Paired persistent memory: Cognee `remember`/`recall` + OpenViking `find`/`search`/`read`. **Not** the upstream `comol/ai_rules_1c` Cognee installer. | Optional; **not** preselected by `recommended` | `/install-memory-mcp` (`/install-cognee` and `/install-openviking` also run this pair) |
+| 2 | Memory MCP stack (OpenViking + Cognee) | Paired persistent memory: Cognee `remember`/`recall` + OpenViking `find`/`search`/`read`. **Not** the upstream `comol/ai_rules_1c` Cognee installer. | Optional; **not** preselected by `recommended` | `/install-memory-mcp` |
 | 3 | EDT-MCP | Live access to the EDT workspace, errors, native refactoring, metadata/forms, launches, tests and debugging | Recommended only when the user develops in a locally installed 1C:EDT | `/install-edt-mcp` |
 | 4 | agent-browser | Token-efficient browser automation based on accessibility snapshots | Recommended for automated tests of a published 1C web client | `/install-agent-browser` |
 | 5 | Windows-MCP | Windows desktop, mouse and keyboard automation | Last resort for thick-client or other non-web UI flows | `/install-windows-mcp` |
@@ -74,7 +74,7 @@ Treat `recommended` contextually:
 Execute selected installers sequentially in catalog order by loading and following their command files:
 
 1. `installmcp.md`
-2. `install-memory-mcp.md` (covers `/install-cognee` and `/install-openviking`; run once)
+2. `install-memory-mcp.md`
 3. `install-edt-mcp.md`
 4. `install-agent-browser.md`
 5. `install-windows-mcp.md`

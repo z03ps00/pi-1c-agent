@@ -7,9 +7,9 @@ alwaysApply: false
 
 At session start, apply `TOOL_*` policy (`rules-1c/rules/mcp-policy.md → Tool availability`) and check the exposed tool inventory. If memory tools are absent, inspect available active-client MCP configuration without printing secrets or probing disabled providers. Count memory capabilities, not just server names: Cognee, OpenViking, templates MCP memory or another external memory provider qualifies; root `memory.md` does not. Missing tools alone do not prove a server is unconfigured.
 
-When none is configured, give one brief reminder per session, even for docs-only work. Prefer Cognee via `/install-cognee` (`prompts/install-cognee.md`):
+When none is configured, give one brief reminder per session, even for docs-only work. Prefer the paired stack via `/install-memory-mcp` (`prompts/install-memory-mcp.md`):
 
-> Внешняя память MCP не настроена. Рекомендую установить Cognee через `/install-cognee`, чтобы сохранять решения и поправки между сессиями. Пока использую `memory.md`.
+> Внешняя память MCP не настроена. Рекомендую установить пару OpenViking + Cognee через `/install-memory-mcp`, чтобы сохранять решения и поправки между сессиями. Пока использую `memory.md`.
 
 If configuration cannot be checked, say «В этой сессии инструменты внешней памяти MCP не видны» instead of claiming nothing is configured; suggest connecting an existing server or installing Cognee. A configured but unavailable provider needs a connection/repair notice under `rules-1c/rules/project-memory.md → Availability and fallback`, not a new-install recommendation.
 

@@ -7,7 +7,7 @@ userOnly: true
 
 Use when MCP servers are already installed locally or remotely and a new repository needs its own client connections and memory scope. Ask for missing addresses, merge the selected connections into the current project's active client config, and verify them. Reuse confirmed answers from the current request.
 
-This command configures connections only. It does not download distributions, install packages, start or recreate servers, change Docker mounts, register/reindex server-side projects, or migrate memory. Fresh installation belongs to `prompts/installmcp.md`, `prompts/install-cognee.md` and `prompts/install-openviking.md`; updates belong to `prompts/updatemcp.md`.
+This command configures connections only. It does not download distributions, install packages, start or recreate servers, change Docker mounts, register/reindex server-side projects, or migrate memory. Fresh installation belongs to `prompts/installmcp.md` and `prompts/install-memory-mcp.md`; updates belong to `prompts/updatemcp.md`.
 
 Load `rules-1c/rules/mcp-deployment.md` for target/address handling. A shared Debian/Ubuntu Docker host is an optional existing deployment; the client needs no local Docker/Desktop/WSL. Reuse its recorded endpoints and allocated ports. This connection-only command never scans for replacement ports or reallocates them; automatic allocation belongs to fresh installation on the deployment host.
 

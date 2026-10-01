@@ -97,18 +97,18 @@ test('install prompts route to our pair; Ollama overlay exists; disable keeps da
   assert.match(install, /1933/);
   assert.match(install, /main_dataset/);
   assert.match(install, /disable/);
+  assert.match(install, /comol\/ai_rules_1c/);
   assert.doesNotMatch(install, /127\.0\.0\.1:8010:8000/);
-
-  const cognee = fs.readFileSync(path.join(prompts, 'install-cognee.md'), 'utf8');
-  assert.match(cognee, /install-memory-mcp/);
-  assert.match(cognee, /8001/);
-  assert.match(cognee, /comol\/ai_rules_1c/);
-  assert.doesNotMatch(cognee, /docker run[\s\S]*8010:8000/);
+  assert.doesNotMatch(install, /docker run[\s\S]*8010:8000/);
+  assert.equal(fs.existsSync(path.join(prompts, 'install-cognee.md')), false);
+  assert.equal(fs.existsSync(path.join(prompts, 'install-openviking.md')), false);
 
   const tools = fs.readFileSync(path.join(prompts, 'installtools.md'), 'utf8');
   assert.match(tools, /install-memory-mcp/);
   assert.match(tools, /Never install the upstream Cognee/);
   assert.match(tools, /8001/);
+  assert.doesNotMatch(tools, /install-cognee/);
+  assert.doesNotMatch(tools, /install-openviking/);
 
   const checkmcp = fs.readFileSync(path.join(prompts, 'checkmcp.md'), 'utf8');
   assert.match(checkmcp, /1933\/health/);

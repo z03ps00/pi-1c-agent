@@ -47,4 +47,4 @@ Review is `/review-airules` (read-only). Apply is a later `/opsx-apply` or `/exe
 - `skills/1c-metadata-manage` PowerShell/Python tool wave (form-edit order, sibling validators, `default.vrd`, preview exit code, and related docs). Left in place so local-only `docs/form-patterns.md` and `docs/ssl-patterns.md` are not dropped. Reopen only by an explicit request; this pin will not surface that wave again.
 - Skill trees not named in the apply tasks: `v8unpack-cf`, `md-to-docx`, `transcribe`, `handoff`, `caveman`, `prompt-enhancer`, `mermaid-diagrams`, `powershell-windows`, `img-grid-analysis`.
 - Pi overlay `rules-1c/core/*`, the lab-extra skill trees (tracked separately via `LAB-EXTRAS.md`, not `ai_rules_1c`), `install.ps1`, and upstream adapters.
-- Our memory installers `install-memory-mcp`, `install-cognee`, `install-openviking` (not the upstream Cognee on port 8010).
+- Our memory installer `install-memory-mcp` (not the upstream Cognee on port 8010).

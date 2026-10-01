@@ -10,7 +10,7 @@ Server aliases commonly include `cognee` and `cognee-memory`. Discover the expos
 - Durable write: `remember(data=..., dataset_name=...)`; omit `session_id`, which selects session-only storage. Omit `dataset_name` when the established client default is appropriate.
 - Inspect the live descriptor before optional arguments or cleanup. `forget(dataset=...)` can delete an entire dataset; it is not a single-note delete API.
 
-Installation: `prompts/install-cognee.md`. Official reference: [Cognee MCP quickstart](https://docs.cognee.ai/cognee-mcp/mcp-quickstart). Live tool descriptors override examples here.
+Installation: `prompts/install-memory-mcp.md` (paired with OpenViking). Official reference: [Cognee MCP quickstart](https://docs.cognee.ai/cognee-mcp/mcp-quickstart). Live tool descriptors override examples here.
 
 ## OpenViking
 
@@ -21,7 +21,7 @@ The native HTTP server exposes MCP at `/mcp` (default local port `1933`). Use it
 - Read a returned note URI with the exposed `read` tool when the search excerpt is insufficient. Preserve returned canonical URIs instead of constructing another user's memory path.
 - Retire a note with `forget(uri=...)` only when that URI identifies the intended note; never substitute a recursive memory-root deletion.
 
-Installation: `prompts/install-openviking.md`. Verified against the [official MCP integration guide](https://docs.openviking.ai/en/guides/06-mcp-integration); the connected server's descriptor remains authoritative.
+Installation: `prompts/install-memory-mcp.md` (paired with Cognee). Verified against the [official MCP integration guide](https://docs.openviking.ai/en/guides/06-mcp-integration); the connected server's descriptor remains authoritative.
 
 ## 1c-templates-mcp
 

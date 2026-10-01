@@ -27,8 +27,6 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/init-knowledge` | Cursor procedure: plant `.pi/1c` knowledge dirs only (Pi TUI: `/init knowledge`). Does not copy the agent |
 | `/installmcp` | First install of the purchased 1C Docker MCP bundle |
 | `/install-memory-mcp` | Opt-in paired OpenViking + Cognee memory stack (Router AI default) |
-| `/install-cognee` | Alias path: our Cognee half of `/install-memory-mcp` (not upstream Cognee) |
-| `/install-openviking` | Alias path: our OpenViking half of `/install-memory-mcp` |
 | `/install-edt-mcp` | EDT plugin MCP (when `USE_EDT=true`) |
 | `/install-agent-browser` | Web-client UI testing browser |
 | `/install-windows-mcp` | Last-resort Windows desktop UI MCP |
