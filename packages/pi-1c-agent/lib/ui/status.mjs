@@ -22,6 +22,7 @@ export function composeStatus(snapshot = {}) {
     '',
     'Agent',
     line('Mode', mode),
+    line('Work path', snapshot.taskmode || 'auto'),
     line('Approval', approve),
     line('Anonymous', anon > 0 ? String(anon) : 'off'),
     line('Thinking', snapshot.thinkingLevel || 'off'),

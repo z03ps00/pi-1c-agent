@@ -1,6 +1,6 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/anon`, and `/approve` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Anonymous session is `/anon`. Approval mode is `/approve`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, and `/approve` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Anonymous session is `/anon`. Approval mode is `/approve`.
 
 ## Everyday (at most twelve)
 
@@ -12,7 +12,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/installtools` | Guided installer menu (asks before any MCP install) |
 | `/checkmcp` | MCP status only (repair is explicit) |
 | `/mode plan` / `/mode build` / `/mode ask` | Pi ASK/PLAN/BUILD switch (not a prompt file; default ASK) |
-| `/taskmode` | Pin the 1C work path for this session (does not replace `/mode`, does not waive gates) |
+| `/taskmode` | Pi package: picker for docs-fix / spec-authoring / analytics / quick-fix / full-cycle / auto (footer pin; not `/mode`) |
 | `/resume` | Continue an active task from its handoff after checking workspace state and evidence |
 | `/loadfrom1cbase` | Dump configuration from the configured infobase into the repo |
 | `/update1cbase` | Load repository into the named infobase (confirm target) |

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { normalizeApproveLevel } from './approve-policy.mjs';
+import { DEFAULT_TASKMODE, normalizeTaskmode } from './taskmode-state.mjs';
 
 export const PLAN_REQUIRED_SECTIONS = [
   '## Plan',
@@ -83,7 +84,7 @@ export function anonBlocksLocalTraces(level) {
 
 export function initialModeState() {
   const mode = resolveDefaultMode();
-  return { mode, phase: MODE_PHASES[mode], plan: null, anonLevel: 0, approveLevel: 0 };
+  return { mode, phase: MODE_PHASES[mode], plan: null, anonLevel: 0, approveLevel: 0, taskmode: DEFAULT_TASKMODE };
 }
 
 export function enterPlan(state = initialModeState()) {
@@ -153,6 +154,7 @@ export function sanitizeModeState(candidate) {
     plan,
     anonLevel: normalizeAnonLevel(candidate.anonLevel),
     approveLevel: normalizeApproveLevel(candidate.approveLevel),
+    taskmode: normalizeTaskmode(candidate.taskmode),
   };
   for (const flag of [
     'memoryGateRequired', 'memoryGatePrompted',

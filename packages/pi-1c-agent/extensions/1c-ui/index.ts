@@ -61,6 +61,7 @@ function collectSnapshot(ctx: any, footerData?: any, pi?: ExtensionAPI) {
     mode: mode.mode || "ask",
     phase: mode.phase,
     planId: mode.planId,
+    taskmode: mode.taskmode || "auto",
     anonLevel: mode.anonLevel || 0,
     approve: mode.approve || "off",
     rotateEnabled: rotate.enabled === true,
@@ -116,6 +117,7 @@ function mountFooter(ctx: any, pi?: ExtensionAPI) {
         const { segments, text } = composeFooter(snap, width);
         const parts = segments.map((s) => {
           if (s.id === "mode") return colorize(theme, modeColor(snap.mode), s.text);
+          if (s.id === "taskmode" && snap.taskmode && snap.taskmode !== "auto") return colorize(theme, "accent", s.text);
           if (s.id === "anon" || s.id === "approve") return colorize(theme, "warning", s.text);
           if (s.id === "failed") return colorize(theme, "error", s.text);
           return colorize(theme, "dim", s.text);
@@ -210,6 +212,7 @@ async function runPaletteAction(id: string, ctx: any, pi: ExtensionAPI) {
   if (id === "status") return showStatus(ctx, pi);
   if (id === "agents") return showHub(ctx);
   if (id === "mode") return invokeAction("mode-select", ctx);
+  if (id === "taskmode") return invokeAction("taskmode-select", ctx);
   if (id === "approve") return invokeAction("approve-select", ctx);
   if (id === "anon") return invokeAction("anon-select", ctx);
   if (id === "init") return invokeAction("init-open", ctx);

@@ -125,6 +125,8 @@ test('1c-mode scopes session approvals and 1c-subagents restrict child env', () 
 test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
   assert.match(mode, /registerCommand\("mode"/);
+  assert.match(mode, /registerCommand\("taskmode"/);
+  assert.match(mode, /overlayTaskmodeSelect/);
   assert.doesNotMatch(mode, /registerCommand\("1c-ask"/);
   assert.doesNotMatch(mode, /registerCommand\("1c-plan"/);
   assert.doesNotMatch(mode, /registerCommand\("1c-build"/);

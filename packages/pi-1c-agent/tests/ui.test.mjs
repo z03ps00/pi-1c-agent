@@ -140,6 +140,17 @@ test('footer PLAN shows read-only and plan id', () => {
   assert.match(text, /plan #4f21a8/);
 });
 
+test('footer shows work-path pin next to mode', () => {
+  const auto = composeFooter({ mode: 'ask', taskmode: 'auto' }, 80);
+  assert.match(auto.text, /ASK/);
+  assert.match(auto.text, /auto/);
+  assert.ok(auto.segments.some((s) => s.id === 'taskmode' && s.text === 'auto'));
+  const pinned = composeFooter({ mode: 'build', taskmode: 'spec-authoring' }, 80);
+  assert.match(pinned.text, /BUILD/);
+  assert.match(pinned.text, /spec/);
+  assert.ok(pinned.segments.some((s) => s.id === 'taskmode' && s.text === 'spec'));
+});
+
 test('footer ASK shows ANON only when enabled', () => {
   const on = composeFooter({ mode: 'ask', anonLevel: 2, contextPercent: 21 }, 120);
   assert.match(on.text, /ASK/);
@@ -180,6 +191,7 @@ test('status screen includes mode, context, and running agents', () => {
     projectName: 'ERP Rehau',
     configuration: 'ERP 2.5',
     mode: 'build',
+    taskmode: 'quick-fix',
     approve: 'safe',
     anonLevel: 0,
     contextPercent: 58,
@@ -197,6 +209,7 @@ test('status screen includes mode, context, and running agents', () => {
     fingerprint: 'current',
   });
   assert.match(text, /BUILD/);
+  assert.match(text, /quick-fix/);
   assert.match(text, /58%/);
   assert.match(text, /high/);
   assert.match(text, /2\/4/);
@@ -300,6 +313,7 @@ test('footer drop order keeps mode and approval longer than model/bar', () => {
   assert.ok(FOOTER_DROP_ORDER.includes('thinking'));
   assert.ok(FOOTER_DROP_ORDER.includes('rotate'));
   assert.ok(!FOOTER_DROP_ORDER.includes('mode'));
+  assert.ok(FOOTER_DROP_ORDER.includes('taskmode'));
   const snap = { mode: 'build', approve: 'safe', model: 'claude-sonnet', projectName: 'ERP', contextPercent: 58 };
   const { segments, dropped } = composeFooter(snap, 28);
   assert.ok(segments.some((s) => s.id === 'mode'));
@@ -374,7 +388,7 @@ test('palette fuzzy match and does not bind ctrl+k', () => {
   const hits = filterPaletteActions('mod');
   assert.ok(hits.some((a) => a.id === 'mode'));
   const ids = PALETTE_ACTIONS.map((a) => a.id);
-  for (const need of ['mode', 'agents', 'status', 'doctor', 'init', 'config', 'memory', 'session', 'approve', 'anon', 'theme', 'settings']) {
+  for (const need of ['mode', 'taskmode', 'agents', 'status', 'doctor', 'init', 'config', 'memory', 'session', 'approve', 'anon', 'theme', 'settings']) {
     assert.ok(ids.includes(need), need);
   }
   assert.ok(filterPaletteActions('drac').some((a) => a.id === 'theme'));

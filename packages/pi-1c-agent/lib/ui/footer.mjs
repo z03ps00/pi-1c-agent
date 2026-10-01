@@ -1,4 +1,5 @@
 import { visibleWidth } from './theme.mjs';
+import { taskmodeFooterLabel } from '../taskmode-state.mjs';
 
 const SEP = ' │ ';
 
@@ -76,6 +77,7 @@ export function footerSegments(snapshot = {}) {
   const mode = String(snapshot.mode || 'ask').toLowerCase();
   const modeLabel = mode === 'build' ? 'BUILD' : mode === 'plan' ? 'PLAN' : 'ASK';
   const segs = [{ id: 'mode', text: modeLabel, keep: true }];
+  segs.push({ id: 'taskmode', text: taskmodeFooterLabel(snapshot.taskmode) });
 
   const anon = Math.trunc(Number(snapshot.anonLevel) || 0);
   const approve = String(snapshot.approve || 'off').toLowerCase();
@@ -122,7 +124,7 @@ export function footerSegments(snapshot = {}) {
 
 /** Drop order for a narrow terminal (lowest priority first). Mode is never dropped. */
 export const FOOTER_DROP_ORDER = Object.freeze([
-  'bar', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'approve', 'readonly', 'anon',
+  'bar', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'approve', 'readonly', 'taskmode', 'anon',
 ]);
 
 export function composeFooter(snapshot = {}, width = 80) {

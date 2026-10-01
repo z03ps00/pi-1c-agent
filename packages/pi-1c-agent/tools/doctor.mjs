@@ -64,6 +64,7 @@ add(`Node >=${MIN_NODE_VERSION}`, nodeMeetsMinimum(), true, process.version);
 add('Pi peer ranges bounded', Object.values(packageJson.peerDependencies || {}).every((range) => range && range !== '*'), true, JSON.stringify(packageJson.peerDependencies));
 add('1C PLAN/BUILD extension', exists(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) && extList.includes('extensions/1c-mode/index.ts'));
 const modeSrc = exists(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) : '';
+add('canonical /taskmode registration', /registerCommand\("taskmode"/.test(modeSrc) && /overlayTaskmodeSelect/.test(modeSrc));
 add('1C approve CLI is --1c-approve', /registerFlag\("1c-approve"/.test(modeSrc) && !/registerFlag\("approve"/.test(modeSrc));
 add('1C subagent extension', exists(path.join(packageRoot, 'extensions', '1c-subagents', 'index.ts')) && extList.includes('extensions/1c-subagents/index.ts'));
 add('1C admin extension', exists(path.join(packageRoot, 'extensions', '1c-admin', 'index.ts')) && extList.includes('extensions/1c-admin/index.ts'));

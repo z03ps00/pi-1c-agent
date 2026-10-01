@@ -2,6 +2,7 @@ export const PALETTE_SHORTCUT = 'ctrl+shift+k';
 
 export const PALETTE_ACTIONS = Object.freeze([
   { id: 'mode', label: 'Change mode', keywords: 'mode build plan ask', command: '/mode' },
+  { id: 'taskmode', label: 'Change work path', keywords: 'taskmode docs-fix spec-authoring analytics quick-fix full-cycle', command: '/taskmode' },
   { id: 'agents', label: 'Agents', keywords: 'hub subagent roster', command: '/agents' },
   { id: 'status', label: 'Project status', keywords: 'status health', command: '/status' },
   { id: 'config', label: 'Configuration knowledge', keywords: 'config knowledge fingerprint', command: '/config status' },

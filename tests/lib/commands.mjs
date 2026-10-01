@@ -11,6 +11,7 @@ export const PACKAGE_OWNED_COMMANDS = [
   'wrap',
   'capture-model',
   'mode',
+  'taskmode',
   'anon',
   'agents',
   'config',

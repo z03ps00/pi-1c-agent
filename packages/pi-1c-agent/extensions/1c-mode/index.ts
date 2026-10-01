@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Key } from "@earendil-works/pi-tui";
-import { overlayApproval, overlayModeSelect } from "../1c-ui/overlays.ts";
+import { overlayApproval, overlayModeSelect, overlayTaskmodeSelect } from "../1c-ui/overlays.ts";
 import { publish, registerAction, summarizeToolAction, uiAvailable } from "../../lib/ui/index.mjs";
 import {
   approveLevelName,
@@ -20,6 +20,14 @@ import { acceptPlan, enterBuild, enterPlan, executePlan, extractPlanArtifact, in
 import * as planStateLib from "../../lib/plan-state.mjs";
 import * as planPolicyLib from "../../lib/plan-policy.mjs";
 import { set1cMode } from "../../lib/mode-state.mjs";
+import {
+  DEFAULT_TASKMODE,
+  describeTaskmode,
+  normalizeTaskmode,
+  parseTaskmode,
+  set1cTaskmode,
+  taskmodeNote,
+} from "../../lib/taskmode-state.mjs";
 
 type OneCMode = "plan" | "build" | "ask";
 type OneCPhase = "build-idle" | "plan-draft" | "plan-ready" | "ask-idle" | "build-executing";
@@ -30,6 +38,7 @@ type ModeState = {
   plan: PlanArtifact | null;
   anonLevel?: number;
   approveLevel?: number;
+  taskmode?: string;
   lastInjectedMode?: OneCMode;
 };
 type SharedState = typeof globalThis & { __PI_1C_MODE__?: OneCMode; __PI_1C_PHASE__?: OneCPhase; __PI_1C_PLAN_ID__?: string };
@@ -270,6 +279,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
 
   function publishSharedState(): void {
     set1cMode(state.mode);
+    set1cTaskmode(state.taskmode);
     shared.__PI_1C_PHASE__ = state.phase;
     shared.__PI_1C_PLAN_ID__ = state.plan?.id;
   }
@@ -296,6 +306,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
       mode: state.mode,
       phase: state.phase,
       planId: state.plan?.id,
+      taskmode: normalizeTaskmode(state.taskmode),
       anonLevel: anonLevel(),
       approve: approveLevelName(approveLevel()),
     });
@@ -419,6 +430,45 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     if (selected === "build") await switchToBuild(ctx);
     if (selected === "ask") await switchToAsk(ctx);
   });
+
+  function setTaskmode(path: string, ctx: ExtensionContext, notify = true): void {
+    const next = normalizeTaskmode(path);
+    state = { ...state, taskmode: next };
+    sync(ctx);
+    if (notify) ctx.ui.notify(`Work path: ${describeTaskmode(next)}`, next === DEFAULT_TASKMODE ? "info" : "warning");
+  }
+
+  async function pickTaskmode(ctx: ExtensionContext): Promise<void> {
+    const selected = uiAvailable(ctx)
+      ? await overlayTaskmodeSelect(ctx)
+      : await ctx.ui.select("Work path", ["docs-fix", "spec-authoring", "analytics", "quick-fix", "full-cycle", "auto"]);
+    if (!selected) return;
+    setTaskmode(selected, ctx);
+  }
+
+  async function handleTaskmode(args: string | undefined, ctx: ExtensionContext) {
+    const parsed = parseTaskmode(args);
+    if (parsed.kind === "invalid") {
+      ctx.ui.notify(`Unknown work path: ${String(args ?? "").trim()}. Use docs-fix | spec-authoring | analytics | quick-fix | full-cycle | auto | status.`, "error");
+      return;
+    }
+    if (parsed.kind === "status") {
+      ctx.ui.notify(`taskmode=${normalizeTaskmode(state.taskmode)} · ${describeTaskmode(state.taskmode)} · session-scoped (does not replace /mode)`, "info");
+      return;
+    }
+    if (parsed.kind === "pick") {
+      await pickTaskmode(ctx);
+      return;
+    }
+    setTaskmode(parsed.path ?? DEFAULT_TASKMODE, ctx);
+  }
+
+  pi.registerCommand("taskmode", {
+    description: "Work path: /taskmode docs-fix | spec-authoring | analytics | quick-fix | full-cycle | auto | status",
+    handler: handleTaskmode,
+  });
+  registerAction("command:taskmode", (args: any, ctx: any) => handleTaskmode(args, ctx));
+  registerAction("taskmode-select", (ctx: any) => pickTaskmode(ctx));
 
   registerAction("approve-select", async (ctx: ExtensionContext) => {
     const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
@@ -583,7 +633,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     state = { ...state, lastInjectedMode: state.mode };
     persist();
     const body = state.mode === "plan" ? PLAN_INSTRUCTIONS : state.mode === "ask" ? ASK_INSTRUCTIONS : BUILD_INSTRUCTIONS;
-    let instructions = `${modeNote(state.mode)}\n\n${body}`;
+    let instructions = `${modeNote(state.mode)}\n\n${taskmodeNote(state.taskmode)}\n\n${body}`;
     if (state.mode === "build" && state.phase === "build-executing" && state.plan) {
       instructions += `\n\n# Approved plan handoff\nplan_id: ${state.plan.id}\n\n${state.plan.text}`;
     }

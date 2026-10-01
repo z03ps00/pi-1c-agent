@@ -40,7 +40,7 @@ Review is `/review-airules` (read-only). Apply is a later `/opsx-apply` or `/exe
 
 ### profile-original (no to-SHA)
 
-- `prompts/taskmode.md` — `/taskmode docs-fix|spec-authoring|analytics|quick-fix|full-cycle|auto|status`. Does not replace `/mode` and does not waive promotion triggers or `syntaxcheck`.
+- `/taskmode` — profile-original work-path command. Implemented as a Pi package command (picker + footer pin), not a prompt file. Does not replace `/mode` and does not waive promotion triggers or `syntaxcheck`.
 
 ### skip
 

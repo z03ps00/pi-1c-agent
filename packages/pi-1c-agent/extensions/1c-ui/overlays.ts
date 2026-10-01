@@ -14,6 +14,7 @@ import {
   statusIcon,
 } from "../../lib/ui/index.mjs";
 import { MODE_CHOICES } from "../../lib/ui/mode-choices.mjs";
+import { taskmodeChoices } from "../../lib/taskmode-state.mjs";
 
 function selectTheme(theme: any) {
   return {
@@ -65,6 +66,10 @@ export async function overlayModeSelect(ctx: any): Promise<string | undefined> {
     label: m.label,
     description: m.description,
   })));
+}
+
+export async function overlayTaskmodeSelect(ctx: any): Promise<string | undefined> {
+  return overlaySelect(ctx, "Choose work path", taskmodeChoices());
 }
 
 export async function overlayApproval(ctx: any, input: { toolName: string; action: string; reason: string }): Promise<string | undefined> {
