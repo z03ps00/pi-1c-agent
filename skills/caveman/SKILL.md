@@ -47,11 +47,11 @@ When in doubt (still under `CAVEMAN=auto`), look at the verbs in the request: **
 Two scopes for changing the state:
 
 - **Session-only** (this chat, no file change): "caveman please" forces on; "stop caveman" / "normal mode" / "обычный режим" forces off; `/caveman lite|full|ultra` switches the level. A forced session state overrides everything below and holds until the next force or session end. **Negation safety:** a negated mention ("не надо caveman", "без caveman", "I don't want caveman") means **off**, never on; a phrase that merely describes the style inside a question ("что делает caveman?") is not a trigger at all. Level commands tolerate case and trailing punctuation (`/caveman Ultra.`).
-- **Persistent** (project-wide, edits `.dev.env` `CAVEMAN`): the `/caveman on|off|auto` slash command (`$PI_CODING_AGENT_DIR/prompts/caveman.md`).
+- **Persistent** (project-wide, edits `.dev.env` `CAVEMAN`): the `/caveman on|off|auto` slash command.
 
 ## Configuration — `.dev.env` (`CAVEMAN`)
 
-Automatic activation is gated by the `CAVEMAN` parameter in `.dev.env` (canonical description — `$PI_CODING_AGENT_DIR/rules-1c/rules/dev-standards-env.md → "CAVEMAN — caveman auto-activation"`; toggled by the `/caveman on|off|auto` slash command, `$PI_CODING_AGENT_DIR/prompts/caveman.md`):
+Automatic activation is gated by the `CAVEMAN` parameter in `.dev.env` (canonical description — `$PI_CODING_AGENT_DIR/rules-1c/rules/dev-standards-env.md → "CAVEMAN — caveman auto-activation"`; toggled by the `/caveman on|off|auto` slash command):
 
 - **`CAVEMAN=on`** (explicit; empty / invalid = `auto`) — caveman is active for **all** tasks, development and analysis / documentation / review alike. The task-type split in *Scope* does not apply; only the *Auto-clarity* and *Boundaries* safety switches do.
 - **`CAVEMAN=auto`** — task-type auto-classification as described in *Scope*: on for development, off for analysis / documentation / review.

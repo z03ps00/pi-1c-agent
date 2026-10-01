@@ -129,7 +129,7 @@ The parameter only chooses a place for a **new** entry; it never reorders object
 
 UI checks confirm behaviour in the 1C interface: through QA MCP (`1c-qa`) in the thin client when it is connected, or through the web client as the more token-expensive fallback. `UI_TESTING` decides **whether** and **how much** is checked. It is **Defaulted** — empty resolves to `essential`, an invalid value to `manual`; the agent **must not** ask for the value.
 
-Explicit editor: `/uitests essential|on|manual|off|status` (`prompts/uitests.md`); `on` / `auto` writes `auto`. Resolve a session-only override before the project value. All QA profiles and orchestration modes preserve UI policy. Changing policy alone does not run tests or authorize deployment; dev/test target and tool-policy gates still apply.
+Explicit editor: `/uitests essential|on|manual|off|status`; `on` / `auto` writes `auto`. Resolve a session-only override before the project value. All QA profiles and orchestration modes preserve UI policy. Changing policy alone does not run tests or authorize deployment; dev/test target and tool-policy gates still apply.
 
 | Value | Meaning |
 |---|---|
@@ -250,7 +250,7 @@ Controls **whether** the terse `caveman` communication style (`skills/caveman/SK
 | `on` | `caveman` is active for **all** tasks — development and analysis / review / documentation alike. Only the skill's safety switches apply (code, error text, destructive / security / ordered blocks stay in normal grammar). |
 | `off` | Automatic activation is disabled — `caveman` never turns on by itself on any task. It can still be enabled by an explicit in-session force ("caveman please"), which holds until session end. |
 
-**Precedence:** an explicit session force always wins over `CAVEMAN`; otherwise the `CAVEMAN` value applies (`on` → all tasks, `auto` → by task type, `off` → no auto-on). The persistent value is edited by the `/caveman on|auto|off` command (`prompts/caveman.md`); session-only force uses the phrases "caveman please" / "stop caveman" or a `/caveman lite|full|ultra` level switch.
+**Precedence:** an explicit session force always wins over `CAVEMAN`; otherwise the `CAVEMAN` value applies (`on` → all tasks, `auto` → by task type, `off` → no auto-on). The persistent value is edited by the `/caveman on|auto|off` command; session-only force uses the phrases "caveman please" / "stop caveman" or a `/caveman lite|full|ultra` level switch.
 
 #### `METADATA_PREVIEW` — wrapper dry-run before a metadata write
 

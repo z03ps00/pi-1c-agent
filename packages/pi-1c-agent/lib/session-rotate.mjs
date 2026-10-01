@@ -26,7 +26,8 @@ export function restoreStateFromEntries(entries) {
 
 export function parseSessionRotateArgs(args) {
   const raw = String(args ?? '').trim().toLowerCase().replace(/[.,;:]+$/, '');
-  if (!raw || raw === 'status') return { action: 'status' };
+  if (!raw) return { action: 'pick' };
+  if (raw === 'status') return { action: 'status' };
   if (raw === 'off') return { action: 'off' };
   if (raw === 'continue') return { action: 'continue' };
   if (raw === 'on') return { action: 'on' };

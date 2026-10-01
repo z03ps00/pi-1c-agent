@@ -28,6 +28,7 @@ import { createMcpAdapters, probeMemoryServers } from "../../lib/memory-mcp.mjs"
 import { emitDiagnostic } from "../../lib/diagnostics.mjs";
 import { current1cMode, isBuildMode } from "../../lib/mode-state.mjs";
 import { publish, registerAction } from "../../lib/ui/index.mjs";
+import { overlayCaptureModelSelect } from "../1c-ui/overlays.ts";
 
 type CaptureState = ReturnType<typeof restoreCaptureState>;
 
@@ -274,7 +275,22 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   pi.registerCommand("capture-model", {
     description: "Distiller for session capture: /capture-model status|off|stack|ollama <model>|routerai <model>|chat",
     handler: async (args, ctx) => {
-      const parsed = parseCaptureModelArgs(args);
+      let parsed = parseCaptureModelArgs(args);
+      if (parsed.action === "pick") {
+        const selected = await overlayCaptureModelSelect(ctx);
+        if (!selected) return;
+        parsed = parseCaptureModelArgs(selected);
+      }
+      if (parsed.action === "needs-model") {
+        const model = ctx.hasUI && typeof ctx.ui.input === "function"
+          ? String(await ctx.ui.input(`${parsed.mode} model`) ?? "").trim()
+          : "";
+        if (!model) {
+          ctx.ui.notify(`${parsed.mode} requires a model name`, "error");
+          return;
+        }
+        parsed = parseCaptureModelArgs(`${parsed.mode} ${model}`);
+      }
       const result = applyCaptureModel(state, parsed);
       if (!result.ok) {
         ctx.ui.notify(result.error ?? "capture-model: invalid argument", "error");

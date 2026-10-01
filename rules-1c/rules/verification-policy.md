@@ -27,7 +27,7 @@ Single owner of the retry budget for `syntaxcheck`, `check_1c_code` and `review_
 
 ## Verification depth levels (`VERIFICATION_DEPTH`)
 
-SDLC QA profiles set `VERIFICATION_DEPTH` in `.dev.env`: `lite`, `standard` (default), `full`. They select Gates 1–3 for every task path, promotion-trigger changes included; task paths (`docs-fix`, `spec-authoring`, `quick-fix`, `full-cycle`) remain risk-based. Empty / invalid = `standard`; never ask at task time. Select with `/sdlc lite|standard|full`; `/sdlc status` reads the state. `/litemode` remains an alias. All profiles preserve `UI_TESTING`; control it via `/uitests` (`prompts/uitests.md`). Three levels:
+SDLC QA profiles set `VERIFICATION_DEPTH` in `.dev.env`: `lite`, `standard` (default), `full`. They select Gates 1–3 for every task path, promotion-trigger changes included; task paths (`docs-fix`, `spec-authoring`, `quick-fix`, `full-cycle`) remain risk-based. Empty / invalid = `standard`; never ask at task time. Select with `/sdlc lite|standard|full`; `/sdlc status` reads the state. `/litemode` remains an alias. All profiles preserve `UI_TESTING`; control it via `/uitests`. Three levels:
 
 | Level | Full-cycle change | Quick-fix-eligible edit (Triage details below) |
 |---|---|---|

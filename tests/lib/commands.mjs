@@ -13,6 +13,7 @@ export const PACKAGE_OWNED_COMMANDS = [
   'mode',
   'taskmode',
   'anon',
+  'approve',
   'agents',
   'config',
   'learn',
@@ -23,6 +24,13 @@ export const PACKAGE_OWNED_COMMANDS = [
   'status',
   'palette',
   'theme',
+  'sdlc',
+  'litemode',
+  'uitests',
+  'previewmode',
+  'caveman',
+  'economymode',
+  'rulesmodel',
 ];
 export const DESTRUCTIVE_PROMPT_NAMES = [
   'update1cbase',

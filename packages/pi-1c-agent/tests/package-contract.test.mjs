@@ -9,7 +9,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
 test('package registers stabilized extensions', () => {
   assert.equal(pkg.version, '0.7.0');
-  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-ui/index.ts']) {
+  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-ui/index.ts']) {
     assert.ok(pkg.pi.extensions.includes(p));
     assert.ok(fs.existsSync(path.join(root, p)));
   }
@@ -62,6 +62,7 @@ test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
   assert.match(src, /registerCommand\("memory-flush"/);
   assert.match(src, /registerCommand\("wrap"/);
   assert.match(src, /registerCommand\("capture-model"/);
+  assert.match(src, /overlayCaptureModelSelect/);
   assert.doesNotMatch(src, /registerCommand\("1c-memory-flush"/);
   assert.doesNotMatch(src, /registerCommand\("1c-wrap"/);
   assert.match(src, /agent_settled/);
@@ -78,6 +79,7 @@ test('1c-memory registers flush/wrap/capture-model without 1c- aliases', () => {
 test('session-rotate command and compaction hooks are registered', () => {
   const src = fs.readFileSync(path.join(root, 'extensions', '1c-session-rotate', 'index.ts'), 'utf8');
   assert.match(src, /registerCommand\("session-rotate"/);
+  assert.match(src, /overlaySessionRotateSelect/);
   assert.doesNotMatch(src, /registerCommand\("1c-session-rotate"/);
   assert.match(src, /session_before_compact/);
   assert.match(src, /agent_settled/);
@@ -143,7 +145,8 @@ test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   assert.match(mode, /\[1C MODE CHANGE\]/);
   assert.match(mode, /Memory: skipped — anonymous/);
   assert.match(mode, /Mode changed:/);
-  assert.match(mode, /overlayModeSelect/);
+  assert.match(mode, /overlayApproveSelect/);
+  assert.match(mode, /overlayAnonSelect/);
   assert.match(mode, /overlayApproval/);
 });
 
@@ -164,4 +167,13 @@ test('1c-ui registers /theme and ships VS Code palettes', () => {
     const json = JSON.parse(fs.readFileSync(path.join(root, 'themes', `${name}.json`), 'utf8'));
     assert.equal(json.name, name);
   }
+});
+
+test('1c-settings registers option-picker commands without 1c- aliases', () => {
+  const src = fs.readFileSync(path.join(root, 'extensions', '1c-settings', 'index.ts'), 'utf8');
+  for (const name of ['sdlc', 'litemode', 'uitests', 'previewmode', 'caveman', 'economymode', 'rulesmodel']) {
+    assert.match(src, new RegExp(`registerCommand\\("${name}"`));
+    assert.doesNotMatch(src, new RegExp(`registerCommand\\("1c-${name}"`));
+  }
+  assert.match(src, /pickOverlay/);
 });

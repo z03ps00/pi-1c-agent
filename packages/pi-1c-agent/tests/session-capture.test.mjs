@@ -333,6 +333,9 @@ test('report-only confirm is UNCONFIRMED with an honest notify', async () => {
 test('capture-model set/status for each mode and fallback to heuristic', async () => {
   let state = defaultCaptureState();
   assert.equal(state.distiller.mode, 'stack');
+  assert.equal(parseCaptureModelArgs('').action, 'pick');
+  assert.equal(parseCaptureModelArgs('status').action, 'status');
+  assert.equal(parseCaptureModelArgs('ollama').action, 'needs-model');
   for (const raw of ['off', 'stack', 'chat', 'ollama qwen3.5:9b', 'routerai qwen/qwen3.5-9b']) {
     const parsed = parseCaptureModelArgs(raw);
     const applied = applyCaptureModel(state, parsed);

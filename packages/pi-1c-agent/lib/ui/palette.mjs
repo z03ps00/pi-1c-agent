@@ -11,6 +11,7 @@ export const PALETTE_ACTIONS = Object.freeze([
   { id: 'session', label: 'Session rotation', keywords: 'session rotate context', command: '/session-rotate status' },
   { id: 'approve', label: 'Approval mode', keywords: 'approve safe strict', command: '/approve' },
   { id: 'anon', label: 'Anonymous mode', keywords: 'anon privacy', command: '/anon' },
+  { id: 'sdlc', label: 'SDLC QA profile', keywords: 'sdlc lite standard full verification', command: '/sdlc' },
   { id: 'theme', label: 'Theme', keywords: 'theme color dracula dark light standard vscode', command: '/theme' },
   { id: 'doctor', label: 'Doctor', keywords: 'doctor health check', command: '/doctor' },
   { id: 'settings', label: 'Settings', keywords: 'settings approve anon capture', command: '/approve' },

@@ -26,7 +26,12 @@ import {
   statusText,
 } from '../lib/session-rotate.mjs';
 
-test('feature is off by default and does not cancel compaction', () => {
+test('empty session-rotate argument is pick, not status', () => {
+  assert.equal(parseSessionRotateArgs('').action, 'pick');
+  assert.equal(parseSessionRotateArgs('status').action, 'status');
+});
+
+test('rotation is off by default', () => {
   const state = defaultState();
   assert.equal(state.enabled, false);
   assert.equal(state.thresholdPercent, DEFAULT_THRESHOLD);

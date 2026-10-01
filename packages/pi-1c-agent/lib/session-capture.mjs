@@ -49,13 +49,14 @@ export function parseWrapArgs(args) {
 
 export function parseCaptureModelArgs(args) {
   const raw = String(args ?? '').trim();
-  if (!raw || raw === 'status') return { action: 'status' };
+  if (!raw) return { action: 'pick' };
+  if (raw === 'status') return { action: 'status' };
   if (raw === 'off') return { action: 'set', mode: 'off', model: '' };
   if (raw === 'stack') return { action: 'set', mode: 'stack', model: '' };
   if (raw === 'chat') return { action: 'set', mode: 'chat', model: '' };
   const named = raw.match(/^(ollama|routerai)\s+(\S+)$/i);
   if (named) return { action: 'set', mode: named[1].toLowerCase(), model: named[2] };
-  if (/^(ollama|routerai)$/i.test(raw)) return { action: 'invalid', error: `${raw} requires a model name` };
+  if (/^(ollama|routerai)$/i.test(raw)) return { action: 'needs-model', mode: raw.toLowerCase() };
   return { action: 'invalid', error: `Unknown capture-model argument: ${raw}. Use status | off | stack | ollama <model> | routerai <model> | chat` };
 }
 

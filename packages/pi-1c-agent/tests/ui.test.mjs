@@ -388,7 +388,7 @@ test('palette fuzzy match and does not bind ctrl+k', () => {
   const hits = filterPaletteActions('mod');
   assert.ok(hits.some((a) => a.id === 'mode'));
   const ids = PALETTE_ACTIONS.map((a) => a.id);
-  for (const need of ['mode', 'taskmode', 'agents', 'status', 'doctor', 'init', 'config', 'memory', 'session', 'approve', 'anon', 'theme', 'settings']) {
+  for (const need of ['mode', 'taskmode', 'agents', 'status', 'doctor', 'init', 'config', 'memory', 'session', 'approve', 'anon', 'sdlc', 'theme', 'settings']) {
     assert.ok(ids.includes(need), need);
   }
   assert.ok(filterPaletteActions('drac').some((a) => a.id === 'theme'));

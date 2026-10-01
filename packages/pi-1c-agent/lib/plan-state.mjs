@@ -54,10 +54,11 @@ export function normalizeAnonLevel(value) {
   return level >= 1 && level <= ANON_MAX_LEVEL ? level : 0;
 }
 
-/** Parses a `/anon` argument: { kind: 'status' | 'set' | 'invalid', level? }. */
+/** Parses a `/anon` argument: { kind: 'pick' | 'status' | 'set' | 'invalid', level? }. */
 export function parseAnonLevel(arg) {
   const t = String(arg ?? '').trim().toLowerCase();
-  if (!t || t === 'status') return { kind: 'status' };
+  if (!t) return { kind: 'pick' };
+  if (t === 'status') return { kind: 'status' };
   if (t === 'off' || t === '0' || t === 'no' || t === 'false') return { kind: 'set', level: 0 };
   if (t === 'on' || t === 'yes' || t === 'true') return { kind: 'set', level: 2 };
   if (/^[123]$/.test(t)) return { kind: 'set', level: Number.parseInt(t, 10) };

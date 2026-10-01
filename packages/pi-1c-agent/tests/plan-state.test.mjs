@@ -160,6 +160,7 @@ test('anon level helpers parse, cycle and classify', () => {
   assert.equal(normalizeAnonLevel('3'), 3);
   assert.equal(normalizeAnonLevel('9'), 0);
   assert.equal(normalizeAnonLevel('nope'), 0);
+  assert.deepEqual(parseAnonLevel(''), { kind: 'pick' });
   assert.deepEqual(parseAnonLevel('status'), { kind: 'status' });
   assert.deepEqual(parseAnonLevel('off'), { kind: 'set', level: 0 });
   assert.deepEqual(parseAnonLevel('on'), { kind: 'set', level: 2 });

@@ -12,8 +12,15 @@ import {
   invokeAction,
   subscribe,
   statusIcon,
+  uiAvailable,
 } from "../../lib/ui/index.mjs";
 import { MODE_CHOICES } from "../../lib/ui/mode-choices.mjs";
+import {
+  ANON_CHOICES,
+  APPROVE_CHOICES,
+  CAPTURE_MODEL_CHOICES,
+  SESSION_ROTATE_CHOICES,
+} from "../../lib/ui/option-choices.mjs";
 import { taskmodeChoices } from "../../lib/taskmode-state.mjs";
 
 function selectTheme(theme: any) {
@@ -58,6 +65,40 @@ export async function overlaySelect(
       },
     };
   }, { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "80%", anchor: "center" } });
+}
+
+/** TUI overlay like /mode; otherwise ctx.ui.select. Cancel returns undefined. */
+export async function pickOverlay(
+  ctx: any,
+  title: string,
+  items: { value: string; label: string; description?: string }[],
+): Promise<string | undefined> {
+  if (uiAvailable(ctx)) {
+    const picked = await overlaySelect(ctx, title, items);
+    if (picked) return picked;
+    return undefined;
+  }
+  if (ctx?.hasUI && typeof ctx.ui?.select === "function") {
+    const selected = await ctx.ui.select(title, items.map((i) => i.value));
+    return selected || undefined;
+  }
+  return undefined;
+}
+
+export async function overlayApproveSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Approve mode", APPROVE_CHOICES);
+}
+
+export async function overlayAnonSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Anonymous session", ANON_CHOICES);
+}
+
+export async function overlayCaptureModelSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Capture model", CAPTURE_MODEL_CHOICES);
+}
+
+export async function overlaySessionRotateSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Session rotation", SESSION_ROTATE_CHOICES);
 }
 
 export async function overlayModeSelect(ctx: any): Promise<string | undefined> {

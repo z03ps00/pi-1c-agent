@@ -17,6 +17,7 @@ import {
   statusText,
 } from "../../lib/session-rotate.mjs";
 import { publish, registerAction } from "../../lib/ui/index.mjs";
+import { overlaySessionRotateSelect } from "../1c-ui/overlays.ts";
 import * as rotateLib from "../../lib/session-rotate.mjs";
 
 type RotateState = { enabled: boolean; thresholdPercent: number };
@@ -178,7 +179,12 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
   }
 
   async function handleSessionRotate(args: string | undefined, ctx: ExtensionContext) {
-    const parsed = parseSessionRotateArgs(args);
+    let parsed = parseSessionRotateArgs(args);
+    if (parsed.action === "pick") {
+      const selected = await overlaySessionRotateSelect(ctx);
+      if (!selected) return;
+      parsed = parseSessionRotateArgs(selected);
+    }
     if (parsed.action === "continue") return continueRotation(ctx);
     const result = applyCommand(state, parsed);
     if (!result.ok) {

@@ -1,6 +1,6 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, and `/approve` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Anonymous session is `/anon`. Approval mode is `/approve`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, and `/rulesmodel` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate` open the same overlay. Anonymous session is `/anon`. Approval mode is `/approve`.
 
 ## Everyday (at most twelve)
 
@@ -38,20 +38,20 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/updaterules` | Update 1c-rules in a **1C project** (`install.ps1`) — not this profile |
 | `/update-profile` | Refresh **this Pi profile** from its git remote (`origin`) — not `/updaterules` |
 | `/update-pi-cli` | Update the **Pi CLI shell** (`@earendil-works/pi-coding-agent`) in its npm prefix |
-| `/caveman` | Persistent `CAVEMAN` (on\|auto\|off); shipped default `auto` |
-| `/session-rotate` | Opt-in Pi-only session rotation at context threshold (default off, 85%) |
+| `/caveman` | Pi package: picker for `CAVEMAN` (on\|auto\|off, shipped default `auto`) and session lite\|full\|ultra |
+| `/session-rotate` | Pi package: picker on\|off; threshold stays `/session-rotate 80` |
 | `/wrap` | Capture this dialog now; `/wrap auto on\|off` toggles Pi idle capture (default on) |
 | `/memory-flush` | Replay pending Cognee/OpenViking records (confirmed / still-pending / duplicates) |
-| `/capture-model` | Distiller: `off` / `stack` / `ollama <model>` / `routerai <model>` / `chat` (default `stack`) |
-| `/anon` | Pi anonymous session: `1` no memory writes, `2` no reads, `3` no local traces, `off` |
-| `/approve` | Pi approval mode: `off` do not ask, `safe` ask on dangerous BUILD actions, `strict` approve every tool (`Ctrl+Alt+S`) |
+| `/capture-model` | Pi package: picker off\|stack\|chat\|ollama\|routerai (ollama/routerai ask for a model) |
+| `/anon` | Pi package: picker 1\|2\|3\|off (`Ctrl+Alt+A` cycles) |
+| `/approve` | Pi package: picker off\|safe\|strict (`Ctrl+Alt+S` cycles) |
 | `/theme` | Pi TUI theme: picker, `standard` (VS Code Dark+), `dracula`, `list`, `status` |
-| `/litemode` | `VERIFICATION_DEPTH` |
-| `/sdlc` | Named SDLC QA profile (`lite` / `standard` / `full` / `status`) |
-| `/uitests` | UI testing + test-client window toggle, independent of verification depth |
-| `/previewmode` | `METADATA_PREVIEW` (on\|auto\|off) or a one-off preview |
-| `/economymode` | Orchestrator economy mode |
-| `/rulesmodel` | `AGENT_MODEL` profile |
+| `/litemode` | Pi package: picker for `VERIFICATION_DEPTH`; lite also sets `UI_TESTING=off` |
+| `/sdlc` | Pi package: picker for SDLC QA profile (`lite` / `standard` / `full`) |
+| `/uitests` | Pi package: picker for UI testing + test-client window |
+| `/previewmode` | Pi package: picker for `METADATA_PREVIEW` (on\|auto\|off\|once) |
+| `/economymode` | Pi package: picker for orchestrator economy; `models` / `rtk` stay arguments |
+| `/rulesmodel` | Pi package: picker for `AGENT_MODEL` profile |
 | `/setupmcp` | Wire already-installed MCP servers and memory providers into this repo |
 | `/install-atlassian-mcp` | Opt-in: `mcp-atlassian` (Jira / Confluence) |
 | `/install-officecli` | Opt-in: OfficeCLI (Word / Excel / PowerPoint without MS Office) |

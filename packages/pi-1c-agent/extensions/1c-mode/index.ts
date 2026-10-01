@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Key } from "@earendil-works/pi-tui";
-import { overlayApproval, overlayModeSelect, overlayTaskmodeSelect } from "../1c-ui/overlays.ts";
+import { overlayApproval, overlayAnonSelect, overlayApproveSelect, overlayModeSelect, overlayTaskmodeSelect } from "../1c-ui/overlays.ts";
 import { publish, registerAction, summarizeToolAction, uiAvailable } from "../../lib/ui/index.mjs";
 import {
   approveLevelName,
@@ -79,13 +79,14 @@ function anonNormalize(value: unknown): number {
   return level >= 1 && level <= 3 ? level : 0;
 }
 
-function anonParse(arg: unknown): { kind: "status" | "set" | "invalid"; level?: number } {
+function anonParse(arg: unknown): { kind: "status" | "set" | "invalid" | "pick"; level?: number } {
   const viaLib = libCall<{ kind: string; level?: number }>(ANON_LIB.parse, [arg]);
   if (viaLib && typeof viaLib.kind === "string") {
-    return { kind: viaLib.kind as "status" | "set" | "invalid", level: viaLib.level };
+    return { kind: viaLib.kind as "status" | "set" | "invalid" | "pick", level: viaLib.level };
   }
   const t = String(arg ?? "").trim().toLowerCase();
-  if (!t || t === "status") return { kind: "status" };
+  if (!t) return { kind: "pick" };
+  if (t === "status") return { kind: "status" };
   if (t === "off" || t === "0" || t === "no" || t === "false") return { kind: "set", level: 0 };
   if (t === "on" || t === "yes" || t === "true") return { kind: "set", level: 2 };
   if (/^[123]$/.test(t)) return { kind: "set", level: Number.parseInt(t, 10) };
@@ -471,14 +472,14 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   registerAction("taskmode-select", (ctx: any) => pickTaskmode(ctx));
 
   registerAction("approve-select", async (ctx: ExtensionContext) => {
-    const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
+    const selected = await overlayApproveSelect(ctx);
     if (selected === "off") setApproveLevel(0, ctx);
     if (selected === "safe") setApproveLevel(1, ctx);
     if (selected === "strict") setApproveLevel(2, ctx);
   });
 
   registerAction("anon-select", async (ctx: ExtensionContext) => {
-    const selected = await ctx.ui.select("Anonymous session", ["off", "1", "2", "3"]);
+    const selected = await overlayAnonSelect(ctx);
     if (!selected) return;
     setAnonLevel(selected === "off" ? 0 : Number(selected), ctx);
   });
@@ -491,8 +492,14 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     }
     if (parsed.kind === "status") {
       const level = anonLevel();
-      const what = level === 0 ? "off — the shared post-task memory policy applies" : anonDescribe(level);
+      const what = level === 0 ? "off — the shared memory policy applies" : anonDescribe(level);
       ctx.ui.notify(`anon=${level} · ${what} · session-scoped (new session starts at 0)`, "info");
+      return;
+    }
+    if (parsed.kind === "pick") {
+      const selected = await overlayAnonSelect(ctx);
+      if (!selected) return;
+      setAnonLevel(selected === "off" ? 0 : Number(selected), ctx);
       return;
     }
     setAnonLevel(parsed.level ?? 0, ctx);
@@ -525,7 +532,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
       return;
     }
     if (parsed.kind === "pick") {
-      const selected = await ctx.ui.select("Approve mode", ["off", "safe", "strict"]);
+      const selected = await overlayApproveSelect(ctx);
       if (selected === "off") setApproveLevel(0, ctx);
       if (selected === "safe") setApproveLevel(1, ctx);
       if (selected === "strict") setApproveLevel(2, ctx);
