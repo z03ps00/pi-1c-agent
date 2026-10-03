@@ -91,7 +91,10 @@ const initSrc = read(path.join(packageRoot, 'extensions', '1c-init', 'index.ts')
 const initCopy = exists(path.join(packageRoot, 'lib', 'ui', 'init-copy.mjs')) ? read(path.join(packageRoot, 'lib', 'ui', 'init-copy.mjs')) : '';
 add('deterministic /doctor registration', /registerCommand\("doctor"/.test(adminSrc) && !/registerCommand\("1c-doctor"/.test(adminSrc));
 add('canonical /init registration', /registerCommand\("init"/.test(initSrc) && !/registerCommand\("1c-init"/.test(initSrc));
+add('/init empty call uses overlay source+mode pickers', /overlayInitSourceSelect/.test(initSrc) && /overlayInitModeSelect/.test(initSrc) && /from-cfe/.test(initCopy) && /INIT_SOURCE_CHOICES/.test(initCopy));
 add('/init TUI first question empty vs from-IB', /Источник проекта \(первый вопрос \/init\)/.test(initCopy) && /Выгрузка из существующей ИБ/.test(initCopy));
+add('/init standard review confirmation', /Стандартный/.test(initCopy) && /Всё верно/.test(initCopy) && /Поправить/.test(initCopy) && /resolveStandardInitProfile/.test(initSrc));
+add('overlay option picker rule', exists(path.join(packageRoot, 'rules', 'core', 'overlay-options.md')));
 add('43-variable .dev.env UX schema', (() => { try { const x = JSON.parse(read(path.join(packageRoot, 'config', 'dev-env.schema.json'))); return x.variables?.length === 43 && new Set(x.variables.map((v) => v.name)).size === 43; } catch { return false; } })());
 add('configuration knowledge rule', exists(path.join(packageRoot, 'rules', 'core', 'knowledge.md')));
 add('PLAN state-machine helper', exists(path.join(packageRoot, 'lib', 'plan-state.mjs')));
@@ -133,6 +136,7 @@ if (!packageOnly) {
   add('skills', exists(path.join(base, 'skills')));
   add('prompts', exists(path.join(base, 'prompts')));
   add('installed 1C mode rule', exists(path.join(base, 'rules-1c', 'core', 'modes.md')));
+  add('installed overlay-options rule', exists(path.join(base, 'rules-1c', 'core', 'overlay-options.md')));
 
   const installedAgents = files(path.join(base, 'agents'), (p) => /^1c-.+\.md$/i.test(path.basename(p)));
   const upstreamAgents = files(path.join(upstream, 'content', 'agents'), (p) => p.endsWith('.md'));

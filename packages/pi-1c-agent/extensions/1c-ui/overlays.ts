@@ -27,6 +27,9 @@ import {
 } from "../../lib/ui/option-choices.mjs";
 import { composePickerLines, pickerSpanAt } from "../../lib/ui/picker-layout.mjs";
 import { TASKMODE_INTRO, taskmodeChoices } from "../../lib/taskmode-state.mjs";
+import {
+  INIT_MODE_CHOICES, INIT_MODE_INTRO, INIT_SOURCE_CHOICES, INIT_SOURCE_INTRO,
+} from "../../lib/ui/init-copy.mjs";
 
 function selectTheme(theme: any) {
   return {
@@ -148,6 +151,14 @@ export async function overlayModeSelect(ctx: any): Promise<string | undefined> {
 
 export async function overlayTaskmodeSelect(ctx: any): Promise<string | undefined> {
   return overlaySelect(ctx, "Taskmode", taskmodeChoices(), TASKMODE_INTRO);
+}
+
+export async function overlayInitSourceSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Init", INIT_SOURCE_CHOICES, INIT_SOURCE_INTRO);
+}
+
+export async function overlayInitModeSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Init mode", INIT_MODE_CHOICES, INIT_MODE_INTRO);
 }
 
 export async function overlayApproval(ctx: any, input: { toolName: string; action: string; reason: string }): Promise<string | undefined> {

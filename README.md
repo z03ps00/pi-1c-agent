@@ -356,13 +356,13 @@ my-1c-project/
 | /deploy-and-test | загрузить в тестовую ИБ и запустить проверки |
 | /build-release | собрать .cf / .cfe из git-снимка |
 
-Пустой вызов `/anon`, `/approve`, `/session-rotate`, `/capture-model`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode` и `/rulesmodel` открывает тот же оверлей, что `/mode`. `/theme` выбирает палитру TUI: `standard` (VS Code Dark+) и `dracula`. Футер показывает режим, пин `/taskmode`, approve, `mcp N/M`, think и rotate.
+Пустой вызов `/anon`, `/approve`, `/session-rotate`, `/capture-model`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode` и `/rulesmodel` открывает тот же оверлей, что `/mode`. Пустой `/init` — тот же оверлей: источник (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`) и затем режим. `/theme` выбирает палитру TUI: `standard` (VS Code Dark+) и `dracula`. Футер показывает режим, пин `/taskmode`, approve, `mcp N/M`, think и rotate.
 
 ## Инициализация проекта
 
 /init — не просто генератор папок.
 
-Сначала мастер определяет источник проекта, потом собирает настройки и показывает preview. В зависимости от сценария он может настроить:
+Сначала мастер открывает оверлей источника: пустой scaffold, существующая ИБ, `.cf`, `.cfe` или `.dt`. Рекомендуемый режим заполнения — стандартный: агент сам собирает платформу и общие настройки с соседних проектов, показывает список и ждёт «Всё верно». Подробный опрос всех переменных остаётся как `/init advanced`. В зависимости от сценария он может настроить:
 
 - пути платформы;
 - параметры ИБ;
@@ -632,7 +632,7 @@ GitHub Actions запускает основной набор на Ubuntu и Win
 |---|---|
 | AGENTS.md | основные правила профиля |
 | rules-1c/ | базовые и адаптированные правила 1С |
-| rules-1c/core/ | modes, orchestration, handoff, knowledge, delivery, project init |
+| rules-1c/core/ | modes, orchestration, handoff, knowledge, delivery, overlay-options, project init |
 | agents/ | специализированные 1С-субагенты |
 | skills/ | прикладные скиллы |
 | prompts/ | команды и prompt-процедуры |

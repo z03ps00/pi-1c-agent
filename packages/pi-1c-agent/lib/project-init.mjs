@@ -472,6 +472,272 @@ export function collectSiblingSharedEnv(cwd, schema = loadDevEnvSchema()) {
   return { parent, projects, suggestions };
 }
 
+/** Project-specific keys stay empty in standard init unless already set in this project's .dev.env. */
+export const STANDARD_PROJECT_LOCAL_NAMES = Object.freeze([
+  'INFOBASE_PATH', 'IB_USER', 'IB_PASSWORD', 'EXTENSION_NAME', 'EXTENSION_NAMES',
+  'INFOBASE_PUBLISH_URL', 'DT_SNAPSHOT_PATH', 'REPOSITORY_PATH', 'REPOSITORY_USER',
+  'REPOSITORY_PASSWORD', 'SUPPORT_KEY',
+]);
+
+const STANDARD_LOCAL_SET = new Set(STANDARD_PROJECT_LOCAL_NAMES);
+const STANDARD_IDENTITY_KEYS = Object.freeze([
+  'projectName', 'configurationName', 'configurationVersion', 'sourceLayoutRoot', 'sourceRoot',
+]);
+const STANDARD_FLAG_KEYS = Object.freeze([
+  'sourceScaffoldEnabled', 'buildScaffoldEnabled', 'docsScaffoldEnabled', 'knowledgeEnabled', 'openSpecEnabled',
+]);
+
+function originRecord(kind, label, extra = {}) {
+  return { kind, label, ...extra };
+}
+
+function siblingOrigin(hint) {
+  const sources = hint.sources ?? [];
+  return originRecord('sibling', sources.length ? `сосед: ${sources.join(', ')}` : 'сосед', {
+    sources,
+    alternatives: hint.alternatives ?? [],
+  });
+}
+
+function emptyOrDefaultOrigin(defaultValue) {
+  const def = String(defaultValue ?? '');
+  if (def) return { value: def, decision: { state: 'default' }, origin: originRecord('upstream', 'upstream default') };
+  return { value: '', decision: { state: 'empty' }, origin: originRecord('empty', 'пусто') };
+}
+
+/**
+ * Build the standard /init profile without prompting.
+ * Priority per ENV key: existing non-empty .dev.env → sibling shared hint → autodetection → upstream default.
+ * PLATFORM_PATH prefers a sibling path that exists on disk over the newest installed platform.
+ */
+export function resolveStandardInitProfile(cwd, options = {}) {
+  const schema = options.schema ?? loadDevEnvSchema();
+  const templateRaw = options.templateRaw;
+  if (!templateRaw) throw new Error('templateRaw is required');
+  const parsed = parseEnvTemplate(templateRaw);
+  const existingPath = path.join(cwd, '.dev.env');
+  const existingValues = options.existingValues ?? (fs.existsSync(existingPath) ? parseEnvValues(fs.readFileSync(existingPath, 'utf8')) : {});
+  const config = detectConfiguration(cwd);
+  const sourceLayoutRoot = options.sourceLayoutRoot ?? inferSourceLayoutRoot(cwd, config.sourceRoot || '.');
+  const sourceRoot = options.sourceRoot ?? configurationRootForLayout(cwd, config, sourceLayoutRoot);
+  const detected = autoDetectedValues(cwd, { sourceLayoutRoot, configurationSourceRoot: sourceRoot });
+  if (typeof options.detectPlatformPath === 'function') {
+    detected.PLATFORM_PATH = options.detectPlatformPath() || '';
+  }
+  const siblingScan = collectSiblingSharedEnv(cwd, schema);
+  const siblingByName = Object.fromEntries(siblingScan.suggestions.map((s) => [s.name, s]));
+
+  const values = {};
+  const decisions = {};
+  const origins = {};
+
+  for (const variable of parsed.variables) {
+    const name = variable.name;
+    const existing = String(existingValues[name] ?? '').trim();
+    if (existing) {
+      values[name] = existing;
+      decisions[name] = { state: 'configured' };
+      origins[name] = originRecord('existing', 'уже было в .dev.env');
+      continue;
+    }
+
+    if (STANDARD_LOCAL_SET.has(name) || isSecretVariable(name, schema)) {
+      const fallback = emptyOrDefaultOrigin(variable.defaultValue);
+      values[name] = fallback.value;
+      decisions[name] = fallback.decision;
+      origins[name] = fallback.origin;
+      continue;
+    }
+
+    const hint = siblingByName[name];
+    if (hint?.value) {
+      const siblingOk = name !== 'PLATFORM_PATH' || fs.existsSync(hint.value);
+      if (siblingOk) {
+        values[name] = hint.value;
+        decisions[name] = { state: 'sibling-hint', sources: hint.sources, alternatives: hint.alternatives };
+        origins[name] = siblingOrigin(hint);
+        continue;
+      }
+    }
+
+    if (name === 'PLATFORM_PATH' && detected.PLATFORM_PATH) {
+      values[name] = detected.PLATFORM_PATH;
+      decisions[name] = { state: 'configured' };
+      origins[name] = originRecord('platform', 'установленная платформа');
+      continue;
+    }
+    if (name !== 'PLATFORM_PATH' && detected[name]) {
+      values[name] = detected[name];
+      decisions[name] = { state: 'configured' };
+      const fromConfig = name === 'PLATFORM_VERSION';
+      origins[name] = originRecord(fromConfig ? 'config' : 'layout', fromConfig ? 'Configuration.xml' : 'автодетект каталогов');
+      continue;
+    }
+
+    const fallback = emptyOrDefaultOrigin(variable.defaultValue);
+    values[name] = fallback.value;
+    decisions[name] = fallback.decision;
+    origins[name] = fallback.origin;
+  }
+
+  const projectName = options.projectName ?? path.basename(cwd);
+  const configurationName = options.configurationName ?? config.name ?? '';
+  const configurationVersion = options.configurationVersion ?? config.version ?? '';
+  const knowledgeEnabled = knowledgeIdentity(configurationName, configurationVersion).ready;
+  const identityOrigins = {
+    projectName: originRecord('basename', 'имя каталога проекта'),
+    configurationName: configurationName
+      ? originRecord('config', 'Configuration.xml')
+      : originRecord('empty', 'пусто'),
+    configurationVersion: configurationVersion
+      ? originRecord('config', 'Configuration.xml')
+      : originRecord('empty', 'пусто'),
+    sourceLayoutRoot: originRecord('layout', 'автодетект каталогов'),
+    sourceRoot: originRecord('layout', 'автодетект каталогов'),
+    sourceScaffoldEnabled: originRecord('standard', 'стандартный профиль'),
+    buildScaffoldEnabled: originRecord('standard', 'стандартный профиль'),
+    docsScaffoldEnabled: originRecord('standard', 'стандартный профиль'),
+    knowledgeEnabled: knowledgeEnabled
+      ? originRecord('config', 'Configuration.xml')
+      : originRecord('standard', 'стандартный профиль'),
+    openSpecEnabled: originRecord('standard', 'стандартный профиль'),
+  };
+
+  return {
+    templateRaw,
+    projectName,
+    configurationName,
+    configurationVersion,
+    sourceRoot,
+    sourceLayoutRoot,
+    sourceScaffoldEnabled: true,
+    buildScaffoldEnabled: true,
+    docsScaffoldEnabled: true,
+    knowledgeEnabled,
+    openSpecEnabled: false,
+    values,
+    decisions,
+    origins,
+    identityOrigins,
+    siblingScan,
+    config,
+  };
+}
+
+function cloneStandardProfile(profile) {
+  return {
+    ...profile,
+    values: { ...profile.values },
+    decisions: { ...profile.decisions },
+    origins: { ...profile.origins },
+    identityOrigins: { ...profile.identityOrigins },
+  };
+}
+
+export function applyStandardInitEdit(profile, fieldId, value) {
+  const next = cloneStandardProfile(profile);
+  const edited = originRecord('edited', 'поправлено');
+  if (String(fieldId).startsWith('env:')) {
+    const name = String(fieldId).slice(4);
+    const str = value == null ? '' : String(value);
+    next.values[name] = str;
+    next.decisions[name] = { state: str ? 'configured' : 'empty' };
+    next.origins[name] = edited;
+    return next;
+  }
+  if (String(fieldId).startsWith('flag:')) {
+    const key = String(fieldId).slice(5);
+    if (!STANDARD_FLAG_KEYS.includes(key)) return next;
+    next[key] = Boolean(value);
+    next.identityOrigins[key] = edited;
+    return next;
+  }
+  const key = String(fieldId).startsWith('identity:') ? String(fieldId).slice(9) : String(fieldId);
+  if (!STANDARD_IDENTITY_KEYS.includes(key)) return next;
+  next[key] = value == null ? '' : String(value);
+  next.identityOrigins[key] = edited;
+  return next;
+}
+
+function displayOrigin(origin) {
+  if (!origin) return 'пусто';
+  const alt = Array.isArray(origin.alternatives) && origin.alternatives.length
+    ? `; другие значения: ${origin.alternatives.slice(0, 3).join(', ')}`
+    : '';
+  return `${origin.label || origin.kind}${alt}`;
+}
+
+export function standardInitReviewRows(profile, schema = loadDevEnvSchema()) {
+  const identity = [
+    ['identity:projectName', 'Название проекта', 'projectName', profile.projectName],
+    ['identity:configurationName', 'Название конфигурации', 'configurationName', profile.configurationName],
+    ['identity:configurationVersion', 'Версия конфигурации', 'configurationVersion', profile.configurationVersion],
+    ['identity:sourceLayoutRoot', 'Корень структуры исходников', 'sourceLayoutRoot', profile.sourceLayoutRoot],
+    ['identity:sourceRoot', 'Каталог основной конфигурации', 'sourceRoot', profile.sourceRoot],
+    ['flag:sourceScaffoldEnabled', 'Каталоги src/{cf,cfe,epf,erf}', 'sourceScaffoldEnabled', profile.sourceScaffoldEnabled],
+    ['flag:buildScaffoldEnabled', 'Каталоги build/{cf,cfe,epf,erf}', 'buildScaffoldEnabled', profile.buildScaffoldEnabled],
+    ['flag:docsScaffoldEnabled', 'Каталоги docs/ и docs/techtask/', 'docsScaffoldEnabled', profile.docsScaffoldEnabled],
+    ['flag:knowledgeEnabled', 'Configuration Knowledge fingerprint', 'knowledgeEnabled', profile.knowledgeEnabled],
+    ['flag:openSpecEnabled', 'OpenSpec', 'openSpecEnabled', profile.openSpecEnabled],
+  ];
+  const rows = identity.map(([id, title, key, value]) => ({
+    id,
+    name: key,
+    title,
+    value,
+    display: typeof value === 'boolean' ? (value ? 'да' : 'нет') : (String(value ?? '') || '(пусто)'),
+    secret: false,
+    origin: profile.identityOrigins?.[key],
+    alternatives: profile.identityOrigins?.[key]?.alternatives ?? [],
+    kind: id.startsWith('flag:') ? 'flag' : 'identity',
+  }));
+  for (const meta of effectiveVariableMeta(profile.templateRaw, schema)) {
+    const raw = profile.values[meta.name] ?? '';
+    rows.push({
+      id: `env:${meta.name}`,
+      name: meta.name,
+      title: meta.title || meta.name,
+      value: raw,
+      display: redactValue(meta.name, raw, schema),
+      secret: Boolean(meta.secret),
+      origin: profile.origins?.[meta.name],
+      alternatives: profile.origins?.[meta.name]?.alternatives ?? [],
+      kind: 'env',
+    });
+  }
+  return rows;
+}
+
+export function formatStandardInitReview(profile, schema = loadDevEnvSchema()) {
+  const rows = standardInitReviewRows(profile, schema);
+  const lines = [
+    '# Стандартная инициализация — список настроек',
+    '',
+    'Ничего не записано. Проверьте список, поправьте нужные строки и подтвердите «Всё верно».',
+    '',
+    '## Проект',
+  ];
+  for (const row of rows.filter((r) => r.kind !== 'env')) {
+    lines.push(`- ${row.title}: ${row.display}  ← ${displayOrigin(row.origin)}`);
+  }
+  lines.push('', '## .dev.env');
+  for (const row of rows.filter((r) => r.kind === 'env')) {
+    lines.push(`- ${row.name}: ${row.display}  ← ${displayOrigin(row.origin)}`);
+  }
+  const siblingNames = (profile.siblingScan?.projects ?? []).map((p) => p.name);
+  if (siblingNames.length) {
+    lines.push('', `Соседние проекты: ${siblingNames.join(', ')}`);
+  } else {
+    lines.push('', 'Соседних 1С-проектов с общими подсказками не найдено.');
+  }
+  lines.push(
+    '',
+    'Секреты и путь ИБ из соседей не копируются.',
+    'После «Всё верно» будут записаны .dev.env, .pi/1c/project.yaml, init-state.json и выбранные каталоги.',
+  );
+  return lines.join('\n');
+}
+
 export function summarizeEnv(templateRaw, values, decisions = {}, schema = loadDevEnvSchema()) {
   return effectiveVariableMeta(templateRaw, schema).map((meta) => {
     const value = String(values[meta.name] ?? '');
@@ -682,7 +948,7 @@ export function ensureGitignore(cwd) {
   return true;
 }
 
-export function applyProjectInitialization(cwd, { templateRaw, values, decisions = {}, projectName, configurationName, configurationVersion, sourceRoot, sourceLayoutRoot, sourceScaffoldEnabled = true, buildScaffoldEnabled = true, docsScaffoldEnabled = true, knowledgeEnabled = true, openSpecEnabled = false }) {
+export function applyProjectInitialization(cwd, { templateRaw, values, decisions = {}, projectName, configurationName, configurationVersion, sourceRoot, sourceLayoutRoot, sourceScaffoldEnabled = true, buildScaffoldEnabled = true, docsScaffoldEnabled = true, knowledgeEnabled = true, openSpecEnabled = false, initMode }) {
   const envPath = path.join(cwd, '.dev.env');
   const stateDir = path.join(cwd, '.pi', '1c');
   const initializedAt = new Date().toISOString();
@@ -720,6 +986,7 @@ export function applyProjectInitialization(cwd, { templateRaw, values, decisions
   atomicWrite(path.join(stateDir, 'init-state.json'), `${JSON.stringify({
     schemaVersion: 1,
     initializedAt,
+    ...(initMode ? { initMode } : {}),
     projectName,
     configurationName,
     configurationVersion,

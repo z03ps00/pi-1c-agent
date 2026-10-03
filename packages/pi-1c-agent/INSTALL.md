@@ -35,18 +35,18 @@ node tools/install.mjs --project --with-openspec
 /init
 ```
 
-`/init` first asks empty scaffold vs dump from IB / `.cf` / `.dt`. `/init` is an alias. `/init advanced`:
+`/init` empty call opens the overlay: empty scaffold vs existing IB vs `.cf` / `.cfe` / `.dt` (label + description). Then it offers Standard (recommended), Quick, or Detailed. Named `/init from-cfe` skips the picker. `/init` is an alias. `/init standard`:
 
 1. читает pinned upstream `.dev.env.example`;
 2. проверяет drift против UX-схемы 43 текущих переменных;
-3. пытается read-only определить Configuration.xml / CompatibilityMode / PLATFORM_PATH / source root;
-4. спрашивает переменные последовательно и объясняет смысл каждой;
-5. показывает redacted preview;
-6. пишет `.dev.env`, `.pi/1c/project.yaml`, `.pi/1c/init-state.json` и каркас `.pi/1c/{knowledge,knowledge-drafts,rules}` только после explicit Apply;
-7. при согласии инициализирует Configuration Knowledge fingerprint;
-8. предлагает `/openspec-setup`, если OpenSpec включён, но native Pi artifacts ещё не созданы.
+3. собирает несекретные значения из соседних 1С-проектов и автодетект (платформа, Configuration.xml, src);
+4. показывает один список настроек с источником каждого значения;
+5. ждёт правок и явного «Всё верно» — это и есть подтверждение записи;
+6. пишет `.dev.env`, `.pi/1c/project.yaml`, `.pi/1c/init-state.json` (`initMode: standard`) и каркас `.pi/1c/{knowledge,knowledge-drafts,rules}`.
 
-Для сокращённого onboarding:
+`/init advanced` по-прежнему проходит все переменные по одной. `/init quick` спрашивает только ключевые решения.
+
+Для сокращённого опроса по одной:
 
 ```text
 /init quick

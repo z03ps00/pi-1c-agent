@@ -37,6 +37,11 @@ import {
   SOURCE_EMPTY,
   SOURCE_DUMP,
   SOURCE_QUESTION,
+  INIT_STANDARD,
+  INIT_SOURCE_CHOICES,
+  INIT_MODE_CHOICES,
+  INIT_CONFIRM_ALL,
+  INIT_EDIT_ROW,
   publish,
   getSnapshot,
   resetUiBusForTests,
@@ -411,6 +416,12 @@ test('init wizard copy and progress', () => {
   assert.match(SOURCE_QUESTION, /Источник проекта/);
   assert.match(SOURCE_EMPTY, /Пустая структура исходников/);
   assert.match(SOURCE_DUMP, /Выгрузка из существующей ИБ/);
+  assert.match(INIT_STANDARD, /Стандартный/);
+  assert.deepEqual(INIT_SOURCE_CHOICES.map((c) => c.value), ['empty', 'from-ib', 'from-cf', 'from-cfe', 'from-dt']);
+  assert.ok(INIT_SOURCE_CHOICES.every((c) => c.label && c.description));
+  assert.deepEqual(INIT_MODE_CHOICES.map((c) => c.value), ['standard', 'quick', 'advanced']);
+  assert.equal(INIT_CONFIRM_ALL, 'Всё верно');
+  assert.equal(INIT_EDIT_ROW, 'Поправить');
   const progress = wizardProgress(0);
   assert.match(progress, /Source/);
   const preview = composeInitPreviewSummary({ source: 'empty', knowledge: true, files: ['.dev.env'] });

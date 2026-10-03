@@ -67,7 +67,7 @@ Project code, metadata, Git, dependencies, database state и shell остают�
 /init
 ```
 
-Canonical `/init` asks first: empty source scaffold vs dump from an existing infobase / `.cf` / `.dt`. `/init` is an alias for one release. `/init advanced` skips the source question and runs the empty-scaffold wizard.
+Canonical `/init` empty call opens the overlay: empty source scaffold vs existing infobase vs `.cf` / `.cfe` / `.dt`. `/init` is an alias for one release. After the source overlay it offers Standard (recommended), Quick, or Detailed. `/init standard` skips the source question and runs the empty-scaffold list-and-confirm flow.
 
 Wizard не придумывает собственный ENV-контракт. Source of truth — `.dev.env.example` из закреплённого commit `ai_rules_1c`; `config/dev-env.schema.json` содержит только human-friendly описания и dependency hints. Для текущего pinned upstream описаны **43 переменные** в пяти группах.
 
@@ -75,7 +75,7 @@ Wizard не придумывает собственный ENV-контракт. 
 
 - `Configuration.xml` → название/версия конфигурации, source root и `CompatibilityMode`;
 - `PLATFORM_VERSION` → из CompatibilityMode;
-- `PLATFORM_PATH` → из стандартных Windows/Linux каталогов;
+- `PLATFORM_PATH` → сначала существующий путь соседних 1С-проектов, иначе самая новая установленная платформа;
 - `EXPORT_PATH` → из обнаруженного source root.
 
 Режимы:
@@ -84,6 +84,7 @@ Wizard не придумывает собственный ENV-контракт. 
 /init               # первый вопрос: пустой scaffold или выгрузка из ИБ / .cf / .dt
 /init empty         # пустая структура исходников
 /init from-ib       # сценарий выгрузки (как /initproject)
+/init standard      # список находок, правки, одно подтверждение «Всё верно»
 /init advanced      # пустой scaffold, все upstream ENV-переменные по одной
 /init quick         # ключевые решения, остальное оставить upstream defaults
 /init status        # deterministic status + schema drift
@@ -111,6 +112,8 @@ docs/                  # документация в git
 ```
 
 Существующие каталоги и файлы никогда не очищаются и не перезаписываются. Если `Configuration.xml` уже найден в `src/cf`, Knowledge Layer продолжает использовать `src/cf` как configuration source root, а `src` хранится отдельно как общий source-layout root.
+
+Стандартный режим показывает один список находок (соседние проекты, Configuration.xml, установленная платформа, upstream default) и пишет файлы только после «Всё верно».
 
 Подробный режим для каждой переменной объясняет смысл, показывает autodetect/default/current value и предлагает использовать, изменить или отключить значение. Пустые значения, которые upstream считает валидными, не превращаются в искусственно обязательные поля.
 

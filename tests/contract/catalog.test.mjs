@@ -44,6 +44,35 @@ test('/init-knowledge exists, is settings, and has no /1c-* alias', () => {
   assert.match(prompt, /Do \*\*not\*\* run `bootstrap\.mjs --project`/);
 });
 
+test('/init empty call catalogues overlay source options', () => {
+  const root = profileRoot();
+  const catalog = fs.readFileSync(path.join(root, 'prompts', 'CATALOG.md'), 'utf8');
+  assert.match(catalog, /Empty `\/init` opens the source overlay/);
+  assert.match(catalog, /from-ib/);
+  assert.match(catalog, /from-cf/);
+  assert.match(catalog, /from-cfe/);
+  assert.match(catalog, /from-dt/);
+  const rule = fs.readFileSync(path.join(root, 'rules-1c', 'core', 'overlay-options.md'), 'utf8');
+  assert.match(rule, /pickOverlay/);
+  assert.match(rule, /Do not register each option as its own slash command/);
+});
+
+test('/initproject asks before creating a file IB from .cf/.cfe/.dt', () => {
+  const root = profileRoot();
+  const promptPath = path.join(root, 'prompts', 'initproject.md');
+  const catalog = fs.readFileSync(path.join(root, 'prompts', 'CATALOG.md'), 'utf8');
+  assert.ok(fs.existsSync(promptPath), `${promptPath} missing`);
+  assert.equal(classifyCatalogSection(catalog, 'initproject'), 'settings');
+  assert.match(catalog, /from-infobase/);
+  assert.match(catalog, /\.cfe/);
+  const prompt = fs.readFileSync(promptPath, 'utf8');
+  assert.match(prompt, /Создать новую файловую базу из этого файла и выгрузить исходники в `src\/`/);
+  assert.match(prompt, /ordinary `\/init`/);
+  assert.match(prompt, /from-cfe/);
+  assert.match(prompt, /db-create\.ps1/);
+  assert.doesNotMatch(prompt, /Do not create an empty cf\/cfe\/epf\/erf scaffold as the primary outcome/);
+});
+
 test('/update-profile exists, is settings, and has no /1c-* alias', () => {
   const root = profileRoot();
   const promptPath = path.join(root, 'prompts', 'update-profile.md');

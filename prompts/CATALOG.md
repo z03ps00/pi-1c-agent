@@ -1,13 +1,13 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, and `/rulesmodel` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate` open the same overlay. Anonymous session is `/anon`. Approval mode is `/approve`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, and `/rulesmodel` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Empty `/init` opens the source overlay (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`), then the mode overlay for the empty-scaffold path. Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate` open the same overlay. Anonymous session is `/anon`. Approval mode is `/approve`.
 
 ## Everyday (at most twelve)
 
 | Command | Purpose |
 |---|---|
 | `/commands` | This catalog: everyday first, then settings, then maintainer |
-| `/init` | One init wizard (Pi package). Step 0: empty scaffold vs dump from IB / `.cf` / `.dt`. Apply always plants `.pi/1c` knowledge dirs |
+| `/init` | One init wizard (Pi package). Empty call: overlay for empty scaffold vs existing IB vs `.cf` / `.cfe` / `.dt` (label + description). Then Standard / Quick / Detailed overlay. Apply plants `.pi/1c` knowledge dirs |
 | `/doctor` | Deterministic profile/package health check (Pi package) |
 | `/installtools` | Guided installer menu (asks before any MCP install) |
 | `/checkmcp` | MCP status only (repair is explicit) |
@@ -23,7 +23,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 
 | Command | Purpose |
 |---|---|
-| `/initproject` | Alias of `/init` from-infobase (dump from IB / `.cf` / `.dt`) |
+| `/initproject` | Alias of `/init` from-infobase. Existing IB, or `.cf` / `.cfe` / `.dt`: ask before creating a file IB and dumping to `src/`; «нет» still runs ordinary `/init`. After «да» — bases catalog, folder name, then dump |
 | `/init-knowledge` | Cursor procedure: plant `.pi/1c` knowledge dirs only (Pi TUI: `/init knowledge`). Does not copy the agent |
 | `/installmcp` | First install of the purchased 1C Docker MCP bundle |
 | `/install-memory-mcp` | Opt-in paired OpenViking + Cognee memory stack (Router AI default) |

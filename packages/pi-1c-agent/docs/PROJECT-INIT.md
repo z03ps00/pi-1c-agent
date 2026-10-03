@@ -4,11 +4,14 @@ Source of truth: pinned upstream `.dev.env.example`. UX schema only explains var
 
 ## Commands
 
-- `/init` — choose detailed or quick mode.
+- `/init` — empty overlay: source (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`), then Standard (recommended), Quick, or Detailed.
+- `/init standard` — sibling/autodetect list, edits, one «Всё верно» confirmation.
 - `/init advanced` — review every upstream variable one by one.
 - `/init quick` — key decisions only.
 - `/init status` — deterministic status and schema-drift check.
 - `/init knowledge` — plant `.pi/1c` knowledge dirs only (no agent copy, no `.dev.env`).
+
+Standard mode fills shared non-secret values from sibling 1C projects one directory up, then autodetection, then upstream defaults. It shows one list (value + origin) and writes only after «Всё верно». Infobase path and secrets are never copied from neighbors. `PLATFORM_PATH` prefers a sibling directory that exists on disk.
 
 ## Current pinned variables (43)
 

@@ -1,6 +1,6 @@
 # Detailed 1C project initialization
 
-`/init` is the canonical project-onboarding flow for `pi-1c-agent`.
+`/init` is the canonical project-onboarding flow for `pi-1c-agent`. Empty `/init` opens the overlay: empty source scaffold vs existing infobase vs `.cf` / `.cfe` / `.dt`; then Standard / Quick / Detailed.
 
 ## Source of truth
 
@@ -60,22 +60,49 @@ Before asking, attempt read-only detection of:
 
 - configuration name/version/source root from `Configuration.xml`;
 - `PLATFORM_VERSION` from `CompatibilityMode`;
-- latest installed `PLATFORM_PATH` from standard Windows/Linux locations;
+- `PLATFORM_PATH` from sibling 1C projects when that directory exists, otherwise the latest installed platform;
 - configuration source root for `EXPORT_PATH`;
 - shared 1C source-layout root (for example `src` when `Configuration.xml` is under `src/cf`);
-- layout-aware `EXTENSIONS_PATH` proposal (for example `src/cfe`).
+- layout-aware `EXTENSIONS_PATH` proposal (for example `src/cfe`);
+- shared non-secret `.dev.env` values from sibling 1C projects one directory up.
 
 Autodetected values are proposals, not silent irreversible decisions.
 
 ## Modes
 
-- `/init` — lets the user choose detailed or quick mode; detailed is recommended.
-- `/init advanced` — reviews all upstream variables one by one with human explanations.
-- `/init quick` — asks key project decisions and keeps upstream defaults for the rest.
+- `/init` — empty call opens the overlay: empty scaffold vs existing IB vs `.cf` / `.cfe` / `.dt`; then Standard (recommended), Quick, or Detailed. Named arguments skip the picker.
+- `/init standard` — empty-scaffold path; agent fills shared settings from siblings and autodetection, shows one list, waits for edits and «Всё верно», then writes. No second Apply question.
+- `/init advanced` — empty-scaffold path; reviews all upstream variables one by one with human explanations.
+- `/init quick` — key project decisions and upstream defaults for the rest.
 - `/init status` — deterministic status/schema coverage report.
 - `/init knowledge` — plant only `.pi/1c` knowledge dirs into an existing 1C repo (no agent copy, no `.dev.env` wizard, no OpenSpec). Cursor procedure: `/init-knowledge`.
 
 Defaulted/advisory values must be explained as defaults instead of being treated as mandatory input. Empty values that upstream defines as valid remain valid.
+
+## Standard mode
+
+Standard init does **not** ask every `.dev.env` variable. It builds a profile, shows a redacted list (name, value, origin), and writes nothing until the developer confirms «Всё верно».
+
+Fill order per field:
+
+1. Non-empty value already in this project's `.dev.env`.
+2. Majority shared non-secret value from sibling 1C projects one directory up. If neighbors disagree, the list shows the chosen value and the alternatives.
+3. Local autodetection (`Configuration.xml`, installed platform, `src` layout).
+4. Upstream default from `.dev.env.example`.
+
+`PLATFORM_PATH` uses a sibling path only when that directory exists on disk; otherwise the newest installed platform. Infobase path, user/password, extension names, publish URL, repository credentials, and other secrets are never copied from neighbors.
+
+Default-on: `src/{cf,cfe,epf,erf}`, `build/{cf,cfe,epf,erf}`, `docs/` and `docs/techtask/`. Configuration Knowledge fingerprint is on only when configuration name and version are already known. OpenSpec is off.
+
+After the list:
+
+- **Всё верно** — the confirmation; then Apply.
+- **Поправить** — edit one row, show the list again, wait for «Всё верно».
+- **Отмена** — no writes.
+
+`init-state.json` records `initMode: standard`.
+
+**Cursor:** there is no Pi TUI. Print the same list and do not write `.dev.env` / manifests until the developer explicitly confirms that the list is correct.
 
 ## Standard source scaffold
 

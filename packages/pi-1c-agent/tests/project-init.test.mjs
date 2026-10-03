@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   applyProjectInitialization,
+  applyStandardInitEdit,
   autoDetectedValues,
   auditDevEnvSchema,
   collectSiblingSharedEnv,
@@ -16,6 +17,7 @@ import {
   ensureDocsScaffold,
   ensureSourceScaffold,
   effectiveVariableMeta,
+  formatStandardInitReview,
   inferSourceLayoutRoot,
   inspectSourceScaffold,
   knowledgeIdentity,
@@ -24,6 +26,7 @@ import {
   parseEnvValues,
   redactValue,
   renderEnvFromTemplate,
+  resolveStandardInitProfile,
   summarizeEnv,
   ensureProjectKnowledgeLayout,
   inspectKnowledgeLayout,
@@ -253,6 +256,111 @@ test('sibling scan ignores non-1C folders one level up', () => {
   fs.writeFileSync(path.join(parent, 'random-notes', 'readme.txt'), 'no 1c');
   const scan = collectSiblingSharedEnv(current);
   assert.equal(scan.suggestions.length, 0);
+});
+
+test('standard profile prefers existing sibling PLATFORM_PATH over a newer installed platform', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-std-plat-'));
+  const siblingPlatform = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-plat-sib-'));
+  const a = path.join(parent, 'proj-a');
+  const current = path.join(parent, 'proj-new');
+  for (const d of [a, current]) fs.mkdirSync(d);
+  fs.writeFileSync(path.join(a, '.dev.env'), `PREFIX=ФСК_\nDEVELOPER=Dev\nPLATFORM_PATH=${siblingPlatform}\nIB_PASSWORD=secret-a\nINFOBASE_PATH=/tmp/base-a\n`);
+  const profile = resolveStandardInitProfile(current, {
+    templateRaw: template(),
+    detectPlatformPath: () => '/opt/1cv8/x86_64/8.3.99',
+  });
+  assert.equal(profile.values.PLATFORM_PATH, siblingPlatform);
+  assert.equal(profile.origins.PLATFORM_PATH.kind, 'sibling');
+  assert.equal(profile.values.PREFIX, 'ФСК_');
+  assert.equal(profile.values.IB_PASSWORD, '');
+  assert.equal(profile.values.INFOBASE_PATH, '');
+  assert.equal(profile.origins.IB_PASSWORD.kind, 'empty');
+  assert.match(formatStandardInitReview(profile), /Всё верно/);
+});
+
+test('standard profile falls back to installed platform when sibling PLATFORM_PATH is missing', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-std-miss-'));
+  const a = path.join(parent, 'proj-a');
+  const current = path.join(parent, 'proj-new');
+  for (const d of [a, current]) fs.mkdirSync(d);
+  fs.writeFileSync(path.join(a, '.dev.env'), 'PREFIX=X_\nPLATFORM_PATH=/definitely/missing/1cv8/8.3.1\n');
+  const profile = resolveStandardInitProfile(current, {
+    templateRaw: template(),
+    detectPlatformPath: () => '/opt/1cv8/x86_64/8.3.99',
+  });
+  assert.equal(profile.values.PLATFORM_PATH, '/opt/1cv8/x86_64/8.3.99');
+  assert.equal(profile.origins.PLATFORM_PATH.kind, 'platform');
+});
+
+test('standard profile keeps existing .dev.env over sibling values', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-std-exist-'));
+  const a = path.join(parent, 'proj-a');
+  const current = path.join(parent, 'proj-new');
+  for (const d of [a, current]) fs.mkdirSync(d);
+  fs.writeFileSync(path.join(a, '.dev.env'), 'PREFIX=ФСК_\nDEVELOPER=Dev\n');
+  fs.writeFileSync(path.join(current, '.dev.env'), 'PREFIX=LOCAL_\n');
+  const profile = resolveStandardInitProfile(current, { templateRaw: template() });
+  assert.equal(profile.values.PREFIX, 'LOCAL_');
+  assert.equal(profile.origins.PREFIX.kind, 'existing');
+  assert.equal(profile.values.DEVELOPER, 'Dev');
+  assert.equal(profile.origins.DEVELOPER.kind, 'sibling');
+});
+
+test('standard profile keeps sibling disagreement visible as an alternative', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-std-alt-'));
+  const a = path.join(parent, 'proj-a');
+  const b = path.join(parent, 'proj-b');
+  const current = path.join(parent, 'proj-new');
+  for (const d of [a, b, current]) fs.mkdirSync(d);
+  fs.writeFileSync(path.join(a, '.dev.env'), 'PREFIX=AAA_\n');
+  fs.writeFileSync(path.join(b, '.dev.env'), 'PREFIX=BBB_\n');
+  const profile = resolveStandardInitProfile(current, { templateRaw: template() });
+  assert.ok(['AAA_', 'BBB_'].includes(profile.values.PREFIX));
+  const other = profile.values.PREFIX === 'AAA_' ? 'BBB_' : 'AAA_';
+  assert.deepEqual(profile.origins.PREFIX.alternatives, [other]);
+  assert.match(formatStandardInitReview(profile), new RegExp(`другие значения: ${other}`));
+});
+
+test('standard profile records initMode after Apply and marks edits as поправлено', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-std-apply-'));
+  let profile = resolveStandardInitProfile(cwd, { templateRaw: template() });
+  assert.equal(profile.knowledgeEnabled, false);
+  assert.equal(profile.openSpecEnabled, false);
+  assert.equal(profile.sourceScaffoldEnabled, true);
+  profile = applyStandardInitEdit(profile, 'env:PREFIX', 'NEW_');
+  assert.equal(profile.values.PREFIX, 'NEW_');
+  assert.equal(profile.origins.PREFIX.kind, 'edited');
+  assert.match(formatStandardInitReview(profile), /PREFIX: NEW_  ← поправлено/);
+  const result = applyProjectInitialization(cwd, {
+    templateRaw: template(),
+    values: profile.values,
+    decisions: profile.decisions,
+    projectName: profile.projectName,
+    configurationName: 'ERP',
+    configurationVersion: '2.5',
+    sourceRoot: profile.sourceRoot,
+    sourceLayoutRoot: profile.sourceLayoutRoot,
+    knowledgeEnabled: false,
+    openSpecEnabled: false,
+    initMode: 'standard',
+  });
+  const state = JSON.parse(fs.readFileSync(result.initState, 'utf8'));
+  assert.equal(state.initMode, 'standard');
+  assert.match(fs.readFileSync(result.envPath, 'utf8'), /PREFIX=NEW_/);
+});
+
+test('standard profile reads configuration identity from Configuration.xml', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-std-cfg-'));
+  fs.mkdirSync(path.join(cwd, 'src', 'cf'), { recursive: true });
+  fs.writeFileSync(path.join(cwd, 'src', 'cf', 'Configuration.xml'), '<?xml version="1.0"?><Configuration><Properties><Name>ERP</Name><Version>2.5.25.56</Version><CompatibilityMode>Version8_3_24</CompatibilityMode></Properties></Configuration>');
+  const profile = resolveStandardInitProfile(cwd, { templateRaw: template() });
+  assert.equal(profile.configurationName, 'ERP');
+  assert.equal(profile.configurationVersion, '2.5.25.56');
+  assert.equal(profile.knowledgeEnabled, true);
+  assert.equal(profile.values.PLATFORM_VERSION, '8.3.24');
+  assert.equal(profile.origins.PLATFORM_VERSION.kind, 'config');
+  assert.equal(profile.sourceRoot, 'src/cf');
+  assert.equal(profile.values.EXPORT_PATH, 'src/cf');
 });
 
 test('compiled artifact names are original name plus date stamp', () => {

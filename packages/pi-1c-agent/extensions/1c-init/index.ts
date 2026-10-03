@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   applyProjectInitialization,
+  applyStandardInitEdit,
   auditDevEnvSchema,
   autoDetectedValues,
   collectSiblingSharedEnv,
@@ -12,6 +13,7 @@ import {
   detectConfiguration,
   effectiveVariableMeta,
   ensureProjectKnowledgeLayout,
+  formatStandardInitReview,
   inferSourceLayoutRoot,
   initStatus,
   knowledgeIdentity,
@@ -23,23 +25,25 @@ import {
   parseEnvTemplate,
   parseEnvValues,
   redactValue,
+  resolveStandardInitProfile,
+  standardInitReviewRows,
   summarizeEnv,
 } from "../../lib/project-init.mjs";
 import { loadConfiguration } from "../../lib/knowledge.mjs";
 import { requireBuild as assertBuild } from "../../lib/mode-state.mjs";
 import { registerAction, uiAvailable, wizardProgress } from "../../lib/ui/index.mjs";
+import { overlayInitModeSelect, overlayInitSourceSelect } from "../1c-ui/overlays.ts";
 import {
   APPLY_QUESTION,
   BUILD_SCAFFOLD_HINT,
   DOCS_SCAFFOLD_HINT,
-  INIT_DETAILED,
-  INIT_QUICK,
+  INIT_CANCEL,
+  INIT_CONFIRM_ALL,
+  INIT_EDIT_ROW,
   KNOWLEDGE_NO_AGENT,
   SIBLING_ACCEPT_ALL,
   SIBLING_QUESTION,
-  SOURCE_DUMP,
-  SOURCE_EMPTY,
-  SOURCE_QUESTION,
+  STANDARD_REVIEW_QUESTION,
 } from "../../lib/ui/init-copy.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -215,23 +219,124 @@ function previewText(project: any, templateRaw: string, values: Record<string, s
   return lines.join("\n");
 }
 
-const FROM_IB_FOLLOW_UP = `The user chose dump from an existing infobase / .cf / .dt — the from-infobase scenario of /init. /initproject is this alias.
+const FROM_IB_FOLLOW_UP = `The user chose dump from an **existing** infobase (\`/init from-ib\` / \`/initproject\`). Follow \`$PI_CODING_AGENT_DIR/prompts/initproject.md\` scenario A.
 
-Do not create an empty cf/cfe/epf/erf scaffold as the primary outcome. Follow the dump procedure: check .dev.env (PLATFORM_PATH, INFOBASE_PATH, EXPORT_PATH, EXTENSION_NAMES), confirm the target infobase, then dump. If .dev.env is missing, collect blocking keys first. Do not run against production without an explicit dump-only confirmation.`;
+Do not create a new infobase from a .cf / .cfe / .dt. Check .dev.env (PLATFORM_PATH, INFOBASE_PATH, EXPORT_PATH, EXTENSION_NAMES), confirm the target is a dev/test dump source, then dump via /loadfrom1cbase. If .dev.env is missing, collect blocking keys first. Do not run against production without an explicit dump-only confirmation.`;
+
+const FROM_TEMPLATE_FOLLOW_UP = `The user chose \`/init from-cf|from-cfe|from-dt\` (or \`/initproject\` with a template file). Follow \`$PI_CODING_AGENT_DIR/prompts/initproject.md\` scenario B.
+
+Initialize the project either way. First ask once: создать новую файловую базу из этого файла и выгрузить исходники в src/? Silence or «нет» = ordinary /init (standard list, «Всё верно»); do not create an infobase and do not dump that file; leave INFOBASE_PATH empty. «Да» = ask the bases catalog (propose the common parent of sibling file infobases, do not hard-code a path), then the folder name (from the file stem without _YYYYMMDD), show the full path, and wait for «Всё верно» before db-create / db-load-cf / /loadfrom1cbase. Never overwrite an existing 1Cv8.1CD. A .cfe is an extension under src/cfe/<name>, never the main configuration.`;
+
+function templateKindFromTokens(tokens: string[]) {
+  for (const t of tokens) {
+    if (t === "from-cfe" || t.startsWith("from-cfe")) return "from-cfe";
+    if (t === "from-dt" || t.startsWith("from-dt")) return "from-dt";
+    if (t === "from-cf" || t.startsWith("from-cf")) return "from-cf";
+  }
+  return "";
+}
 
 function parseInitRequest(args?: string) {
   const raw = (args?.trim() || "");
   const tokens = raw.toLowerCase().split(/\s+/).filter(Boolean);
+  const templateKind = templateKindFromTokens(tokens);
+  const fromTemplate = Boolean(templateKind);
+  const fromIb = tokens.some((t) => t === "from-ib") && !fromTemplate;
   return {
     raw,
     tokens,
     status: tokens.includes("status"),
     knowledge: tokens.includes("knowledge"),
+    standard: tokens.includes("standard"),
     advanced: tokens.includes("advanced"),
     quick: tokens.includes("quick"),
     empty: tokens.includes("empty"),
-    fromIb: tokens.some((t) => t === "from-ib" || t === "from-cf" || t === "from-dt" || t.startsWith("from-cf") || t.startsWith("from-dt")),
+    fromIb,
+    fromTemplate,
+    templateKind,
   };
+}
+
+function rowChoiceLabel(row: any) {
+  return `${row.name}: ${row.display}  ← ${row.origin?.label || "пусто"}`;
+}
+
+async function editStandardRow(ctx: any, profile: any, row: any) {
+  if (row.kind === "flag") {
+    const selected = await ctx.ui.select(row.title, ["Да", "Нет"]);
+    if (!selected) return profile;
+    return applyStandardInitEdit(profile, row.id, selected === "Да");
+  }
+  if (row.secret) {
+    const ok = await ctx.ui.confirm("Секретное значение", "Pi input не гарантирует маскирование. Вводить только DEV/TEST секрет и только если вы согласны, что он может быть видим при вводе. Продолжить?");
+    if (!ok) return applyStandardInitEdit(profile, row.id, "");
+  }
+  const entered = await askText(ctx, row.title, row.secret ? "" : String(row.value ?? ""), "Введите значение", false);
+  if (entered == null) return profile;
+  return applyStandardInitEdit(profile, row.id, entered);
+}
+
+async function runStandardInitWizard(pi: ExtensionAPI, ctx: any, templateRaw: string) {
+  let profile = resolveStandardInitProfile(ctx.cwd, { templateRaw, schema });
+  while (true) {
+    if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(4), "info");
+    pi.sendMessage({
+      customType: "pi-1c-init-standard-review",
+      content: formatStandardInitReview(profile, schema),
+      display: true,
+    }, { triggerTurn: false });
+    const action = await ctx.ui.select(STANDARD_REVIEW_QUESTION, [INIT_CONFIRM_ALL, INIT_EDIT_ROW, INIT_CANCEL]);
+    if (!action || action === INIT_CANCEL) {
+      ctx.ui.notify("Инициализация отменена. Ничего не записано.", "info");
+      return;
+    }
+    if (action === INIT_EDIT_ROW) {
+      const rows = standardInitReviewRows(profile, schema);
+      const labels = rows.map(rowChoiceLabel);
+      const picked = await ctx.ui.select("Какую строку поправить?", labels);
+      if (!picked) continue;
+      const row = rows[labels.indexOf(picked)];
+      if (!row) continue;
+      profile = await editStandardRow(ctx, profile, row);
+      continue;
+    }
+
+    try {
+      const result = applyProjectInitialization(ctx.cwd, {
+        templateRaw,
+        values: profile.values,
+        decisions: profile.decisions,
+        projectName: profile.projectName,
+        configurationName: profile.configurationName,
+        configurationVersion: profile.configurationVersion,
+        sourceRoot: profile.sourceRoot,
+        sourceLayoutRoot: profile.sourceLayoutRoot,
+        sourceScaffoldEnabled: profile.sourceScaffoldEnabled,
+        buildScaffoldEnabled: profile.buildScaffoldEnabled,
+        docsScaffoldEnabled: profile.docsScaffoldEnabled,
+        knowledgeEnabled: profile.knowledgeEnabled,
+        openSpecEnabled: profile.openSpecEnabled,
+        initMode: "standard",
+      });
+      const knowledgeLine = knowledgeResultLine(result.knowledgeLayout, profile.knowledgeEnabled);
+      const next = [
+        "1C project initialization complete.",
+        "Mode: standard",
+        `ENV: ${result.summary.length} upstream variables reviewed/materialized`,
+        `Project manifest: ${path.relative(ctx.cwd, result.projectYaml)}`,
+        profile.sourceScaffoldEnabled ? `Source scaffold: ${result.scaffold.root}/{cf,cfe,epf,erf}; created=${result.scaffold.created.length}, existing=${result.scaffold.existing.length}` : "Source scaffold: disabled",
+        profile.buildScaffoldEnabled ? `Build scaffold: build/{cf,cfe,epf,erf}; created=${result.buildScaffold.created.length}, existing=${result.buildScaffold.existing.length}` : "Build scaffold: disabled",
+        profile.docsScaffoldEnabled ? `Docs scaffold: docs/ + docs/techtask; created=${result.docsScaffold.created.length}, existing=${result.docsScaffold.existing.length}` : "Docs scaffold: disabled",
+        knowledgeLine,
+        profile.openSpecEnabled && !fs.existsSync(path.join(ctx.cwd, "openspec")) ? "Next: run /openspec-setup to materialize native Pi OpenSpec artifacts." : "",
+        "Next: run /doctor project.",
+      ].filter(Boolean).join("\n");
+      pi.sendMessage({ customType: "pi-1c-init-complete", content: next, display: true }, { triggerTurn: false });
+    } catch (error: any) {
+      ctx.ui.notify(error?.message || String(error), "error");
+    }
+    return;
+  }
 }
 
 function knowledgeResultLine(layout: any, knowledgeEnabled: boolean) {
@@ -330,16 +435,23 @@ export default function oneCInit(pi: ExtensionAPI): void {
         return;
       }
 
-      let sourceChoice = requested.fromIb ? "dump" : (requested.empty || requested.advanced || requested.quick ? "empty" : "");
-      if (!sourceChoice) {
+      let sourceKind = requested.fromIb
+        ? "from-ib"
+        : requested.templateKind
+          ? requested.templateKind
+          : (requested.empty || requested.advanced || requested.quick || requested.standard ? "empty" : "");
+      if (!sourceKind) {
         if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(0), "info");
-        const selected = await ctx.ui.select(SOURCE_QUESTION, [SOURCE_EMPTY, SOURCE_DUMP]);
-        if (!selected) return;
-        sourceChoice = selected === SOURCE_DUMP ? "dump" : "empty";
+        sourceKind = (await overlayInitSourceSelect(ctx)) || "";
+        if (!sourceKind) return;
       }
-      if (sourceChoice === "dump") {
-        const extra = requested.raw ? `\nArguments: ${requested.raw}` : "";
-        return pi.sendMessage({ customType: "pi-1c-init-from-ib", content: `${FROM_IB_FOLLOW_UP}${extra}`, display: true }, { triggerTurn: true, deliverAs: "followUp" });
+      if (sourceKind === "from-ib" || sourceKind === "from-cf" || sourceKind === "from-cfe" || sourceKind === "from-dt") {
+        const extra = requested.raw ? `\nArguments: ${requested.raw}` : `\nSelected: ${sourceKind}`;
+        const content = sourceKind === "from-ib"
+          ? `${FROM_IB_FOLLOW_UP}${extra}`
+          : `${FROM_TEMPLATE_FOLLOW_UP}${extra}`;
+        const customType = sourceKind === "from-ib" ? "pi-1c-init-from-ib" : "pi-1c-init-from-template";
+        return pi.sendMessage({ customType, content, display: true }, { triggerTurn: true, deliverAs: "followUp" });
       }
 
       let example = locateDevEnvExample(ctx.cwd);
@@ -360,15 +472,16 @@ export default function oneCInit(pi: ExtensionAPI): void {
         if (!proceed) return;
       }
 
-      let wizard = requested.advanced ? "advanced" : requested.quick ? "quick" : "";
+      let wizard = requested.advanced ? "advanced" : requested.quick ? "quick" : requested.standard ? "standard" : "";
       if (!wizard) {
         if (uiAvailable(ctx)) ctx.ui.notify(wizardProgress(1), "info");
-        const selected = await ctx.ui.select("Режим /init", [
-          INIT_DETAILED,
-          INIT_QUICK,
-        ]);
-        if (!selected) return;
-        wizard = selected.startsWith("Подробный") ? "advanced" : "quick";
+        wizard = (await overlayInitModeSelect(ctx)) || "";
+        if (!wizard) return;
+      }
+
+      if (wizard === "standard") {
+        await runStandardInitWizard(pi, ctx, templateRaw);
+        return;
       }
 
       const config = detectConfiguration(ctx.cwd);
@@ -568,7 +681,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("init", {
-    description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .dt: /init [empty|from-ib|advanced|quick|status|knowledge]",
+    description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .cfe / .dt: /init [empty|from-ib|from-cf|from-cfe|from-dt|standard|advanced|quick|status|knowledge]",
     handler: async (args, ctx) => handleInit(args, ctx),
   });
   registerAction("init-open", (ctx: any) => handleInit(undefined, ctx));

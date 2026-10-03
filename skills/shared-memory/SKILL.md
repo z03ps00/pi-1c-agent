@@ -26,6 +26,8 @@ Canonical scope is `project:<project-id>` from git remote, `.pi/1c/project-id`, 
 
 Recall before assuming when prior context can materially affect correctness. Build a narrow query. Do not fetch all memory. Treat recalled memory as historical evidence.
 
+Ordinary recall is chunk retrieval. Call `recall` with `search_type=CHUNKS` and `top_k=5`. Do not omit `search_type`: the server default is `HYBRID_COMPLETION`, which walks the graph and waits for an LLM completion. Do not use `GRAPH_COMPLETION`, `GRAPH_COMPLETION_COT`, `GRAPH_COMPLETION_CONTEXT_EXTENSION`, `HYBRID_COMPLETION`, or `RAG_COMPLETION` for ordinary lookup.
+
 ## Remember
 
 Store only confirmed, durable, later-useful items. Allowed types: `fact`, `decision`, `constraint`, `solution`, `experience`, `preference`, `project_state`, `relation`. Before write, apply `memory-safety`.

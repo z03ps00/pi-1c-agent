@@ -26,6 +26,7 @@ These components are intentionally new rather than mappings from upstream:
 |---|---|
 | `extensions/1c-mode/index.ts` | OpenCode-style primary PLAN / BUILD modes for vanilla Pi |
 | `rules/core/modes.md` | Behavioral contract for the two modes |
+| `rules/core/overlay-options.md` | Empty option-set commands open the `/mode`-style overlay picker |
 | `extensions/1c-subagents/index.ts` PLAN guard | Prevent writer-subagent bypass while PLAN is active |
 | session state `pi-1c-mode-state` | Persist current primary mode |
 

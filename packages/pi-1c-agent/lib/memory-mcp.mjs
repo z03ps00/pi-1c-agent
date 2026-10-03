@@ -279,7 +279,7 @@ export function createMcpAdapters(fetchImpl = globalThis.fetch) {
     const memory = await mcpToolCall({
       target: 'memory',
       tool: 'recall',
-      args: { query, search_type: 'CHUNKS', datasets: cogneeDataset() },
+      args: { query, search_type: 'CHUNKS', top_k: 5, datasets: cogneeDataset() },
       fetchImpl,
     });
     const hay = memory.text || '';

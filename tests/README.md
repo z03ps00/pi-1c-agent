@@ -39,6 +39,9 @@ Scenario tests assert **file/action effects** (created / modified / deleted / un
 | Prompt titles unprefixed; no `/1c-*` prompt files | `unit/commands` + `contract/command-surface` | unit + regression | implemented |
 | `/session-rotate` opt-in, Pi-only, Settings catalog, no prompt twin | `contract/catalog` + `contract/command-surface` | regression | implemented |
 | `/init` always plants `.pi/1c` knowledge dirs; `/init knowledge` / `/init-knowledge` adopt without agent copy | `packages/pi-1c-agent/tests/project-init` + `contract/catalog` | unit + regression | implemented |
+| `/init` empty overlay: `empty` / `from-ib` / `from-cf` / `from-cfe` / `from-dt`; option-set commands use overlay (`overlay-options.md`) | `contract/catalog` + package-contract + ui | regression | implemented |
+| `/init standard` fills from siblings/autodetect, list + «Всё верно», sibling platform path wins when it exists | `packages/pi-1c-agent/tests/project-init` + `contract` package-init copy | unit + regression | implemented |
+| `/initproject` asks before creating a file IB from `.cf`/`.cfe`/`.dt`; «нет» still runs ordinary `/init` | `contract/catalog` + package-contract | regression | implemented |
 | `/wrap` `/memory-flush` `/capture-model` package-owned, Settings catalog, no prompt twin | `contract/catalog` + `contract/command-surface` | regression | implemented |
 | `/update-profile` refreshes this profile from git remote, Settings, preserves local secrets/MCP | `unit/update-profile` + `contract/catalog` | unit + regression | implemented |
 | `/update-pi-cli` updates Pi CLI shell in npm prefix, Settings, preserves profile configs/secrets | `unit/update-pi-cli` + `contract/catalog` | unit + regression | implemented |
