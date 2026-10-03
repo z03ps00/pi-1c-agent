@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.0 — 2026-10-03
+
 - `/init` empty call opens the same overlay picker as `/mode`: source (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`, each with a description) then Standard / Quick / Detailed. Named arguments skip the picker. Package commands with a closed option set must use that overlay — see `rules-1c/core/overlay-options.md`. `/init` Standard (recommended) fills platform and shared settings from sibling 1C projects, shows one list, waits for edits and «Всё верно», then writes. `/init advanced` still walks every variable. Sibling `PLATFORM_PATH` wins when that directory exists.
 - `/taskmode` is a package command: empty argument opens the same overlay as `/mode` (docs-fix, spec-authoring, analytics, quick-fix, full-cycle, auto); the pin is session-scoped and shown in the footer.
 - Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate` open the same overlay picker; named `.dev.env` keys are written by the package.

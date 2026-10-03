@@ -1,8 +1,8 @@
-# Pi 1C Agent v0.7.0
+# Pi 1C Agent v0.8.0
 
 Multi-agent пакет для **vanilla Pi** для разработки на 1С:Предприятие.
 
-v0.7.0 — первый tagged GitHub-релиз: fail-closed ASK/PLAN, secret egress до remote distill, `/approve safe` как allowlist для shell, и product README в корне профиля.
+v0.8.0 — оверлеи команд (`/init`, `/taskmode`, `/anon`, `/approve` и настройки), Standard `/init` с одним подтверждением «Всё верно», TUI-слой Pi 0.85 и фоновая запись в Cognee/OpenViking.
 
 ## Базовая архитектура
 
