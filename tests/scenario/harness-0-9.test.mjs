@@ -213,7 +213,7 @@ test('scenario: profile contract, commands and doctor still pass', () => {
   assert.match(agents, /Anonymous session/);
   assert.doesNotMatch(agents, /1c-graph-metadata-mcp/);
   const router = fs.readFileSync(path.join(packageRoot, 'extensions', '1c-context-router', 'index.ts'), 'utf8');
-  for (const name of ['capabilities', 'context', 'evolve', 'session-stats']) {
+  for (const name of ['capabilities', 'context', 'evolve', 'learning', 'session-stats']) {
     assert.match(router, new RegExp(`registerCommand\\("${name}"`));
     assert.equal(fs.existsSync(path.join(root, 'prompts', `${name}.md`)), false);
     assert.doesNotMatch(router, new RegExp(`registerCommand\\("1c-${name}"`));

@@ -2,13 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { overlaySelect, overlayText } from "../1c-ui/overlays.ts";
+import { overlayLearningSelect, overlaySelect, overlayText } from "../1c-ui/overlays.ts";
 import { getSnapshot, uiAvailable } from "../../lib/ui/index.mjs";
 import {
   formatCapabilityBlock,
   isStructuralToolName,
   snapshotCapabilities,
 } from "../../lib/harness/capabilities.mjs";
+import { classifyDanger } from "../../lib/approve-policy.mjs";
 import { rankBySummary, tryAdmit } from "../../lib/harness/budget.mjs";
 import { renderContextView } from "../../lib/harness/context-view.mjs";
 import {
@@ -23,12 +24,27 @@ import {
   noteToolStats,
   shouldBlockTool,
 } from "../../lib/harness/router.mjs";
-import { beginTurn, getSession, markStructuralCall, noteTools, setDecision } from "../../lib/harness/session.mjs";
+import { ensureMemoryFlushWorker } from "../../lib/memory-flush-worker.mjs";
+import {
+  approveLearnedSkill,
+  formatLearningReview,
+  isCheckTool,
+  learnedSkillsDir,
+  learningStatus,
+  matchActiveWorkflows,
+  queueLearningMemory,
+  readLearningMode,
+  recordSkillUse,
+  reviewExperience,
+  writeLearningMode,
+} from "../../lib/harness/learning.mjs";
+import { beginTurn, getSession, markStructuralCall, notePrompt, noteTools, noteTrace, noteVerification, setDecision } from "../../lib/harness/session.mjs";
 import {
   catalogMarkdownFiles,
   chooseSkills,
   indexManifests,
   loadKnowledgeSlice,
+  mergeSkillCatalog,
   readSkillBody,
   readTextFile,
 } from "../../lib/harness/skills.mjs";
@@ -134,9 +150,10 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
       }
       if (kind === "approve") {
         const id = raw.split(/\s+/).slice(1).join(" ");
-        const result = approveDraft(profileRoot, id);
-        const content = result.ok ? result.message : result.reason;
-        pi.sendMessage({ customType: "pi-1c-evolve", content: content || "", display: true }, { triggerTurn: false });
+        const learned = approveLearnedSkill(profileRoot, id);
+        const result = learned.handled ? learned : approveDraft(profileRoot, id);
+        const content = `${result.ok ? result.message : result.reason || ""}${formatLearningReview(profileRoot)}`;
+        pi.sendMessage({ customType: "pi-1c-evolve", content: content.trim(), display: true }, { triggerTurn: false });
         return;
       }
       const created = createManualDraft(profileRoot, kind);
@@ -155,9 +172,32 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
       const memoryLine = memory.skipped ? "Memory write skipped." : `Memory queued: ${memory.queued}.`;
       pi.sendMessage({
         customType: "pi-1c-evolve",
-        content: `Draft ${created.draft.id} is not active.\n${memoryLine}\n${pending}`,
+        content: `Draft ${created.draft.id} is not active.\n${memoryLine}\n${pending}${formatLearningReview(profileRoot)}`,
         display: true,
       }, { triggerTurn: false });
+    },
+  });
+
+  pi.registerCommand("learning", {
+    description: "Learning mode: /learning off | safe | auto | status. Empty opens the picker.",
+    handler: async (args, ctx) => {
+      const raw = String(args ?? "").trim().toLowerCase();
+      if (raw === "status") {
+        await show(pi, ctx, "Learning", learningStatus(profileRoot).text);
+        return;
+      }
+      let mode = raw;
+      if (!mode) {
+        const picked = await overlayLearningSelect(ctx);
+        mode = String(picked || "");
+      }
+      if (!mode) return;
+      const saved = writeLearningMode(profileRoot, mode);
+      if (!saved.ok) {
+        ctx.ui.notify(saved.reason || "learning failed", "error");
+        return;
+      }
+      ctx.ui.notify(`learning:${saved.mode}`, "info");
     },
   });
 
@@ -173,12 +213,17 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
     setDecision(decision);
     applyDecisionStats(session.stats, decision);
     beginTurn(String(event.systemPrompt || ""));
+    notePrompt(String(event.prompt || ""));
     session.decision = decision;
 
     const mode = currentMode();
-    const manifests = indexManifests(path.join(profileRoot, "skills"));
-    const choice = chooseSkills({ manifests, text: String(event.prompt || ""), mode, available: capabilities, limit: 2 });
-    session.skipped = choice.skipped;
+    const prompt = String(event.prompt || "");
+    const catalog = mergeSkillCatalog(
+      indexManifests(path.join(profileRoot, "skills")),
+      indexManifests(learnedSkillsDir(profileRoot)),
+    );
+    const choice = chooseSkills({ manifests: catalog.manifests, text: prompt, mode, available: capabilities, limit: 2 });
+    session.skipped = [...catalog.collisions, ...choice.skipped];
     let extra = "";
     for (const manifest of choice.selected) {
       const body = readSkillBody(manifest.dir);
@@ -193,7 +238,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
     }
 
     const rulesDir = path.join(profileRoot, "rules-1c", "rules");
-    const rules = rankBySummary(catalogMarkdownFiles(rulesDir), String(event.prompt || ""), 2);
+    const rules = rankBySummary(catalogMarkdownFiles(rulesDir), prompt, 2);
     for (const rule of rules) {
       const body = readTextFile(rule.file);
       const admitted = admitFile(session, `rule:${rule.id}`, "rules", body);
@@ -201,6 +246,13 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
       session.loaded.rules.push(rule.id);
       bump(session.stats, "rulesLoaded");
       extra += `\n\n# Rule ${rule.id}\n${body}`;
+    }
+
+    for (const workflow of matchActiveWorkflows(profileRoot, prompt)) {
+      const admitted = admitFile(session, `workflow:${workflow.id}`, "rules", workflow.text);
+      if (!admitted.admitted) continue;
+      session.loaded.rules.push(workflow.id);
+      extra += `\n\n# Workflow ${workflow.id}\n${workflow.text}`;
     }
 
     const wantKnowledge = decision.first === "configuration_knowledge";
@@ -228,6 +280,66 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
     if (block) return block;
     if (structural) markStructuralCall();
     noteToolStats(session.stats, event.toolName, { structural });
+    const input = event.input && typeof event.input === "object" ? event.input as Record<string, unknown> : {};
+    const role = event.toolName === "subagent_1c" ? String(input.agent || input.role || "") : "";
+    noteTrace({
+      name: event.toolName,
+      dangerous: classifyDanger(event.toolName, input).dangerous,
+      role,
+    });
     return undefined;
+  });
+
+  pi.on("tool_execution_end", async (event) => {
+    if (isCheckTool(event.toolName)) noteVerification(event.isError !== true);
+  });
+
+  pi.on("agent_end", async (_event, ctx) => {
+    const session = getSession();
+    const mode = currentMode();
+    const anon = anonLevel();
+    const trace = session.trace.slice();
+    const loaded = session.loaded.skills.slice();
+    const verification = session.verification;
+    const prompt = session.prompt;
+    if (anon > 0) {
+      if (mode === "build" && trace.length) {
+        pi.sendMessage({
+          customType: "pi-1c-learning",
+          content: "Learning: skipped — anonymous",
+          display: true,
+        }, { triggerTurn: false });
+      }
+      return;
+    }
+    if (mode !== "build") return;
+    const learning = readLearningMode(profileRoot);
+    const result = reviewExperience(profileRoot, {
+      task: prompt,
+      tools: trace,
+      roles: trace.map((entry) => entry.role).filter(Boolean),
+      verification,
+      sessionMode: mode,
+    }, { cwd: ctx?.cwd || process.cwd(), anonLevel: anon, sessionMode: mode });
+    if (learning === "off") return;
+    if (verification === "pass" || verification === "fail") {
+      const outcome = verification === "pass" ? "success" : "failure";
+      for (const id of loaded) recordSkillUse(profileRoot, id, outcome);
+    }
+    if (result.created || result.activated) {
+      const memory = queueLearningMemory({
+        profileDir: profileRoot,
+        candidate: result,
+        connected: memoryConnected(),
+        anonLevel: anon,
+        cwd: ctx?.cwd || profileRoot,
+      });
+      if (memory.queued > 0) ensureMemoryFlushWorker(profileRoot);
+      pi.sendMessage({
+        customType: "pi-1c-learning",
+        content: result.message || `Learning candidate ${result.id || result.type}.`,
+        display: true,
+      }, { triggerTurn: false });
+    }
   });
 }

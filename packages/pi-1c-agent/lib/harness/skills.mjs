@@ -58,20 +58,29 @@ function asList(value) {
   return [String(value)];
 }
 
+function asCount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
+}
+
 function normalizeManifest(root) {
   const requires = root.requires && typeof root.requires === 'object' && !Array.isArray(root.requires)
     ? { any: asList(root.requires.any), all: asList(root.requires.all) }
     : { any: asList(root.requires), all: [] };
+  const learning = root.learning && typeof root.learning === 'object' ? root.learning : {};
   return {
     id: String(root.id ?? ''),
     version: String(root.version ?? ''),
     description: String(root.description ?? ''),
+    status: root.status ? String(root.status) : 'active',
     triggers: asList(root.triggers),
     requires,
     optional: asList(root.optional),
     modes: asList(root.modes),
+    tools: asList(root.tools),
     cost: String(root.cost?.context ?? root.cost ?? 'low'),
     quality: String(root.quality?.level ?? root.quality ?? 'verified'),
+    learning: { successes: asCount(learning.successes), failures: asCount(learning.failures) },
   };
 }
 
@@ -88,6 +97,20 @@ export function indexManifests(skillsDir) {
     out.push(manifest);
   }
   return out;
+}
+
+export function mergeSkillCatalog(shipped = [], learned = []) {
+  const shippedIds = new Set(shipped.map((item) => item.id).filter(Boolean));
+  const collisions = [];
+  const manifests = [...shipped];
+  for (const item of learned) {
+    if (item.id && shippedIds.has(item.id)) {
+      collisions.push({ id: item.id, reason: 'shipped skill id' });
+      continue;
+    }
+    manifests.push(item);
+  }
+  return { manifests, collisions };
 }
 
 function capabilityOn(available, name) {
@@ -115,6 +138,10 @@ export function chooseSkills({ manifests = [], text = '', mode = 'ask', availabl
   for (const manifest of manifests) {
     const triggered = (manifest.triggers ?? []).some((trigger) => hay.includes(String(trigger).toLowerCase()));
     if (!triggered) continue;
+    if (manifest.status === 'draft' || manifest.status === 'deactivated') {
+      skipped.push({ id: manifest.id, reason: manifest.status });
+      continue;
+    }
     if (manifest.modes?.length && !manifest.modes.includes(mode)) {
       skipped.push({ id: manifest.id, reason: `mode ${mode}` });
       continue;

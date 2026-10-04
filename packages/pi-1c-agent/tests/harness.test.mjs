@@ -6,9 +6,19 @@ import { fileURLToPath } from 'node:url';
 import { buildSystemKernel } from '../lib/harness/system-prompt.mjs';
 import { formatCapabilitySummary, snapshotCapabilities } from '../lib/harness/capabilities.mjs';
 import { createBudget, tryAdmit } from '../lib/harness/budget.mjs';
-import { queueEvolutionMemory, observeFriction } from '../lib/harness/evolution.mjs';
+import { queueEvolutionMemory, observeFriction, approveDraft } from '../lib/harness/evolution.mjs';
+import {
+  approveLearnedSkill,
+  evaluateSkillBundle,
+  matchActiveWorkflows,
+  queueLearningMemory,
+  readLearningMode,
+  recordSkillUse,
+  reviewExperience,
+  writeLearningMode,
+} from '../lib/harness/learning.mjs';
 import { assertTierWorkflows, selectTier } from '../lib/harness/promotion.mjs';
-import { chooseSkills, parseManifest, auditSkillManifests } from '../lib/harness/skills.mjs';
+import { chooseSkills, mergeSkillCatalog, parseManifest, auditSkillManifests, indexManifests } from '../lib/harness/skills.mjs';
 import { rankKnowledgeItems } from '../lib/harness/skills.mjs';
 import { createStats, formatSessionStats } from '../lib/harness/stats.mjs';
 import { renderContextView } from '../lib/harness/context-view.mjs';
@@ -143,4 +153,195 @@ test('session stats render counters and context view shows the source', () => {
 test('every profile skill manifest has id and requires', () => {
   const audit = auditSkillManifests(path.join(profileRoot, 'skills'));
   assert.equal(audit.ok, true, audit.details);
+});
+
+function tempProfile() {
+  return fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'pi-1c-learn-'));
+}
+
+const READONLY_PROCEDURE = {
+  task: 'Обнови ЗУП поставщика и сохрани локальную дельту',
+  tools: [{ name: 'read' }, { name: 'grep' }, { name: 'syntaxcheck' }],
+  sessionMode: 'build',
+};
+
+test('learning mode defaults to safe and rejects unknown values', () => {
+  const dir = tempProfile();
+  assert.equal(readLearningMode(dir), 'safe');
+  assert.equal(writeLearningMode(dir, 'auto').mode, 'auto');
+  assert.equal(readLearningMode(dir), 'auto');
+  assert.equal(writeLearningMode(dir, 'nope').ok, false);
+  assert.equal(readLearningMode(dir), 'auto');
+});
+
+test('the second procedure trace writes no skill and off writes no draft', () => {
+  const dir = tempProfile();
+  const first = reviewExperience(dir, READONLY_PROCEDURE);
+  const second = reviewExperience(dir, READONLY_PROCEDURE);
+  assert.equal(first.created, false);
+  assert.equal(second.created, false);
+  assert.equal(fs.existsSync(path.join(dir, 'state', 'evolution', 'learned', 'skills')), false);
+  writeLearningMode(dir, 'off');
+  const signal = { type: 'reviewer_finding', subject: 'password=supersecret same finding' };
+  assert.equal(observeFriction(dir, signal).draft, null);
+  assert.equal(observeFriction(dir, signal).draft, null);
+  const third = observeFriction(dir, signal);
+  assert.equal(third.draft, null);
+  assert.equal(third.count, 3);
+  const tree = fs.readdirSync(path.join(dir, 'state', 'evolution'));
+  assert.equal(tree.includes('drafts'), false);
+  const dumped = fs.readFileSync(path.join(dir, 'state', 'evolution', 'friction.json'), 'utf8');
+  assert.equal(dumped.includes('supersecret'), false);
+});
+
+test('safe keeps a passing bundle inactive until approve and auto skips a configuration load', () => {
+  const safeDir = tempProfile();
+  let last;
+  for (let i = 0; i < 3; i += 1) last = reviewExperience(safeDir, READONLY_PROCEDURE);
+  assert.equal(last.created, true);
+  assert.equal(last.activated, false);
+  const manifests = indexManifests(path.join(safeDir, 'state', 'evolution', 'learned', 'skills'));
+  const choice = chooseSkills({ manifests, text: 'обнови зуп', mode: 'build', available: {} });
+  assert.equal(choice.selected.length, 0);
+  assert.ok(choice.skipped.some((item) => item.reason === 'draft'));
+  const approved = approveLearnedSkill(safeDir, last.id);
+  assert.equal(approved.activated, true);
+  assert.match(approved.message, new RegExp(last.id));
+  const active = chooseSkills({
+    manifests: indexManifests(path.join(safeDir, 'state', 'evolution', 'learned', 'skills')),
+    text: 'обнови зуп',
+    mode: 'build',
+    available: {},
+  });
+  assert.deepEqual(active.selected.map((item) => item.id), [last.id]);
+  const stub = approveDraft(safeDir, 'missing-stub');
+  assert.equal(stub.ok, false);
+
+  const autoDir = tempProfile();
+  writeLearningMode(autoDir, 'auto');
+  let activated;
+  for (let i = 0; i < 3; i += 1) activated = reviewExperience(autoDir, READONLY_PROCEDURE);
+  assert.equal(activated.activated, true);
+  assert.match(activated.message, /is active/);
+  const loaded = parseManifest(fs.readFileSync(path.join(autoDir, 'state', 'evolution', 'learned', 'skills', activated.id, 'manifest.yaml'), 'utf8'));
+  assert.equal(loaded.status, 'active');
+  assert.equal(loaded.quality, 'candidate');
+  assert.equal(loaded.learning.successes, 0);
+
+  const loadDir = tempProfile();
+  writeLearningMode(loadDir, 'auto');
+  const loading = {
+    task: 'Загрузи расширение в тестовую базу',
+    tools: [{ name: 'read' }, { name: 'grep' }, { name: 'bash', input: { command: 'ЗагрузитьИнформационнуюБазу' } }],
+  };
+  let held;
+  for (let i = 0; i < 3; i += 1) held = reviewExperience(loadDir, loading);
+  assert.equal(held.activated, false);
+  assert.equal(parseManifest(fs.readFileSync(path.join(loadDir, 'state', 'evolution', 'learned', 'skills', held.id, 'manifest.yaml'), 'utf8')).status, 'draft');
+  const broken = path.join(loadDir, 'state', 'evolution', 'learned', 'skills', held.id, 'SKILL.md');
+  fs.writeFileSync(broken, '# broken\n');
+  const refused = approveLearnedSkill(loadDir, held.id);
+  assert.equal(refused.activated, false);
+  assert.match(refused.reason, /SKILL.md/);
+});
+
+test('fact, decision, pipeline and lesson stay drafts in auto', () => {
+  const dir = tempProfile();
+  const project = path.join(dir, 'project');
+  fs.mkdirSync(project);
+  writeLearningMode(dir, 'auto');
+  fs.mkdirSync(path.join(dir, 'workflows'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'workflows', 'tier2.yaml'), 'name: tier2\n');
+  const fact = reviewExperience(dir, { task: 'В ERP регистр Хозрасчетный используется для остатков' }, { cwd: project, mode: 'auto' });
+  const decision = reviewExperience(dir, { task: 'Новые объекты создаём только в расширении CompanyExt' }, { cwd: project, mode: 'auto' });
+  const pipeline = reviewExperience(dir, { task: 'Интеграция', roles: ['explorer', 'architect', 'developer', 'tester'] }, { mode: 'auto' });
+  const lesson = reviewExperience(dir, { task: 'Нельзя выгружать всё расширение', verification: 'fail', tools: [{ name: 'read' }] }, { mode: 'auto' });
+  assert.equal(fact.activated, false);
+  assert.equal(decision.activated, false);
+  assert.equal(pipeline.activated, false);
+  assert.equal(lesson.activated, false);
+  const drafts = fs.readdirSync(path.join(project, '.pi', '1c', 'knowledge-drafts'));
+  assert.equal(drafts.length, 2);
+  const factDraft = JSON.parse(fs.readFileSync(path.join(project, '.pi', '1c', 'knowledge-drafts', drafts.find((name) => name.endsWith('.json'))), 'utf8'));
+  assert.equal(factDraft.status, 'pending');
+  assert.equal(fs.existsSync(path.join(project, 'USER-RULES.md')), false);
+  const items = path.join(project, '.pi', '1c', 'knowledge', 'items');
+  assert.deepEqual(fs.existsSync(items) ? fs.readdirSync(items) : [], []);
+  const lessonFile = fs.readdirSync(path.join(dir, 'state', 'evolution', 'learned', 'lessons'))[0];
+  assert.match(fs.readFileSync(path.join(dir, 'state', 'evolution', 'learned', 'lessons', lessonFile), 'utf8'), /status: draft/);
+  const workflowFile = fs.readdirSync(path.join(dir, 'state', 'evolution', 'learned', 'workflows'))[0];
+  assert.match(fs.readFileSync(path.join(dir, 'state', 'evolution', 'learned', 'workflows', workflowFile), 'utf8'), /status: draft/);
+  assert.equal(fs.readFileSync(path.join(dir, 'workflows', 'tier2.yaml'), 'utf8'), 'name: tier2\n');
+  assert.equal(selectTier('Исправь одну процедуру в Module.bsl').workflow, 'tier1');
+});
+
+test('learned skill index skips drafts and shipped id collisions, and two failures deactivate', () => {
+  const shipped = [{ id: 'meta', status: 'active', triggers: ['объект'], requires: { any: [], all: [] }, modes: ['build'], cost: 'low' }];
+  const learned = [
+    { id: 'meta', status: 'active', triggers: ['объект'], requires: { any: [], all: [] }, modes: ['build'], cost: 'low' },
+    { id: 'local', status: 'draft', triggers: ['объект'], requires: { any: [], all: [] }, modes: ['build'], cost: 'low' },
+    { id: 'ready', status: 'active', triggers: ['объект'], requires: { any: [], all: [] }, modes: ['build'], cost: 'low' },
+  ];
+  const merged = mergeSkillCatalog(shipped, learned);
+  assert.deepEqual(merged.collisions, [{ id: 'meta', reason: 'shipped skill id' }]);
+  const choice = chooseSkills({ manifests: merged.manifests, text: 'объект', mode: 'build', available: {} });
+  assert.deepEqual(choice.selected.map((item) => item.id).sort(), ['meta', 'ready']);
+  assert.ok(choice.skipped.some((item) => item.id === 'local' && item.reason === 'draft'));
+
+  const dir = tempProfile();
+  writeLearningMode(dir, 'auto');
+  let created;
+  for (let i = 0; i < 3; i += 1) created = reviewExperience(dir, READONLY_PROCEDURE);
+  recordSkillUse(dir, created.id, 'failure');
+  const second = recordSkillUse(dir, created.id, 'failure');
+  assert.equal(second.status, 'deactivated');
+  const after = chooseSkills({
+    manifests: indexManifests(path.join(dir, 'state', 'evolution', 'learned', 'skills')),
+    text: 'обнови зуп',
+    mode: 'build',
+    available: {},
+  });
+  assert.equal(after.selected.length, 0);
+  assert.ok(fs.existsSync(path.join(dir, 'state', 'evolution', 'learned', 'skills', created.id, 'SKILL.md')));
+  const parsed = parseManifest(fs.readFileSync(path.join(dir, 'state', 'evolution', 'learned', 'skills', created.id, 'manifest.yaml'), 'utf8'));
+  assert.equal(parsed.learning.failures, 2);
+  assert.equal(evaluateSkillBundle(path.join(dir, 'state', 'evolution', 'learned', 'skills', created.id)).ok, true);
+});
+
+test('a shipped manifest without status stays active and memory stays queued', () => {
+  const parsed = parseManifest('id: meta\ntriggers:\n  - объект\nrequires:\n  any: []\nmodes:\n  - build\nquality:\n  level: verified\n');
+  assert.equal(parsed.status, 'active');
+  assert.equal(parsed.quality, 'verified');
+  assert.equal(parsed.learning.successes, 0);
+  const dir = tempProfile();
+  const skipped = queueLearningMemory({ profileDir: dir, candidate: { id: 'x', type: 'skill' }, connected: false });
+  assert.equal(skipped.queued, 0);
+  const queued = queueLearningMemory({ profileDir: dir, candidate: { id: 'x', type: 'skill', message: 'draft' }, connected: true, cwd: dir });
+  assert.equal(queued.queued, 2);
+  const pending = fs.readdirSync(path.join(dir, 'state', 'agent-memory', 'pending'));
+  assert.equal(pending.length, 2);
+});
+
+test('three successful uses verify a learned skill', () => {
+  const dir = tempProfile();
+  writeLearningMode(dir, 'auto');
+  let created;
+  const experience = { ...READONLY_PROCEDURE, task: 'Собери отчёт по остаткам регистра партии' };
+  for (let i = 0; i < 3; i += 1) created = reviewExperience(dir, experience);
+  assert.equal(recordSkillUse(dir, created.id, 'success').quality, 'experimental');
+  recordSkillUse(dir, created.id, 'success');
+  const third = recordSkillUse(dir, created.id, 'success');
+  assert.equal(third.quality, 'verified');
+  assert.equal(third.learning.successes, 3);
+});
+
+test('active learned workflow is admitted and a draft workflow is not', () => {
+  const dir = tempProfile();
+  const root = path.join(dir, 'state', 'evolution', 'learned', 'workflows');
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(path.join(root, 'draft.yaml'), 'name: draft\nstatus: draft\ntriggers:\n  - зуп\nstages:\n  - 1c-developer\n');
+  fs.writeFileSync(path.join(root, 'live.yaml'), 'name: live\nstatus: active\ntriggers:\n  - зуп\nstages:\n  - 1c-developer\n');
+  const hits = matchActiveWorkflows(dir, 'обнови зуп');
+  assert.deepEqual(hits.map((item) => item.id), ['live']);
+  assert.equal(matchActiveWorkflows(dir, 'другая задача').length, 0);
 });

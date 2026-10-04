@@ -22,6 +22,8 @@ import {
   APPROVE_INTRO,
   CAPTURE_MODEL_CHOICES,
   CAPTURE_MODEL_INTRO,
+  LEARNING_CHOICES,
+  LEARNING_INTRO,
   SESSION_ROTATE_CHOICES,
   SESSION_ROTATE_INTRO,
 } from "../../lib/ui/option-choices.mjs";
@@ -127,6 +129,10 @@ export async function pickOverlay(
     return selected || undefined;
   }
   return undefined;
+}
+
+export async function overlayLearningSelect(ctx: any): Promise<string | undefined> {
+  return pickOverlay(ctx, "Learning mode", LEARNING_CHOICES, LEARNING_INTRO);
 }
 
 export async function overlayApproveSelect(ctx: any): Promise<string | undefined> {

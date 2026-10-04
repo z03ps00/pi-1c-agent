@@ -83,6 +83,7 @@ test('footer BUILD omits default-off flags', () => {
   }, 160);
   assert.match(text, /BUILD/);
   assert.match(text, /safe/);
+  assert.match(text, /learning:safe/);
   assert.match(text, /mcp 0\/0/);
   assert.match(text, /think off/);
   assert.match(text, /rotate off 85%/);

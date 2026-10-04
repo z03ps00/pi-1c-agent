@@ -25,6 +25,14 @@ export const CAPTURE_MODEL_CHOICES = [
   { value: 'routerai', label: 'routerai', description: 'модель Router AI. Дальше спросит имя.' },
 ];
 
+export const LEARNING_INTRO = 'Пишет ли агент локальные skills из повторяющейся работы. Новая сессия берёт сохранённый режим. По умолчанию safe.';
+
+export const LEARNING_CHOICES = [
+  { value: 'off', label: 'off', description: 'не создавать skills, rules и черновики из опыта.' },
+  { value: 'safe', label: 'safe', description: 'собрать skill и ждать /evolve approve.' },
+  { value: 'auto', label: 'auto', description: 'включить procedure-skill без опасных инструментов после проверки.' },
+];
+
 export const SESSION_ROTATE_INTRO = 'Новая сессия вместо сжатия контекста. Порог процента задаётся отдельно: /session-rotate 80.';
 
 export const SESSION_ROTATE_CHOICES = [

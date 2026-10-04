@@ -64,6 +64,12 @@ add('package version', packageJson.version === '0.9.0', true, packageJson.versio
 add('1C harness kernel', exists(path.join(packageRoot, 'system', 'core.md')) && exists(path.join(packageRoot, 'lib', 'harness', 'system-prompt.mjs')) && exists(path.join(packageRoot, 'lib', 'harness', 'router.mjs')));
 add('1C context router extension', extList.includes('extensions/1c-context-router/index.ts') && extList.indexOf('extensions/1c-mode/index.ts') < extList.indexOf('extensions/1c-context-router/index.ts') && extList.at(-1) === 'extensions/1c-ui/index.ts');
 {
+  const routerSrc = exists(path.join(packageRoot, 'extensions', '1c-context-router', 'index.ts'))
+    ? read(path.join(packageRoot, 'extensions', '1c-context-router', 'index.ts'))
+    : '';
+  add('canonical /learning overlay', /registerCommand\("learning"/.test(routerSrc) && /overlayLearningSelect/.test(routerSrc) && !/registerCommand\("1c-learning"/.test(routerSrc));
+}
+{
   const profileSkills = path.resolve(packageRoot, '..', '..', 'skills');
   const audit = auditSkillManifests(profileSkills);
   add('profile skill manifests', audit.ok, exists(profileSkills), audit.details || 'ok');

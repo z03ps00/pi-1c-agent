@@ -110,6 +110,9 @@ export function footerSegments(snapshot = {}) {
     segs.push({ id: 'git', text: `${snapshot.gitBranch}${snapshot.gitDirty ? '*' : ''}` });
   }
 
+  const learning = String(snapshot.learning || 'safe').toLowerCase();
+  segs.push({ id: 'learning', text: `learning:${learning === 'auto' || learning === 'off' ? learning : 'safe'}` });
+
   if (snapshot.model) segs.push({ id: 'model', text: shortModel(snapshot.model) });
 
   segs.push({ id: 'mcp', text: mcpFooterLabel(snapshot) });
@@ -126,7 +129,7 @@ export function footerSegments(snapshot = {}) {
 
 /** Drop order for a narrow terminal (lowest priority first). Mode is never dropped. */
 export const FOOTER_DROP_ORDER = Object.freeze([
-  'bar', 'caps', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'approve', 'readonly', 'taskmode', 'anon',
+  'bar', 'caps', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'learning', 'approve', 'readonly', 'taskmode', 'anon',
 ]);
 
 export function composeFooter(snapshot = {}, width = 80) {

@@ -34,6 +34,7 @@ export const PACKAGE_OWNED_COMMANDS = [
   'capabilities',
   'context',
   'evolve',
+  'learning',
   'session-stats',
 ];
 export const DESTRUCTIVE_PROMPT_NAMES = [

@@ -10,6 +10,9 @@ function blank() {
     skipped: [],
     stats: createStats(),
     budget: createBudget(),
+    trace: [],
+    prompt: '',
+    verification: null,
   };
 }
 
@@ -44,7 +47,31 @@ export function beginTurn(kernelText, env = process.env) {
   tryAdmit(session.budget, { id: 'kernel', bucket: 'kernel', text: kernelText, protect: true }, stats);
   session.tools = tools;
   session.stats = stats;
+  session.trace = [];
+  session.prompt = '';
+  session.verification = null;
   return session;
+}
+
+export function notePrompt(text) {
+  session.prompt = String(text || '');
+  return session.prompt;
+}
+
+export function noteTrace(entry) {
+  if (!entry?.name) return session.trace;
+  session.trace.push({
+    name: String(entry.name),
+    dangerous: Boolean(entry.dangerous),
+    role: entry.role ? String(entry.role) : '',
+  });
+  return session.trace;
+}
+
+export function noteVerification(ok) {
+  if (ok === false) session.verification = 'fail';
+  else if (session.verification !== 'fail') session.verification = 'pass';
+  return session.verification;
 }
 
 export function resetSessionForTests(env = process.env) {

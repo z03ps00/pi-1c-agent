@@ -3,6 +3,7 @@ import path from 'node:path';
 import { hasUnredactableSecret, redact } from '../redact.mjs';
 import { prepareWrite } from '../memory-write.mjs';
 import { queuePendingRecord } from '../memory-reconcile.mjs';
+import { readLearningMode } from './learning.mjs';
 
 export const DRAFT_THRESHOLD = 3;
 export const SIGNAL_TYPES = Object.freeze([
@@ -50,7 +51,7 @@ function kindFor(type) {
   return 'skill';
 }
 
-export function observeFriction(profileDir, signal = {}) {
+export function observeFriction(profileDir, signal = {}, options = {}) {
   const id = fingerprintSignal(signal);
   if (!id) return { ok: false, reason: 'ignored signal', draft: null };
   const journal = readJson(journalPath(profileDir), { signals: {} });
@@ -59,6 +60,8 @@ export function observeFriction(profileDir, signal = {}) {
   journal.signals[id] = current;
   writeJson(journalPath(profileDir), journal);
   if (current.count < DRAFT_THRESHOLD) return { ok: true, count: current.count, draft: null, activated: false };
+  const mode = options.mode || readLearningMode(profileDir);
+  if (mode === 'off') return { ok: true, count: current.count, draft: null, activated: false };
   const draft = ensureDraft(profileDir, { fingerprint: id, kind: kindFor(signal.type), subject: current.subject });
   return { ok: true, count: current.count, draft, activated: false };
 }

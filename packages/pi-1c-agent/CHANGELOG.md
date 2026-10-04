@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `/learning off|safe|auto` разбирает законченную BUILD-задачу. Повторяемая процедура становится локальным skill в `state/evolution/learned/` после структурной проверки. `safe` ждёт `/evolve approve`, `auto` включает только procedure-skill без опасных инструментов. Факты, правила, workflows и уроки остаются черновиками.
+
 ## 0.9.0 — 2026-10-04
 
 - System kernel собирает короткий промпт из `system/*.md`. В него не попадают весь `ai_rules_1c`, все skills и вся knowledge base. `AGENTS.md` остаётся контрактом профиля.

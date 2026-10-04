@@ -1,9 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Key, truncateToWidth } from "@earendil-works/pi-tui";
 import { loadConfiguration } from "../../lib/knowledge.mjs";
 import { formatCapabilityFooter, snapshotCapabilities } from "../../lib/harness/capabilities.mjs";
+import { readLearningMode } from "../../lib/harness/learning.mjs";
 import { contextPercent } from "../../lib/harness/budget.mjs";
 import { getSession } from "../../lib/harness/session.mjs";
 import { initStatus } from "../../lib/project-init.mjs";
@@ -36,6 +38,8 @@ import {
 import { overlayChild, overlayHub, overlayModeSelect, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
 
 let widgetMounted = false;
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const profileRoot = process.env.PI_CODING_AGENT_DIR?.trim() || path.resolve(packageRoot, "..", "..");
 
 function readProjectName(cwd: string): string {
   try {
@@ -70,6 +74,7 @@ function collectSnapshot(ctx: any, footerData?: any, pi?: ExtensionAPI) {
     taskmode: mode.taskmode || "auto",
     anonLevel: mode.anonLevel || 0,
     approve: mode.approve || "off",
+    learning: readLearningMode(profileRoot),
     rotateEnabled: rotate.enabled === true,
     rotateThreshold: rotate.thresholdPercent ?? 85,
     captureEnabled: capture.idleEnabled === true && capture.host === "pi",

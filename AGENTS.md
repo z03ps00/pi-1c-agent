@@ -71,6 +71,8 @@ PLAN protects project code but permits planning artifacts only in `openspec/**`,
 
 **Approval mode.** `/approve off|safe|strict`, `Ctrl+Alt+S`. `off` does not ask (default). `safe` prompts on dangerous BUILD actions (file writes, destructive bash, MCP/IB mutations). `strict` prompts on every tool call. Footer shows `approve:off|safe|strict`. Pi-only; without UI the would-be prompt is blocked, not auto-allowed.
 
+**Learning mode.** `/learning off|safe|auto`. Empty opens the overlay. Default `safe`, stored in the profile. Footer shows `learning:off|safe|auto`. Pi reviews a finished BUILD turn and may write a learned skill under `state/evolution/learned/`. Cursor does not run that review.
+
 **Dual host.** ASK/PLAN/BUILD/ANON/APPROVE tool gates exist in **Pi** (`1c-mode`). Cursor loads this `AGENTS.md` but does **not** enforce the write-block, anon denials, or approve prompts. `/init` TUI is Pi-only. Cursor users follow the same prompts as procedures.
 
 ## Project initialization
