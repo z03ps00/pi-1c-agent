@@ -7,4 +7,28 @@ if ! command -v pi >/dev/null 2>&1; then
   echo "pi не найден в PATH. Установите Pi Coding Agent 0.85.x." >&2
   exit 1
 fi
+
+looks_like_dir_arg() {
+  case "$1" in
+    /*|~|~/*|./*|../*) return 0 ;;
+  esac
+  [[ "$1" =~ ^[A-Za-z]:[\\/] ]]
+}
+
+if [ "$#" -ge 1 ]; then
+  target="$1"
+  if [[ "$target" == "~" ]]; then
+    target="$HOME"
+  elif [[ "$target" == ~/* ]]; then
+    target="$HOME/${target#~/}"
+  fi
+  if [ -d "$target" ]; then
+    cd "$target"
+    shift
+  elif looks_like_dir_arg "$1"; then
+    echo "Каталог не найден: $1" >&2
+    exit 1
+  fi
+fi
+
 exec pi "$@"
