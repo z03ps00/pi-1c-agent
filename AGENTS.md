@@ -27,7 +27,7 @@ This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already c
 4. Optional: `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk` and the same prefix for `npm:pi-tool-display`.
 5. Start with `pi-1c` (not plain `pi`) and check with `/doctor`.
 
-Full copy-paste is in `README.md` → «Быстрый старт».
+Full copy-paste is in `README.md` → «Быстрый старт». If you are installing for a person, follow `INSTALL-AGENT.md` and do those steps; do not stop after describing them.
 
 **Update an existing install** when this directory is already the profile clone:
 
