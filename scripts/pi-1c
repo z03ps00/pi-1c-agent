@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Launch Pi with this 1C profile only. Does not change the default `pi` profile.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PI_CODING_AGENT_DIR="$ROOT"
+if ! command -v pi >/dev/null 2>&1; then
+  echo "pi не найден в PATH. Установите Pi Coding Agent 0.85.x." >&2
+  exit 1
+fi
+exec pi "$@"

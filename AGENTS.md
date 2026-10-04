@@ -21,10 +21,13 @@ This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already c
 
 **Install from scratch** when `$PI_CODING_AGENT_DIR` is unset, the target is not this profile (`AGENTS.md` with `PI-1C-AGENT`, `prompts/CATALOG.md`, `rules-1c/`), `packages/pi-1c-agent/package.json` is missing, or `settings.json` still lists `<path-to-pi-1c-agent>`:
 
-1. Clone this repository into the profile directory. Set `PI_CODING_AGENT_DIR` to that clone (no trailing-space folder names).
-2. Run `node "$PI_CODING_AGENT_DIR/scripts/setup.mjs"` (Windows: `node "%PI_CODING_AGENT_DIR%\scripts\setup.mjs"`). It fills `packages[0]`, copies `auth.json` / `trust.json` from the examples if they are missing, and is safe to re-run.
-3. Optional: `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk` and `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-tool-display`.
-4. Check with `/doctor`.
+1. Clone this repository into the profile directory (no trailing-space folder names). Do **not** persist `PI_CODING_AGENT_DIR` in the shell rc or the Windows user environment: that would make every `pi` this 1C profile. Set the variable only for the setup command and for the dedicated launcher.
+2. Run `PI_CODING_AGENT_DIR=<clone> node "<clone>/scripts/setup.mjs"` (Windows: set the variable for that process only, then remove it). It fills `packages[0]`, copies `auth.json` / `trust.json` from the examples if they are missing, and is safe to re-run. It does not edit `~/.pi/agent`.
+3. Install a dedicated launcher for the host OS so plain `pi` stays the previous profile. Linux and macOS: `chmod +x <clone>/scripts/pi-1c` and `ln -sfn` it to `~/.local/bin/pi-1c` (macOS: ensure `~/.local/bin` is on `PATH` without exporting `PI_CODING_AGENT_DIR`). Windows: copy `<clone>/scripts/pi-1c.cmd` onto the user `PATH`. Then put a desktop shortcut that runs that launcher only: Linux `.desktop` from `scripts/Pi-1C-Agent.desktop.in` (`Terminal=true`; agent-shortcut folder such as `Рабочий стол/Программы/AGENTS` when it exists, otherwise the desktop and `~/.local/share/applications/`); macOS `Pi 1C Agent.command` on the Desktop; Windows `Pi 1C Agent.lnk` on the Desktop targeting `pi-1c.cmd`. Do not point the shortcut at a machine-local control script.
+4. Optional: `PI_CODING_AGENT_DIR=<clone> pi install npm:pi-cursor-sdk` and the same prefix for `npm:pi-tool-display`.
+5. Start with `pi-1c` (not plain `pi`) and check with `/doctor`.
+
+Full copy-paste is in `README.md` → «Быстрый старт».
 
 **Update an existing install** when this directory is already the profile clone:
 
