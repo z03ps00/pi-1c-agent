@@ -1,0 +1,4 @@
+name: tier1
+stages:
+  - 1c-developer
+  - verification

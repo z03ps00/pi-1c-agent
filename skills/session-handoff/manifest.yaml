@@ -1,0 +1,19 @@
+id: session-handoff
+version: 1.0.0
+description: "Summarize significant completed work into a compact, reusable handoff and persist only durable confirmed parts to shared memory."
+triggers:
+  - "session-handoff"
+  - "session"
+  - "handoff"
+requires:
+  any:
+    - memory.short
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

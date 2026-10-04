@@ -1,0 +1,20 @@
+id: 1c-code-search
+version: 1.0.0
+description: "Find BSL code in a 1C project — routines by name, code by behaviour or exact literal, module layout, members of a context — through the graph and code-metadata MCP servers before any Grep. Use whenever a task needs to locate or read a fragm"
+triggers:
+  - "1c-code-search"
+  - "code"
+  - "search"
+requires:
+  any:
+    - code.search
+    - code.symbol
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

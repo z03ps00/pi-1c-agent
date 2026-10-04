@@ -1,0 +1,16 @@
+id: kd31-rules
+version: 1.0.0
+description: "Creates and edits 1C Конвертация данных 3.1 EnterpriseData exchange rules (ПКО _Отправка/_Получение, ПКС, ПОД, XDTO format extension, manager module BSL) in a live KD 3.1 infobase via MCP_Toolkit HTTP API. Use when the user asks about КД 3,"
+triggers:
+  - "kd31-rules"
+  - "kd31"
+  - "rules"
+requires:
+  any: []
+optional: []
+modes:
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -1,0 +1,18 @@
+id: mermaid-diagrams
+version: 1.0.0
+description: "Practical guide for creating human-readable and agent-parseable diagrams using Mermaid. Includes conservative, renderer-compatible templates and when-to-use guidance."
+triggers:
+  - "mermaid-diagrams"
+  - "mermaid"
+  - "diagrams"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

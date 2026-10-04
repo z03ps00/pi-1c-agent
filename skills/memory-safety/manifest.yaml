@@ -1,0 +1,19 @@
+id: memory-safety
+version: 1.0.0
+description: "Gate every candidate shared-memory write: reject secrets, temporary output, unconfirmed hypotheses, low-value noise, duplicates, and wrongly scoped information."
+triggers:
+  - "memory-safety"
+  - "memory"
+  - "safety"
+requires:
+  any:
+    - memory.short
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

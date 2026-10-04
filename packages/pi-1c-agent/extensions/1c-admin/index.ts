@@ -4,6 +4,8 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerAction } from "../../lib/ui/index.mjs";
+import { formatCapabilityBlock, snapshotCapabilities } from "../../lib/harness/capabilities.mjs";
+import { getSession, noteTools } from "../../lib/harness/session.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -26,7 +28,9 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
     const scope = requested === "project" || requested === "global" ? requested : defaultScope(ctx.cwd);
     const result = runNode("doctor.mjs", [scope === "project" ? "--project" : "--global"], ctx.cwd);
     const text = `${result.stdout || ""}${result.stderr ? `\n${result.stderr}` : ""}`.trim() || `doctor exited ${result.status}`;
-    pi.sendMessage({ customType: "pi-1c-doctor", content: text, display: true }, { triggerTurn: false });
+    try { noteTools(pi.getActiveTools()); } catch { /* doctor still prints an empty snapshot */ }
+    const capabilities = formatCapabilityBlock(snapshotCapabilities(getSession().tools));
+    pi.sendMessage({ customType: "pi-1c-doctor", content: `${text}\n\n${capabilities}`, display: true }, { triggerTurn: false });
   }
 
   pi.registerCommand("doctor", {

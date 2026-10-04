@@ -1,0 +1,18 @@
+id: powershell-windows
+version: 1.0.0
+description: "PowerShell scripting rules for Windows environment. Use when running shell commands, Docker operations, or HTTP requests on Windows PowerShell."
+triggers:
+  - "powershell-windows"
+  - "powershell"
+  - "windows"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -98,6 +98,8 @@ export function footerSegments(snapshot = {}) {
 
   if (snapshot.projectName) segs.push({ id: 'project', text: String(snapshot.projectName) });
 
+  if (snapshot.capabilityFooter) segs.push({ id: 'caps', text: String(snapshot.capabilityFooter) });
+
   const pct = roundPct(snapshot.contextPercent);
   if (pct != null) {
     segs.push({ id: 'ctx', text: `ctx ${pct}%` });
@@ -124,7 +126,7 @@ export function footerSegments(snapshot = {}) {
 
 /** Drop order for a narrow terminal (lowest priority first). Mode is never dropped. */
 export const FOOTER_DROP_ORDER = Object.freeze([
-  'bar', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'approve', 'readonly', 'taskmode', 'anon',
+  'bar', 'caps', 'project', 'capture', 'memory', 'plan', 'git', 'model', 'mcp', 'thinking', 'rotate', 'ctx', 'approve', 'readonly', 'taskmode', 'anon',
 ]);
 
 export function composeFooter(snapshot = {}, width = 80) {

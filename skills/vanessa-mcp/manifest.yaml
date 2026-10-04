@@ -1,0 +1,20 @@
+id: vanessa-mcp
+version: 1.0.0
+description: "Protocol for writing, checking and running Vanessa Automation scenario tests (.feature / Gherkin / Turbo Gherkin) through the Vanessa MCP server and its test client. Use whenever the user asks to write, debug, or run a Vanessa scenario, a ."
+triggers:
+  - "vanessa-mcp"
+  - "vanessa"
+  - "mcp"
+requires:
+  any:
+    - test.ui
+    - test.unit
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

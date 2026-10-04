@@ -8,6 +8,7 @@ import { auditKnowledge, loadConfiguration } from '../lib/knowledge.mjs';
 import { collectRuntimeStatus, formatRuntimeStatus } from '../lib/runtime-status.mjs';
 import { auditDevEnvSchema, initStatus, locateDevEnvExample } from '../lib/project-init.mjs';
 import { dockerPolicyLabel } from '../lib/docker-policy.mjs';
+import { auditSkillManifests } from '../lib/harness/skills.mjs';
 import { MIN_NODE_VERSION, nodeMeetsMinimum } from '../lib/node-runtime.mjs';
 import {
   bootstrapWritesOptionalMcp,
@@ -59,7 +60,14 @@ function commandVersion(cmd) {
 
 const packageJson = JSON.parse(read(path.join(packageRoot, 'package.json')));
 const extList = packageJson?.pi?.extensions ?? [];
-add('package version', packageJson.version === '0.8.0', true, packageJson.version);
+add('package version', packageJson.version === '0.9.0', true, packageJson.version);
+add('1C harness kernel', exists(path.join(packageRoot, 'system', 'core.md')) && exists(path.join(packageRoot, 'lib', 'harness', 'system-prompt.mjs')) && exists(path.join(packageRoot, 'lib', 'harness', 'router.mjs')));
+add('1C context router extension', extList.includes('extensions/1c-context-router/index.ts') && extList.indexOf('extensions/1c-mode/index.ts') < extList.indexOf('extensions/1c-context-router/index.ts') && extList.at(-1) === 'extensions/1c-ui/index.ts');
+{
+  const profileSkills = path.resolve(packageRoot, '..', '..', 'skills');
+  const audit = auditSkillManifests(profileSkills);
+  add('profile skill manifests', audit.ok, exists(profileSkills), audit.details || 'ok');
+}
 add(`Node >=${MIN_NODE_VERSION}`, nodeMeetsMinimum(), true, process.version);
 add('Pi peer ranges bounded', Object.values(packageJson.peerDependencies || {}).every((range) => range && range !== '*'), true, JSON.stringify(packageJson.peerDependencies));
 add('1C PLAN/BUILD extension', exists(path.join(packageRoot, 'extensions', '1c-mode', 'index.ts')) && extList.includes('extensions/1c-mode/index.ts'));

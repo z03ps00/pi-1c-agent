@@ -64,7 +64,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 
 | Command | Purpose |
 |---|---|
-| `/evolve` | Propose `LLM-RULES.md` updates from friction signals |
+| `/evolve` | Package command: draft skill/rule/workflow/prompt, or the LLM-RULES.md pass (`ruleset`, `note`, `show`) |
 | `/ponytail-review` | Read-only simplification review of the current diff / selected files |
 | `/review-airules` | Read-only review of `comol/ai_rules_1c` vs this profile pin |
 | `/support` | Support ticket about MCP / ruleset |

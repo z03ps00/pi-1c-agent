@@ -1,0 +1,16 @@
+id: transcribe
+version: 1.0.0
+description: "Transcribe video and audio files via Gemini API. Use when the user asks to transcribe a recording, generate a meeting summary, extract speech from video or audio, or convert speech to text. Supports mp4, mkv, webm, avi, mov, mp3, wav, ogg,"
+triggers:
+  - "transcribe"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

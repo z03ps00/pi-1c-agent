@@ -1,0 +1,20 @@
+id: 1c-impact
+version: 1.0.0
+description: "Usages, dependencies, call chains and change impact of 1C objects and routines — callers, downstream breakage, register movements, extension changes — via the graph MCP with code-metadata fallback. Mandatory before renames, removals, refact"
+triggers:
+  - "1c-impact"
+  - "impact"
+requires:
+  any:
+    - graph.impact
+    - graph.usages
+    - graph.dependencies
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

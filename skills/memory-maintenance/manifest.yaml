@@ -1,0 +1,19 @@
+id: memory-maintenance
+version: 1.0.0
+description: "Maintain shared Cognee memory by detecting duplicates, superseded records, stale project state, and contradictions while preserving useful history."
+triggers:
+  - "memory-maintenance"
+  - "memory"
+  - "maintenance"
+requires:
+  any:
+    - memory.short
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

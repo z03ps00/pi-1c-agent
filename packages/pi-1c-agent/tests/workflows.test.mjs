@@ -10,7 +10,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 
 test('runtime loads all declared workflow YAML files as source of truth', () => {
   const workflows = loadWorkflows(packageRoot);
-  assert.deepEqual([...workflows.keys()].sort(), ['architecture','bugfix','feature','performance','refactor']);
+  assert.deepEqual([...workflows.keys()].sort(), ['architecture','bugfix','feature','performance','refactor','tier1','tier2','tier3','tier4']);
   const feature = workflows.get('feature');
   assert.equal(feature.stages.at(-1).type, 'verification');
   const architecture = workflows.get('architecture');

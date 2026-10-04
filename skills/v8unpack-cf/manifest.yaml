@@ -1,0 +1,17 @@
+id: v8unpack-cf
+version: 1.0.0
+description: "Read and write 1C binary artifacts without the 1C:Enterprise platform. Two workflows: an ordinary form (обычная форма) `Ext/Form.bin` through the `unpack_ordinary_form` / `build_ordinary_form` MCP tools, and a whole CF / CFE / EPF through t"
+triggers:
+  - "v8unpack-cf"
+  - "v8unpack"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

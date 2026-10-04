@@ -17,6 +17,9 @@ import { HANDOFF_HEADING, handoffFailureMessage, handoffInstruction, parseUpstre
 import { current1cMode, requireBuild } from "../../lib/mode-state.mjs";
 import { withSubagentSlot } from "../../lib/subagent-budget.mjs";
 import { combineParallelHandoffs, loadWorkflows, verifyWorkflowHandoff } from "../../lib/workflows.mjs";
+import { selectTier } from "../../lib/harness/promotion.mjs";
+import { getSession } from "../../lib/harness/session.mjs";
+import { notePromotion } from "../../lib/harness/stats.mjs";
 import {
   composeHubRows,
   composeHubText,
@@ -641,8 +644,21 @@ export default function oneCSubagents(pi: ExtensionAPI) {
       };
       try {
         requireBuild("workflow_1c execution");
+        let workflowName = String(params.workflow || "");
+        let taskText = String(params.task || "");
+        if (!workflowName || workflowName === "auto" || workflowName === "tier") {
+          const tier = selectTier(taskText);
+          notePromotion(getSession().stats, tier.tier);
+          if (tier.tier === 0) {
+            return { content: [{ type: "text", text: tier.summary }], details: { workflow: "tier0", tier } };
+          }
+          workflowName = tier.workflow;
+          if (tier.syntaxCheckRequired) taskText += "\n\nSyntax check stays required. This tier does not replace /mode.";
+          params = { ...params, workflow: workflowName, task: taskText };
+          workflowUi.workflow = workflowName;
+        }
         const workflows = loadWorkflows(packageRoot);
-        const workflow = workflows.get(params.workflow);
+        const workflow = workflows.get(workflowName);
         if (!workflow) throw new Error(`Unknown workflow '${params.workflow}'. Available: ${[...workflows.keys()].join(", ")}`);
         workflowUi.stages = workflow.stages.map((stage: any) => ({
           agent: stage.agent || (stage.type === "parallel" ? stage.agents?.join(", ") : stage.type),

@@ -1,0 +1,21 @@
+id: mcp-1c-tools
+version: 1.0.0
+description: "Router for the 1C MCP ecosystem — which server answers which need, which operation skill holds the exact calls and parameter names, and the fallback chain. Load before selecting any 1c-*-mcp / 1C-*-mcp tool."
+triggers:
+  - "mcp-1c-tools"
+  - "mcp"
+  - "tools"
+requires:
+  any:
+    - metadata.object
+    - code.search
+    - graph.usages
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

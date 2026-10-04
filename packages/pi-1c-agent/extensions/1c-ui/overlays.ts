@@ -370,3 +370,19 @@ export async function overlayChild(ctx: any, agentName?: string): Promise<void> 
     };
   }, { overlay: true, overlayOptions: { width: "82%", minWidth: 48, maxHeight: "90%", anchor: "center" } });
 }
+
+export async function overlayText(ctx: any, title: string, body: string): Promise<void> {
+  if (!ctx?.ui?.custom) {
+    ctx?.ui?.notify?.(body, "info");
+    return;
+  }
+  await ctx.ui.custom<null>((_tui: any, theme: any, _kb: unknown, done: (v: null) => void) => ({
+    invalidate() {},
+    handleInput(data: string) {
+      if (matchesKey(data, "escape") || matchesKey(data, "enter") || matchesKey(data, "ctrl+c")) done(null);
+    },
+    render(width: number) {
+      return frame(theme, title, String(body || "").split("\n"), width, "Esc close");
+    },
+  }), { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "80%", anchor: "center" } });
+}

@@ -1,0 +1,19 @@
+id: shared-memory
+version: 1.0.0
+description: "Recall and store durable cross-agent context using a connected Cognee MCP. Use for previous decisions, confirmed facts, fixes, constraints, preferences, experience, and project state."
+triggers:
+  - "shared-memory"
+  - "shared"
+  - "memory"
+requires:
+  any:
+    - memory.short
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

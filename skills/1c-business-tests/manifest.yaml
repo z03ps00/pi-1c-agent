@@ -1,0 +1,20 @@
+id: 1c-business-tests
+version: 1.0.0
+description: "Create, maintain and run reusable tests of 1C business logic using the project's verified framework or runner. Optional: the model chooses when persistent regression coverage adds value beyond a focused result check."
+triggers:
+  - "1c-business-tests"
+  - "business"
+  - "tests"
+requires:
+  any:
+    - test.ui
+    - test.unit
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -1,0 +1,16 @@
+id: kd2-rules
+version: 1.0.0
+description: "Creates and edits 1C Конвертация данных 2.0/2.1 exchange rules (ПКО, ПКС, ПКЗ, ПВД) in a live KD infobase via MCP_Toolkit HTTP API, then unloads XML for Универсальный обмен данными в формате XML. Use when the user asks about КД 2, КД 2.0, К"
+triggers:
+  - "kd2-rules"
+  - "kd2"
+  - "rules"
+requires:
+  any: []
+optional: []
+modes:
+  - build
+cost:
+  context: low
+quality:
+  level: verified

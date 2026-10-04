@@ -1,0 +1,19 @@
+id: 1c-ui-regression
+version: 1.0.0
+description: "Create or maintain reusable UI regression tests for a 1C web client, runnable without an AI agent. Optional: choose when repeatable coverage is useful; ordinary interactive UI checks remain with 1c-tester."
+triggers:
+  - "1c-ui-regression"
+  - "regression"
+requires:
+  any:
+    - test.ui
+    - test.unit
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

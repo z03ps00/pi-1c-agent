@@ -1,0 +1,18 @@
+id: 1c-metadata-manage
+version: 1.0.0
+description: "1C metadata management — create, edit, validate, and remove configuration objects (catalogs, documents, registers, enums), managed forms, data composition schemas (SKD), spreadsheet layouts (MXL), roles, external processors (EPF/ERF), exten"
+triggers:
+  - "1c-metadata-manage"
+  - "metadata"
+  - "manage"
+requires:
+  any:
+    - metadata.object
+    - metadata.tree
+optional: []
+modes:
+  - build
+cost:
+  context: low
+quality:
+  level: verified

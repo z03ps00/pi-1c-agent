@@ -1,0 +1,18 @@
+id: context-router
+version: 1.0.0
+description: "Route a task to shared memory (Cognee), knowledge/document retrieval (OpenViking), current project files, or a combination of them before the agent makes assumptions."
+triggers:
+  - "context-router"
+  - "context"
+  - "router"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -1,0 +1,18 @@
+id: prompt-enhancer
+version: 1.0.0
+description: "Improve and structure short, unstructured prompts and task statements, turning them into detailed imperative specifications with numbered analysis steps, explicit edge cases, and a clearly described expected output format. Preserves all ter"
+triggers:
+  - "prompt-enhancer"
+  - "prompt"
+  - "enhancer"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

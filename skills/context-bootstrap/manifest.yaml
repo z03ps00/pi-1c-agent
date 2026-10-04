@@ -1,0 +1,18 @@
+id: context-bootstrap
+version: 1.0.0
+description: "Initialize minimal project context at the beginning of meaningful work: identify project, authoritative files, available Cognee/OpenViking MCPs, and appropriate memory/knowledge scope."
+triggers:
+  - "context-bootstrap"
+  - "context"
+  - "bootstrap"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

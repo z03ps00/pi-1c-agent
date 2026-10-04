@@ -1,0 +1,18 @@
+id: 1c-validate
+version: 1.0.0
+description: "Validate changed 1C artifacts — BSL by path (BSL Language Server), logic and performance (1С:Напарник check), style and ITS review, metadata XML against XSD — within the verification-policy budget. Use after every BSL or metadata edit."
+triggers:
+  - "1c-validate"
+  - "validate"
+requires:
+  any:
+    - syntax.bsl
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -1,0 +1,20 @@
+id: 1c-meta-info
+version: 1.0.0
+description: "Facts about 1C metadata objects — passport, typed attributes, tabular-part columns, forms, predefined items, objects by category or Russian description — from the graph and code-metadata MCP. Use before code or metadata that depends on an o"
+triggers:
+  - "1c-meta-info"
+  - "meta"
+  - "info"
+requires:
+  any:
+    - metadata.object
+    - metadata.tree
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

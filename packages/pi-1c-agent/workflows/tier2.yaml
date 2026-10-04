@@ -1,0 +1,5 @@
+name: tier2
+stages:
+  - 1c-explorer
+  - 1c-developer
+  - 1c-code-reviewer

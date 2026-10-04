@@ -1,8 +1,8 @@
-# Pi 1C Agent v0.8.0
+# Pi 1C Agent v0.9.0
 
 Multi-agent пакет для **vanilla Pi** для разработки на 1С:Предприятие.
 
-v0.8.0 — оверлеи команд (`/init`, `/taskmode`, `/anon`, `/approve` и настройки), Standard `/init` с одним подтверждением «Всё верно», TUI-слой Pi 0.85 и фоновая запись в Cognee/OpenViking.
+v0.9.0 — 1C Harness Core: короткий system kernel, реестр возможностей, MCP-first маршрутизатор, бюджет контекста, manifest skills, tier 0–4 и черновики `/evolve`. На 1.0 остаются DSH, свой Web UI, полный `evals/` и автоматическая активация evolution.
 
 ## Базовая архитектура
 

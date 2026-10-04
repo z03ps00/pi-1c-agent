@@ -1,0 +1,19 @@
+id: 1c-live-ib
+version: 1.0.0
+description: "Answer what only the running infobase knows — does a query parse, what it returns on real data, does a BSL fragment run, what the event log recorded — via the 1c-data-mcp service on the infobase. Read-only by default; any mutation needs exp"
+triggers:
+  - "1c-live-ib"
+  - "live"
+requires:
+  any:
+    - ib.query
+    - ib.metadata
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

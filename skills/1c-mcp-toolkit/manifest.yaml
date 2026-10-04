@@ -1,0 +1,20 @@
+id: 1c-mcp-toolkit
+version: 1.0.0
+description: "Talks to a live 1C infobase over HTTP via MCP_Toolkit.epf (ROCTUP) — execute_query, execute_code, metadata, event log. Use when working with a running 1C session, Конвертация данных КД 2/КД 3, MCP Toolkit ports, or calling BSL in a live IB"
+triggers:
+  - "1c-mcp-toolkit"
+  - "mcp"
+  - "toolkit"
+requires:
+  any:
+    - ib.query
+    - ib.metadata
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

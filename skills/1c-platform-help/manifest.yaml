@@ -1,0 +1,19 @@
+id: 1c-platform-help
+version: 1.0.0
+description: "External 1C knowledge — platform syntax reference, the platform-capability check before a custom specialized mechanism, БСП / SSL APIs, routed standards, file-format specs, ITS docs — via the docs, SSL and code-check MCP. Use only when such"
+triggers:
+  - "1c-platform-help"
+  - "platform"
+  - "help"
+requires:
+  any:
+    - docs.platform
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

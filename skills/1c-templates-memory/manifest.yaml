@@ -1,0 +1,19 @@
+id: 1c-templates-memory
+version: 1.0.0
+description: "Reuse before reinventing — search code templates with the user's task text, adapt a fitting template as the base, recall / save project memory (Cognee, OpenViking, templates MCP). Use at the start of every non-trivial 1C task and in the sam"
+triggers:
+  - "1c-templates-memory"
+  - "templates"
+  - "memory"
+requires:
+  any:
+    - docs.templates
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

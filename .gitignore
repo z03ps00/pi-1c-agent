@@ -46,6 +46,8 @@ pi-1c-agent-upstream/
 # --- Development-process artifacts (local only; not published) ---
 openspec/changes/
 handoffs/
+state/evolution/**
+!state/evolution/.gitkeep
 state/agent-memory/pending/**
 !state/agent-memory/pending/.gitkeep
 state/agent-memory/processing/**

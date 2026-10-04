@@ -8,12 +8,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 
 test('package registers stabilized extensions', () => {
-  assert.equal(pkg.version, '0.8.0');
-  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-ui/index.ts']) {
+  assert.equal(pkg.version, '0.9.0');
+  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-context-router/index.ts','extensions/1c-ui/index.ts']) {
     assert.ok(pkg.pi.extensions.includes(p));
     assert.ok(fs.existsSync(path.join(root, p)));
   }
   assert.equal(pkg.pi.extensions.at(-1), 'extensions/1c-ui/index.ts');
+  const modeAt = pkg.pi.extensions.indexOf('extensions/1c-mode/index.ts');
+  const routerAt = pkg.pi.extensions.indexOf('extensions/1c-context-router/index.ts');
+  assert.ok(modeAt >= 0 && routerAt > modeAt);
 });
 
 test('doctor is a command, not a prompt template collision', () => {
@@ -168,24 +171,21 @@ test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   assert.match(mode, /overlayApproval/);
 });
 
-test('1c-mode injects capability-first source policy in every mode', () => {
+test('1c-mode injects the harness kernel instead of a second source-policy paste', () => {
   const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
-  const policy = SOURCE_POLICY_INSTRUCTIONS_BLOCK(mode);
-  assert.match(mode, /const SOURCE_POLICY_INSTRUCTIONS =/);
-  assert.match(policy, /any session MCP whose tools expose \*\*graph\*\*/);
-  assert.match(policy, /code metadata/);
-  assert.match(policy, /not permission to start with/);
-  assert.match(mode, /SOURCE_POLICY_INSTRUCTIONS\}\\n\\n\$\{body\}/);
-  assert.doesNotMatch(policy, /app:\/\/connector_openai_deep_research/);
-  assert.doesNotMatch(policy, /1c-graph-metadata-mcp/);
-  assert.doesNotMatch(policy, /1c-code-metadata-mcp/);
+  const routing = fs.readFileSync(path.join(root, 'system', 'context-routing.md'), 'utf8');
+  assert.match(mode, /buildSystemKernel\(/);
+  assert.doesNotMatch(mode, /const SOURCE_POLICY_INSTRUCTIONS/);
+  assert.match(routing, /graph/);
+  assert.match(routing, /code metadata/);
+  assert.match(routing, /Server ids do not matter/);
+  assert.doesNotMatch(routing, /app:\/\/connector_openai_deep_research/);
+  assert.doesNotMatch(routing, /1c-graph-metadata-mcp/);
+  assert.doesNotMatch(routing, /1c-code-metadata-mcp/);
+  for (const name of ['ASK_INSTRUCTIONS', 'PLAN_INSTRUCTIONS', 'BUILD_INSTRUCTIONS']) {
+    assert.match(mode, new RegExp(`const ${name}`));
+  }
 });
-
-function SOURCE_POLICY_INSTRUCTIONS_BLOCK(mode) {
-  const start = mode.indexOf('const SOURCE_POLICY_INSTRUCTIONS');
-  const end = mode.indexOf('const PLAN_INSTRUCTIONS');
-  return start >= 0 && end > start ? mode.slice(start, end) : '';
-}
 
 test('1c-ui palette shortcut is Ctrl+Shift+K not Ctrl+K', () => {
   const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');

@@ -1,0 +1,19 @@
+id: 1c-qa-testing
+version: 1.0.0
+description: "UI checks in the 1C thin client through QA MCP (`1c-qa`, `qa_*` / `ui_*`): session, observe → act → assert, platform behaviour, unknown outcomes, journal and verdicts. Main UI route when connected and TOOL_QA allows it; the web client is th"
+triggers:
+  - "1c-qa-testing"
+  - "testing"
+requires:
+  any:
+    - test.ui
+    - test.unit
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

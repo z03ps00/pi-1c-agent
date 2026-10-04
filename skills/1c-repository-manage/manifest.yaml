@@ -1,0 +1,18 @@
+id: 1c-repository-manage
+version: 1.0.0
+description: "1C configuration repository (хранилище конфигурации) operations — status, history, diff, lock, update, commit, unlock, dump — and the SDLC discipline for repository-bound configurations (lock before edit, commit after verify). Use when .dev"
+triggers:
+  - "1c-repository-manage"
+  - "repository"
+  - "manage"
+requires:
+  any:
+    - repository.status
+    - repository.diff
+optional: []
+modes:
+  - build
+cost:
+  context: low
+quality:
+  level: verified

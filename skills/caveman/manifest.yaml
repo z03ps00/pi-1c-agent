@@ -1,0 +1,16 @@
+id: caveman
+version: 1.0.0
+description: "caveman — terse output style"
+triggers:
+  - "caveman"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

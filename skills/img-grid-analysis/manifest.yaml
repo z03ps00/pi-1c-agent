@@ -1,0 +1,19 @@
+id: img-grid-analysis
+version: 1.0.0
+description: "Overlay a numbered grid on an image to determine column proportions for layout generation. Use when creating MXL spreadsheet layouts from screenshots or scanned print forms."
+triggers:
+  - "img-grid-analysis"
+  - "img"
+  - "grid"
+  - "analysis"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -1,0 +1,20 @@
+id: 1c-form-inspect
+version: 1.0.0
+description: "Read 1C managed and ordinary forms — similar forms, element trees, bindings, commands, handlers, form / role / report artifacts, form XSD or format spec — via the code-metadata, graph and docs MCP. Use before generating or changing a form;"
+triggers:
+  - "1c-form-inspect"
+  - "form"
+  - "inspect"
+requires:
+  any:
+    - metadata.object
+    - metadata.tree
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

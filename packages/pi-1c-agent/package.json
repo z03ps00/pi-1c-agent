@@ -1,6 +1,6 @@
 {
   "name": "pi-1c-agent",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "description": "Multi-agent 1C:Enterprise package for vanilla Pi with PLAN/BUILD, Configuration Knowledge Layer, and detailed project initialization wizard",
   "keywords": [
@@ -21,6 +21,7 @@
       "extensions/1c-session-rotate/index.ts",
       "extensions/1c-memory/index.ts",
       "extensions/1c-settings/index.ts",
+      "extensions/1c-context-router/index.ts",
       "extensions/1c-ui/index.ts"
     ],
     "skills": [

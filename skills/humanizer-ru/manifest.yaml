@@ -1,0 +1,17 @@
+id: humanizer-ru
+version: 1.0.0
+description: "Редактирует русский ИИ-текст: убирает канцелярит, пустые зачины, рекламную накачку и обёртки чат-бота без изменения фактов и авторского голоса. Use when: «очеловечь», «сделай читаемым», «убери канцелярит», «звучит как нейросеть», «причеши т"
+triggers:
+  - "humanizer-ru"
+  - "humanizer"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

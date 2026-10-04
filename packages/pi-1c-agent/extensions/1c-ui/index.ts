@@ -3,6 +3,9 @@ import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Key, truncateToWidth } from "@earendil-works/pi-tui";
 import { loadConfiguration } from "../../lib/knowledge.mjs";
+import { formatCapabilityFooter, snapshotCapabilities } from "../../lib/harness/capabilities.mjs";
+import { contextPercent } from "../../lib/harness/budget.mjs";
+import { getSession } from "../../lib/harness/session.mjs";
 import { initStatus } from "../../lib/project-init.mjs";
 import {
   ACTIVE_STATUSES,
@@ -54,6 +57,8 @@ function collectSnapshot(ctx: any, footerData?: any, pi?: ExtensionAPI) {
   const usage = typeof ctx.getContextUsage === "function" ? ctx.getContextUsage() : undefined;
   const config = (() => { try { return loadConfiguration(ctx.cwd); } catch { return null; } })();
   const init = (() => { try { return initStatus(ctx.cwd); } catch { return null; } })();
+  const session = getSession();
+  const harnessPct = session.budget?.used ? contextPercent(session.budget) : null;
   const thinkingLevel = ctx.thinkingLevel
     || (typeof pi?.getThinkingLevel === "function" ? pi.getThinkingLevel() : undefined)
     || thinkingSnap.level
@@ -69,7 +74,8 @@ function collectSnapshot(ctx: any, footerData?: any, pi?: ExtensionAPI) {
     rotateThreshold: rotate.thresholdPercent ?? 85,
     captureEnabled: capture.idleEnabled === true && capture.host === "pi",
     captureMode: capture.distillerMode,
-    contextPercent: usage?.percent ?? null,
+    contextPercent: harnessPct ?? usage?.percent ?? null,
+    capabilityFooter: session.tools.length ? formatCapabilityFooter(snapshotCapabilities(session.tools)) : "",
     gitBranch: footerData?.getGitBranch?.() ?? null,
     gitDirty: false,
     projectName: readProjectName(ctx.cwd) || config?.name,

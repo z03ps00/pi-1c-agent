@@ -7,13 +7,7 @@ Before non-trivial work read the adapted upstream context/rules under `rules-1c/
 
 ## Configuration source policy
 
-A 1C configuration is structured metadata, not a bag of files. For a question about an object, attribute, form, module, procedure, call or dependency:
-
-1. Use any session MCP whose tools expose **graph** (dependencies, calls, impact, usages) or **code metadata** (object, attributes, symbols, module structure, fragment). Pick from the live tool list; use the most structural call that answers the question. Server ids do not matter. Platform docs, SSL/BSP, templates, ITS, syntax checkers, live IB and memory are **not** this chain.
-2. Then `Read` the file that index (or the user) already named.
-3. `Grep`, directory listing and `Read`-scanning to *locate* come after a bounded index attempt, with one line of what was tried. No such MCP in the session — file search immediately, one line.
-
-If a **specific file** is known newer than the index, that file's text wins for that path and the index is marked stale. That is not permission to start with `Grep`. File tools without a prior index call: user-named path, edit target, non-metadata artifacts (rules, OpenSpec, JSON), literal comments such as TODO. Empty result from a ready index = not found. Missing or failed service = unavailable, then files. Do not invent objects or attributes. Details: `rules-1c/rules/mcp-first-search.md`.
+A 1C configuration is structured metadata, not a bag of files. For structure: any session MCP with graph or code metadata (server id does not matter), then a known current file, then a bounded file search. A file newer than the index wins. Do not invent metadata. Platform docs, SSL/BSP, templates, ITS, syntax, live IB, and memory are outside this chain. Named files, edit targets, OpenSpec, JSON, rules, and literal TODO may be read without a prior structural call. Canon: `rules-1c/rules/mcp-first-search.md`. Runtime kernel: `packages/pi-1c-agent/system/`.
 
 ## This profile: install or update (do it, do not only explain)
 

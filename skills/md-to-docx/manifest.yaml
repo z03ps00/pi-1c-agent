@@ -1,0 +1,17 @@
+id: md-to-docx
+version: 1.0.0
+description: "Convert a Markdown file to DOCX (Word). Use when the user asks to convert .md to .docx, generate a Word document from Markdown, or export Markdown notes to Word."
+triggers:
+  - "md-to-docx"
+  - "docx"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

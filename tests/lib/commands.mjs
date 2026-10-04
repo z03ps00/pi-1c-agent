@@ -31,6 +31,10 @@ export const PACKAGE_OWNED_COMMANDS = [
   'caveman',
   'economymode',
   'rulesmodel',
+  'capabilities',
+  'context',
+  'evolve',
+  'session-stats',
 ];
 export const DESTRUCTIVE_PROMPT_NAMES = [
   'update1cbase',

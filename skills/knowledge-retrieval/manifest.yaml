@@ -1,0 +1,19 @@
+id: knowledge-retrieval
+version: 1.0.0
+description: "Retrieve documentation and indexed project knowledge from a connected OpenViking MCP without confusing documents with remembered decisions."
+triggers:
+  - "knowledge-retrieval"
+  - "knowledge"
+  - "retrieval"
+requires:
+  any:
+    - knowledge.long
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.9.0 — 2026-10-04
+
+- System kernel собирает короткий промпт из `system/*.md`. В него не попадают весь `ai_rules_1c`, все skills и вся knowledge base. `AGENTS.md` остаётся контрактом профиля.
+- Capability snapshot не зависит от id MCP-сервера. Его печатают `/doctor` и `/capabilities`.
+- Context router для структурного вопроса вызывает structural capability до широкого grep. Названный файл читается сразу, свежая рабочая копия побеждает индекс, отсутствие capability даёт один bounded fallback.
+- Context budget режет лишние skills, rules и knowledge и показывает `ctx N%` в footer. `/context` показывает бюджет и выбранный источник.
+- У skills профиля есть `manifest.yaml`. Skill без доступной возможности или чужого режима не активируется.
+- Автозапуск workflow `auto`/`tier` выбирает tier 0–4 на существующих ролях. Именованные `feature`/`bugfix`/`architecture`/`performance`/`refactor` не изменены.
+- `/evolve` пишет только черновик. Активация — явное подтверждение, файлы skills и rules сами не меняются.
+- `/session-stats` показывает счётчики сессии и не пишет их в Cognee/OpenViking.
+- Не вошло в 0.9: DSH-адаптер, свой Web UI, полный каталог `evals/`, автоактивация evolution.
+
 ## 0.8.0 — 2026-10-03
 
 - `/init` empty call opens the same overlay picker as `/mode`: source (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`, each with a description) then Standard / Quick / Detailed. Named arguments skip the picker. Package commands with a closed option set must use that overlay — see `rules-1c/core/overlay-options.md`. `/init` Standard (recommended) fills platform and shared settings from sibling 1C projects, shows one list, waits for edits and «Всё верно», then writes. `/init advanced` still walks every variable. Sibling `PLATFORM_PATH` wins when that directory exists.
