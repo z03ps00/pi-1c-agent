@@ -5,6 +5,16 @@ Use the decomposed 1C multi-agent workflow supplied by `pi-1c-agent`.
 
 Before non-trivial work read the adapted upstream context/rules under `rules-1c/` and the Pi-native core rules `modes.md`, `orchestration.md`, `handoff.md`, `openspec.md`, `extension-targeting.md`, `delivery.md`, and `overlay-options.md`. Process documents: this overlay, then `rules-1c/AGENTS-UPSTREAM.md`, then `rules-1c/core/*`.
 
+## Configuration source policy
+
+A 1C configuration is structured metadata, not a bag of files. For a question about an object, attribute, form, module, procedure, call or dependency:
+
+1. Use any session MCP whose tools expose **graph** (dependencies, calls, impact, usages) or **code metadata** (object, attributes, symbols, module structure, fragment). Pick from the live tool list; use the most structural call that answers the question. Server ids do not matter. Platform docs, SSL/BSP, templates, ITS, syntax checkers, live IB and memory are **not** this chain.
+2. Then `Read` the file that index (or the user) already named.
+3. `Grep`, directory listing and `Read`-scanning to *locate* come after a bounded index attempt, with one line of what was tried. No such MCP in the session — file search immediately, one line.
+
+If a **specific file** is known newer than the index, that file's text wins for that path and the index is marked stale. That is not permission to start with `Grep`. File tools without a prior index call: user-named path, edit target, non-metadata artifacts (rules, OpenSpec, JSON), literal comments such as TODO. Empty result from a ready index = not found. Missing or failed service = unavailable, then files. Do not invent objects or attributes. Details: `rules-1c/rules/mcp-first-search.md`.
+
 ## This profile: install or update (do it, do not only explain)
 
 This clone is the **global** Pi 1C profile (`PI_CODING_AGENT_DIR`). It already contains the runtime at `packages/pi-1c-agent/`. Do not send the user to copy a package from another machine. Do not install this agent into a 1C project.

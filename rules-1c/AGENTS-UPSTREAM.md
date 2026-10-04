@@ -85,7 +85,7 @@ Report changes, every modified file, checks and real limitations; for non-trivia
 1. **Scope:** risk-bearing 1C work, memory and 1C-fact specs use the relevant exposed tools; prose-only edits get structural checks.
 2. **External knowledge:** platform/БСП/ITS only when their facts matter.
 3. **Evidence:** minimum set per `rules-1c/rules/tooling-playbooks.md`; confirm 1C facts before writing; disclose gaps.
-4. **Search:** `rules-1c/rules/mcp-first-search.md` before searching 1C sources; extensions / multi-project — verified `project_id` and layer (`rules-1c/rules/extension-workspace.md`).
+4. **Search:** `rules-1c/rules/mcp-first-search.md` before searching 1C sources — any session MCP with graph or code-metadata capability, then native tools after a bounded miss; extensions / multi-project — verified `project_id` and layer (`rules-1c/rules/extension-workspace.md`).
 5. **Validation:** saved BSL → `syntaxcheck_file` → `check_1c_code` → `review_1c_code` at the active depth; XML → `verify_xml`.
 6. **ITS:** `its_help` → `fetch_its` for every document relied on.
 7. **Platform first:** before a custom specialized mechanism — `docsearch` → `docinfo` (+ `ssl_search`); build on a find; partial fit → `CONFUSION`; reject only for documented incompatibility, stated.

@@ -7,6 +7,8 @@ allowed-tools: mcp__1c-graph-metadata-mcp__get_object_dossier, mcp__1c-graph-met
 
 # 1c-meta-info — facts about a metadata object
 
+Policy owner: `rules-1c/rules/mcp-first-search.md`. Another session MCP with the same graph or code-metadata capability takes the same priority; take argument names from its live schema. This skill maps the current Graph/Code deployment.
+
 Facts only; a verdict about an object needs the validators of `1c-validate`. Search discipline and freshness — `rules-1c/rules/mcp-first-search.md`.
 
 For each graph call, explicitly pass the returned `project_id` verified against the current source roots; substitute `<resolved-project-id>` below. Discover through `list_graph_projects` using the `mcp-1c-tools` router first when needed. Keep project scope outside JSON `query` operations and template `arguments`. An extension requires verified layer coverage/provenance; neither the first project nor the base-only response is an extension lookup. Code-server selectors use their own live schema and mappings (`rules-1c/rules/multi-contour-search.md`).

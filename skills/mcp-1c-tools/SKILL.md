@@ -54,7 +54,7 @@ These are experimental projects, separate from the eight main servers above and 
 
 ## Fallback chain
 
-**Project source** (code, metadata, usages, forms, file locations): within verified contour coverage, graph → mapped code-metadata → scoped native `Grep` / `Glob` / `Read` after a bounded miss, with a one-line fallback note. Code chooses its file-scan fallback internally; current tools have no `grep` input. Skip uncovered lanes; no eligible exposed index means native search in that contour immediately. Owner: `rules-1c/rules/mcp-first-search.md`; multiple roots, catalog/scope selectors and acceptance: `rules-1c/rules/multi-contour-search.md`.
+**Project source** (code, metadata, usages, forms, file locations): within verified contour coverage, any session MCP with **graph** or **code-metadata** capability → scoped native `Grep` / `Glob` / `Read` after a bounded miss, with a one-line fallback note. Server ids in the catalog below are a map, not the only allowed path. Current Code tools choose file-scan fallback internally and have no `grep` input. Skip uncovered lanes; no eligible exposed graph/code-metadata tool means native search in that contour immediately. Owner: `rules-1c/rules/mcp-first-search.md`; multiple roots, catalog/scope selectors and acceptance: `rules-1c/rules/multi-contour-search.md`.
 
 **External knowledge** has no interchangeable fallback chain. Select only the relevant eligible provider. Missing templates: disclose no template check; memory: `project-memory.md`; routed standards: `help-corpus-retrieval.md`; validators/live IB: `verification-gates.md`. An unavailable source never proves API absence or a passed check; block dependent design when authoritative facts are missing.
 

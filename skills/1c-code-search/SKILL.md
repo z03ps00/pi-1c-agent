@@ -7,6 +7,8 @@ allowed-tools: mcp__1c-graph-metadata-mcp__search_code, mcp__1c-code-metadata-mc
 
 # 1c-code-search — locate BSL code
 
+Policy owner: `rules-1c/rules/mcp-first-search.md`. Another session MCP with the same graph or code-metadata capability takes the same priority; take argument names from its live schema. This skill maps the current Graph/Code deployment.
+
 Project-source search is MCP-first within verified contour coverage: graph → mapped code-metadata → scoped native `Grep` after a bounded miss with a one-line fallback note. Skip uncovered lanes; never substitute a neighboring contour's index. `rules-1c/rules/multi-contour-search.md` selects scope and server mappings for multiple roots; `rules-1c/rules/mcp-first-search.md` owns retrieval, freshness and native exceptions. This skill owns the calls below; any shared-server scope arguments must match its live contract.
 
 ## Tools and exact arguments

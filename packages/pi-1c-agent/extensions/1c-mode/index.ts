@@ -156,6 +156,16 @@ function anonNote(level: number): string {
   return lines.join("\n");
 }
 
+const SOURCE_POLICY_INSTRUCTIONS = `# Configuration source policy
+
+A 1C configuration is structured metadata, not a bag of files. For a question about an object, attribute, form, module, procedure, call or dependency:
+
+1. Use any session MCP whose tools expose **graph** (dependencies, calls, impact, usages) or **code metadata** (object, attributes, symbols, module structure, fragment). Pick from the live tool list; use the most structural call that answers the question. Server ids do not matter. Platform docs, SSL/BSP, templates, ITS, syntax checkers, live IB and memory are **not** this chain.
+2. Then \`Read\` the file that index (or the user) already named.
+3. \`Grep\`, directory listing and \`Read\`-scanning to *locate* come after a bounded index attempt, with one line of what was tried. No such MCP in the session — file search immediately, one line.
+
+If a **specific file** is known newer than the index, that file's text wins for that path and the index is marked stale. That is not permission to start with \`Grep\`. File tools without a prior index call: user-named path, edit target, non-metadata artifacts (rules, OpenSpec, JSON), literal comments such as TODO. Empty result from a ready index = not found. Missing or failed service = unavailable, then files. Do not invent objects or attributes. Details: \`rules-1c/rules/mcp-first-search.md\`.`;
+
 const PLAN_INSTRUCTIONS = `# 1C PLAN MODE
 
 You are in a dedicated planning workflow for 1C development.
@@ -640,7 +650,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     state = { ...state, lastInjectedMode: state.mode };
     persist();
     const body = state.mode === "plan" ? PLAN_INSTRUCTIONS : state.mode === "ask" ? ASK_INSTRUCTIONS : BUILD_INSTRUCTIONS;
-    let instructions = `${modeNote(state.mode)}\n\n${taskmodeNote(state.taskmode)}\n\n${body}`;
+    let instructions = `${modeNote(state.mode)}\n\n${taskmodeNote(state.taskmode)}\n\n${SOURCE_POLICY_INSTRUCTIONS}\n\n${body}`;
     if (state.mode === "build" && state.phase === "build-executing" && state.plan) {
       instructions += `\n\n# Approved plan handoff\nplan_id: ${state.plan.id}\n\n${state.plan.text}`;
     }

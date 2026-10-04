@@ -168,6 +168,25 @@ test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   assert.match(mode, /overlayApproval/);
 });
 
+test('1c-mode injects capability-first source policy in every mode', () => {
+  const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
+  const policy = SOURCE_POLICY_INSTRUCTIONS_BLOCK(mode);
+  assert.match(mode, /const SOURCE_POLICY_INSTRUCTIONS =/);
+  assert.match(policy, /any session MCP whose tools expose \*\*graph\*\*/);
+  assert.match(policy, /code metadata/);
+  assert.match(policy, /not permission to start with/);
+  assert.match(mode, /SOURCE_POLICY_INSTRUCTIONS\}\\n\\n\$\{body\}/);
+  assert.doesNotMatch(policy, /app:\/\/connector_openai_deep_research/);
+  assert.doesNotMatch(policy, /1c-graph-metadata-mcp/);
+  assert.doesNotMatch(policy, /1c-code-metadata-mcp/);
+});
+
+function SOURCE_POLICY_INSTRUCTIONS_BLOCK(mode) {
+  const start = mode.indexOf('const SOURCE_POLICY_INSTRUCTIONS');
+  const end = mode.indexOf('const PLAN_INSTRUCTIONS');
+  return start >= 0 && end > start ? mode.slice(start, end) : '';
+}
+
 test('1c-ui palette shortcut is Ctrl+Shift+K not Ctrl+K', () => {
   const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');
   assert.match(ui, /Key\.ctrlShift\("k"\)/);

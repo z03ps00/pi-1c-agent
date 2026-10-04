@@ -7,6 +7,8 @@ allowed-tools: mcp__1c-graph-metadata-mcp__trace_impact, mcp__1c-graph-metadata-
 
 # 1c-impact — usages, call graph, change impact
 
+Policy owner: `rules-1c/rules/mcp-first-search.md`. Another session MCP with the same graph or code-metadata capability takes the same priority; take argument names from its live schema. This skill maps the current Graph/Code deployment.
+
 Evidence for `rules-1c/rules/verification-gates.md → Gate 4` and for the pre-refactor analysis of `rules-1c/rules/tooling-playbooks.md → Refactoring`. Refactoring blind when these servers are exposed is a defect; when they are not, follow Gate 4 graceful degradation.
 
 All graph project-data calls require the explicit returned `project_id` bound to the current roots; substitute `<resolved-project-id>` in the examples. Reuse it for searches, impact, evidence and pagination, with verified layer provenance for an extension. Follow the live schema for tools without this selector and for code-server scope; use verified fixed/session/entity scope or another scoped route, never invent arguments (`rules-1c/rules/multi-contour-search.md`).
