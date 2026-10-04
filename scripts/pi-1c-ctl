@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Control panel for this 1C profile. The desktop shortcut launches this, not plain pi.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-$ROOT}"
+if ! command -v node >/dev/null 2>&1; then
+  echo "node не найден в PATH. Нужен Node.js 22.19+." >&2
+  exit 1
+fi
+exec node "$ROOT/scripts/pi-1c-ctl.mjs" "$@"

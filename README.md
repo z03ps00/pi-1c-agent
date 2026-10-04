@@ -322,18 +322,19 @@ if ($machinePath -notlike "*$bin*") {
 
 ### 4. Ярлык на рабочем столе
 
-Ярлык запускает `pi-1c` этой ОС. В shell rc и в переменные среды пользователя `PI_CODING_AGENT_DIR` не пишется.
+Ярлык открывает панель управления этого профиля (`scripts/pi-1c-ctl` / `scripts/pi-1c-ctl.cmd`): статус, новый чат, открыть проект по пути, сессии, модели, диагностика, backup `settings.json`, обновление Pi. В shell rc и в переменные среды пользователя `PI_CODING_AGENT_DIR` не пишется. Команда `pi-1c` по-прежнему запускает агента без панели.
 
-Linux — шаблон `scripts/Pi-1C-Agent.desktop.in`, в `Exec` абсолютный путь к `scripts/pi-1c`, `Terminal=true`. Если есть каталог ярлыков агентов (`~/Рабочий стол/Программы/AGENTS`, `~/Desktop/Программы/AGENTS` или тот же каталог на рабочем столе), положи `Pi-1C-Agent.desktop` туда. Иначе — на рабочий стол (`xdg-user-dir DESKTOP`) и копию в `~/.local/share/applications/`.
+Linux — шаблон `scripts/Pi-1C-Agent.desktop.in`, в `Exec` абсолютный путь к `scripts/pi-1c-ctl`, `Terminal=true`. Если есть каталог ярлыков агентов (`~/Рабочий стол/Программы/AGENTS`, `~/Desktop/Программы/AGENTS` или тот же каталог на рабочем столе), положи `Pi-1C-Agent.desktop` туда. Иначе — на рабочий стол (`xdg-user-dir DESKTOP`) и копию в `~/.local/share/applications/`.
 
 ~~~bash
-launcher="$HOME/pi-1c-agent/scripts/pi-1c"
+ctl="$HOME/pi-1c-agent/scripts/pi-1c-ctl"
 desktop_dir="${XDG_DESKTOP_DIR:-$(xdg-user-dir DESKTOP 2>/dev/null || true)}"
 agents_dir=""
 for candidate in "$HOME/Рабочий стол/Программы/AGENTS" "$HOME/Desktop/Программы/AGENTS" "$desktop_dir/Программы/AGENTS"; do
   if [ -n "$candidate" ] && [ -d "$candidate" ]; then agents_dir="$candidate"; break; fi
 done
-sed "s|@PI_1C_LAUNCHER@|$launcher|" "$HOME/pi-1c-agent/scripts/Pi-1C-Agent.desktop.in" > /tmp/Pi-1C-Agent.desktop
+chmod +x "$ctl"
+sed "s|@PI_1C_CTL@|$ctl|" "$HOME/pi-1c-agent/scripts/Pi-1C-Agent.desktop.in" > /tmp/Pi-1C-Agent.desktop
 chmod +x /tmp/Pi-1C-Agent.desktop
 if [ -n "$agents_dir" ]; then
   cp /tmp/Pi-1C-Agent.desktop "$agents_dir/Pi-1C-Agent.desktop"
@@ -345,28 +346,29 @@ else
 fi
 ~~~
 
-macOS — файл `Pi 1C Agent.command` на рабочем столе. Двойной щелчок открывает Terminal и профиль 1С:
+macOS — файл `Pi 1C Agent.command` на рабочем столе. Двойной щелчок открывает Terminal и панель профиля 1С:
 
 ~~~bash
 desktop="$(osascript -e 'POSIX path of (path to desktop folder)' | tr -d '\r')"
 cat > "${desktop}Pi 1C Agent.command" <<EOF
 #!/bin/bash
-exec "$HOME/pi-1c-agent/scripts/pi-1c"
+clear
+exec "$HOME/pi-1c-agent/scripts/pi-1c-ctl"
 EOF
-chmod +x "${desktop}Pi 1C Agent.command"
+chmod +x "$HOME/pi-1c-agent/scripts/pi-1c-ctl" "${desktop}Pi 1C Agent.command"
 ~~~
 
-Windows — ярлык `.lnk` на рабочем столе. Цель — `scripts\pi-1c.cmd`:
+Windows — ярлык `.lnk` на рабочем столе. Цель — `scripts\pi-1c-ctl.cmd`:
 
 ~~~powershell
 $desktop = [Environment]::GetFolderPath('Desktop')
-$target = "$env:USERPROFILE\pi-1c-agent\scripts\pi-1c.cmd"
+$target = "$env:USERPROFILE\pi-1c-agent\scripts\pi-1c-ctl.cmd"
 $shell = New-Object -ComObject WScript.Shell
 $link = $shell.CreateShortcut((Join-Path $desktop 'Pi 1C Agent.lnk'))
 $link.TargetPath = $target
 $link.WorkingDirectory = "$env:USERPROFILE\pi-1c-agent"
 $link.WindowStyle = 1
-$link.Description = 'Запуск Pi с профилем 1С. Команда pi без этого ярлыка остаётся прежним профилем.'
+$link.Description = 'Панель управления Pi 1C Agent'
 $link.Save()
 ~~~
 

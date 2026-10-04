@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Pi 1C Agent
-Comment=Запуск Pi с профилем 1С. Команда pi без этого ярлыка остаётся прежним профилем.
-Exec=bash -lc "exec \"@PI_1C_LAUNCHER@\""
+Comment=Панель управления Pi 1C Agent
+Exec=bash -lc "clear; exec \"@PI_1C_CTL@\""
 Terminal=true
 Categories=Development;
 StartupNotify=false
