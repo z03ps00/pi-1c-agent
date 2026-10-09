@@ -2,6 +2,7 @@
  * Allowlist packager for the client profile zip.
  * The git tree stays the full profile. This module only copies what Pi needs to run.
  */
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -155,6 +156,22 @@ function isText(rel) {
   return TEXT_RE.test(rel) || TEXT_NAMES.has(path.basename(rel));
 }
 
+function isGitIgnored(root, rel) {
+  const result = spawnSync('git', ['check-ignore', '-q', '--', rel], {
+    cwd: root,
+    env: { ...process.env, GIT_DISCOVERY_ACROSS_FILESYSTEM: '1' },
+  });
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  throw new Error(`git check-ignore failed for ${rel}: ${result.stderr || result.stdout}`);
+}
+
+function isLiveSecret(rel) {
+  const base = path.posix.basename(rel);
+  if (base.endsWith('.example')) return false;
+  return rel.split('/').includes('secrets');
+}
+
 function assertSafeName(rel) {
   const base = path.posix.basename(rel);
   if (FORBIDDEN_BASENAMES.has(base)) {
@@ -192,7 +209,7 @@ function walkDir(root, rel, skipDir) {
       continue;
     }
     if (!ent.isFile()) continue;
-    if (FORBIDDEN_BASENAMES.has(ent.name)) continue;
+    if (FORBIDDEN_BASENAMES.has(ent.name) || isLiveSecret(child) || isGitIgnored(root, child)) continue;
     out.push(readFileEntry(root, child));
   }
   return out;

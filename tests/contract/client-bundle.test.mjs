@@ -28,6 +28,8 @@ test('client bundle keeps the runnable profile and drops maintainer trees', () =
   assert.ok(names.includes('packages/pi-1c-agent/package.json'));
   assert.ok(names.includes('rules-1c/core/release-bundle.md'));
   assert.ok(names.includes('mcp.example.json'));
+  assert.ok(names.includes('mcp.optional/memory-stack/secrets/routerai.env.example'));
+  assert.equal(names.includes('mcp.optional/memory-stack/secrets/routerai.env'), false);
   for (const name of names) {
     for (const ban of FORBIDDEN) {
       const hit = ban.endsWith('/') ? name.startsWith(ban) || name.includes(`/${ban}`) : name === ban || name.endsWith(`/${ban}`);

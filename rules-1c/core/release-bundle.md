@@ -32,4 +32,4 @@ Memory placeholders: `state/agent-memory/README.md`, `state/agent-memory/task-co
 
 `tests/`, `.github/`, `.vscode/`, `.cursor/`, `openspec/`, `handoffs/`, `external-agent-sources/`, `pi-1c-agent-upstream/`, `node_modules/`, `dist/`, publication scripts (`scripts/export-public-repo.mjs`, `scripts/scan-public-tree.mjs`, `scripts/public-release-checklist.md`, `scripts/package-client-bundle.mjs`), live `auth.json`, `trust.json`, `.dev.env`, `.env`. No `Pi-1C.exe`, no bundled Node, Java, or Python.
 
-The packager refuses secret-shaped values, machine-local paths, and live credential filenames before it writes the zip.
+The packager skips gitignored files, including live `secrets/*.env`. It refuses secret-shaped values, machine-local paths, and live credential filenames before it writes the zip.
