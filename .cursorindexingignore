@@ -1,0 +1,3 @@
+# Closed third-party 1C agent bundles — local reference only.
+# Keep agent-readable (no .cursorignore); skip indexing and embeddings.
+external-agent-sources/

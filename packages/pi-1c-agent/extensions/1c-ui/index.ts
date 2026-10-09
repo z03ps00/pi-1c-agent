@@ -2,8 +2,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Key, truncateToWidth } from "@earendil-works/pi-tui";
+import { Key, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { alignChatTree } from "../../lib/ui/message-align.mjs";
+import { readDevEnvFile } from "../../lib/dev-env-key.mjs";
+import { infobaseLabel } from "../../lib/ib-label.mjs";
 import { loadConfiguration } from "../../lib/knowledge.mjs";
+import { readGitMark } from "../../lib/ui/git-mark.mjs";
 import { formatCapabilityFooter, snapshotCapabilities } from "../../lib/harness/capabilities.mjs";
 import { readLearningMode } from "../../lib/harness/learning.mjs";
 import { contextPercent } from "../../lib/harness/budget.mjs";
@@ -12,7 +16,8 @@ import { initStatus } from "../../lib/project-init.mjs";
 import {
   ACTIVE_STATUSES,
   colorize,
-  composeFooter,
+  composeWorkFooter,
+  countOpenChanges,
   composeStatus,
   composeWidgetLines,
   getSnapshot,
@@ -35,7 +40,7 @@ import {
   themeSelectItems,
   uiAvailable,
 } from "../../lib/ui/index.mjs";
-import { overlayChild, overlayHub, overlayModeSelect, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
+import { overlayChild, overlayCommandGroups, overlayHub, overlayModeSelect, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
 
 let widgetMounted = false;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -63,6 +68,9 @@ function collectSnapshot(ctx: any, footerData?: any, pi?: ExtensionAPI) {
   const init = (() => { try { return initStatus(ctx.cwd); } catch { return null; } })();
   const session = getSession();
   const harnessPct = session.budget?.used ? contextPercent(session.budget) : null;
+  const env = readDevEnvFile(ctx.cwd).values || {};
+  const ib = infobaseLabel(env);
+  const git = readGitMark(ctx.cwd, footerData?.getGitBranch?.() ?? "");
   const thinkingLevel = ctx.thinkingLevel
     || (typeof pi?.getThinkingLevel === "function" ? pi.getThinkingLevel() : undefined)
     || thinkingSnap.level
@@ -81,8 +89,14 @@ function collectSnapshot(ctx: any, footerData?: any, pi?: ExtensionAPI) {
     captureMode: capture.distillerMode,
     contextPercent: harnessPct ?? usage?.percent ?? null,
     capabilityFooter: session.tools.length ? formatCapabilityFooter(snapshotCapabilities(session.tools)) : "",
-    gitBranch: footerData?.getGitBranch?.() ?? null,
-    gitDirty: false,
+    gitBranch: git.branch || footerData?.getGitBranch?.() || "",
+    gitDirty: git.dirty === true,
+    depth: env.VERIFICATION_DEPTH || "standard",
+    economy: env.ORCHESTRATION || "standard",
+    ui: env.UI_TESTING || "essential",
+    changes: countOpenChanges(ctx.cwd),
+    ibKind: ib.kind,
+    ibName: ib.name,
     projectName: readProjectName(ctx.cwd) || config?.name,
     model: ctx.model?.id,
     thinkingLevel,
@@ -125,17 +139,29 @@ function mountFooter(ctx: any, pi?: ExtensionAPI) {
       dispose() { unsubBranch(); unsubBus(); },
       invalidate() {},
       render(width: number) {
+        const paintFg = (token: string, text: string) => {
+          try { return typeof theme?.fg === "function" ? theme.fg(token, text) : text; } catch { return text; }
+        };
+        const paints = {
+          border: (text: string) => paintFg("text", text),
+          title: (text: string) => paintFg("accent", typeof theme?.bold === "function" ? theme.bold(text) : text),
+          bg: (text: string) => {
+            try { return typeof theme?.bg === "function" ? theme.bg("userMessageBg", text) : text; } catch { return text; }
+          },
+        };
+        if (alignChatTree(tui, paints, { visibleWidth, truncateToWidth })) tui.requestRender?.();
         const snap = collectSnapshot(ctx, footerData, pi);
-        const { segments, text } = composeFooter(snap, width);
-        const parts = segments.map((s) => {
-          if (s.id === "mode") return colorize(theme, modeColor(snap.mode), s.text);
-          if (s.id === "taskmode" && snap.taskmode && snap.taskmode !== "auto") return colorize(theme, "accent", s.text);
-          if (s.id === "anon" || s.id === "approve") return colorize(theme, "warning", s.text);
-          if (s.id === "failed") return colorize(theme, "error", s.text);
-          return colorize(theme, "dim", s.text);
+        const view = composeWorkFooter(snap, width);
+        const modeWord = ({ ask: "Вопрос", plan: "Планирование", build: "Реализация" } as Record<string, string>)[String(snap.mode || "ask")] || "";
+        return view.lines.map((line: { kind: string; text: string }) => {
+          if (line.kind === "title") return truncateToWidth(colorize(theme, "accent", line.text), Math.max(1, width));
+          if (line.kind === "rule") return truncateToWidth(colorize(theme, "dim", line.text), Math.max(1, width));
+          if (line.kind === "primary" && modeWord) {
+            const colored = line.text.replace(modeWord, colorize(theme, modeColor(snap.mode), modeWord));
+            return truncateToWidth(colored, Math.max(1, width));
+          }
+          return truncateToWidth(colorize(theme, "dim", line.text), Math.max(1, width));
         });
-        const line = parts.join(colorize(theme, "dim", " │ ")) || text;
-        return [truncateToWidth(line, Math.max(1, width))];
       },
     };
   });
@@ -229,7 +255,7 @@ async function runPaletteAction(id: string, ctx: any, pi: ExtensionAPI) {
   if (id === "anon") return invokeAction("anon-select", ctx);
   if (id === "init") return invokeAction("init-open", ctx);
   if (id === "theme") return invokeAction("theme-select", ctx);
-  if (id === "settings") return invokeAction("approve-select", ctx);
+  if (id === "settings") return showStatus(ctx, pi);
   const action = PALETTE_ACTIONS.find((a) => a.id === id);
   if (action?.command) {
     const name = action.command.replace(/^\//, "").split(/\s+/)[0];
@@ -285,26 +311,97 @@ export default function oneCUi(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("status", {
-    description: "Show Pi 1C Agent status (mode, project, memory, agents)",
+    description: "Статус: режим, проект, память и агенты",
     handler: async (_args, ctx) => showStatus(ctx, pi),
   });
   pi.registerCommand("palette", {
-    description: "Open the Pi 1C command palette (Ctrl+Shift+K)",
+    description: "Палитра частых действий (Ctrl+Shift+K)",
     handler: async (_args, ctx) => invokeAction("palette-open", ctx),
   });
   pi.registerCommand("theme", {
-    description: "Select TUI theme: /theme | /theme standard | /theme dracula | /theme list | /theme status",
+    description: "Тема терминала: /theme, /theme standard, /theme dracula, /theme list, /theme status",
     handler: handleTheme,
   });
   registerAction("theme-select", (ctx: any) => handleTheme(undefined, ctx));
   registerAction("command:theme", (args: any, ctx: any) => handleTheme(args, ctx));
 
   pi.registerShortcut(Key.alt("a"), {
-    description: "Open 1C Agent Hub",
+    description: "Список субагентов",
     handler: async (ctx) => showHub(ctx),
   });
+  let slashGroupsAttached = false;
+  let groupsOpening = false;
+  let slashCtx: any = null;
+
+  function slashToken(lines: string[], cursorLine: number, cursorCol: number) {
+    const line = String(lines?.[cursorLine] ?? "");
+    const left = line.slice(0, Math.max(0, cursorCol));
+    const match = left.match(/(?:^|\s)(\/[^\s]*)$/);
+    return match ? match[1] : "";
+  }
+
+  function attachSlashGroups(ctx: any) {
+    slashCtx = ctx;
+    if (slashGroupsAttached) return;
+    if (typeof ctx?.ui?.addAutocompleteProvider !== "function") return;
+    slashGroupsAttached = true;
+    ctx.ui.addAutocompleteProvider((current: any) => ({
+      triggerCharacters: ["/"],
+      async getSuggestions(lines: string[], cursorLine: number, cursorCol: number, options: any) {
+        const live = slashCtx || ctx;
+        const joined = (lines || []).join("\n").trim();
+        const token = slashToken(lines || [], cursorLine, cursorCol);
+        if (joined === "/" && token === "/") {
+          if (!groupsOpening) {
+            groupsOpening = true;
+            queueMicrotask(async () => {
+              try {
+                if (typeof live.ui?.setEditorText === "function") live.ui.setEditorText("");
+                await openCommandGroups(live);
+              } finally {
+                groupsOpening = false;
+              }
+            });
+          }
+          return null;
+        }
+        if (typeof current?.getSuggestions === "function") {
+          return current.getSuggestions(lines, cursorLine, cursorCol, options);
+        }
+        return null;
+      },
+      applyCompletion(lines: string[], cursorLine: number, cursorCol: number, item: any, prefix: string) {
+        if (typeof current?.applyCompletion === "function") {
+          return current.applyCompletion(lines, cursorLine, cursorCol, item, prefix);
+        }
+        return { lines, cursorLine, cursorCol };
+      },
+    }));
+  }
+
+  async function openCommandGroups(ctx: any) {
+    const listed = typeof pi.getCommands === "function" ? pi.getCommands() : [];
+    const name = await overlayCommandGroups(ctx, listed);
+    if (!name) return;
+    const text = `/${name} `;
+    if (typeof ctx.ui?.setEditorText === "function") {
+      ctx.ui.setEditorText(text);
+      return;
+    }
+    ctx.ui.notify(text.trim(), "info");
+  }
+
+  pi.registerCommand("groups", {
+    description: "Разделы команд. Выбранная команда попадает в поле и не запускается",
+    handler: async (_args, ctx) => openCommandGroups(ctx),
+  });
+  pi.registerShortcut(Key.ctrlShift("g"), {
+    description: "Открыть разделы команд",
+    handler: async (ctx) => openCommandGroups(ctx),
+  });
+
   pi.registerShortcut(Key.ctrlShift("k"), {
-    description: "Open Pi 1C command palette",
+    description: "Открыть палитру частых действий",
     handler: async (ctx) => invokeAction("palette-open", ctx),
   });
 
@@ -332,6 +429,7 @@ export default function oneCUi(pi: ExtensionAPI): void {
   pi.on("session_start", async (_event, ctx) => {
     seedMcpFromDisk(ctx.cwd);
     publishThinking(undefined, ctx);
+    attachSlashGroups(ctx);
     if (!uiAvailable(ctx)) return;
     mountFooter(ctx, pi);
     mountAgentWidget(ctx);

@@ -1,5 +1,5 @@
 ---
-description: Review the current diff or selected files for unnecessary complexity; report evidence-backed simplifications without applying fixes
+description: "Найти лишнюю сложность в текущем diff или выбранных файлах, ничего не меняя"
 ---
 
 # /ponytail-review — review for unnecessary complexity

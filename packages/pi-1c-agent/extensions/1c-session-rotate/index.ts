@@ -199,7 +199,7 @@ export default function sessionRotateExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("session-rotate", {
-    description: "Opt-in session rotation instead of compaction: /session-rotate on|off|status|<percent>",
+    description: "Ротация сессии вместо сжатия: /session-rotate on, off, status или процент",
     handler: handleSessionRotate,
   });
   registerAction("command:session-rotate", (args: any, ctx: any) => handleSessionRotate(args, ctx));

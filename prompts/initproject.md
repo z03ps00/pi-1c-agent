@@ -1,5 +1,5 @@
 ---
-description: [settings] Alias of /init from-infobase — existing IB, or optional new file IB + dump from .cf / .cfe / .dt
+description: "[settings] То же, что /init из базы: существующая ИБ или новая файловая из .cf / .cfe / .dt"
 ---
 
 # /initproject — alias of /init from-infobase

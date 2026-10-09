@@ -22,6 +22,10 @@ Load the owner that matches the task; do not preload the whole set. Routed stand
 | Queries — routing and pre-flight | `query-design.md` (load first for any non-trivial query) |
 | Managed forms — routing | `forms.md` (load first; companions via its table) |
 | Locks and transactions · logging · extensions · registers · СКД · БСП access rights | `standards(name="locks-and-transactions")` · `standards(name="logging-strategy")` · `standards(name="extension-patterns")` · `standards(name="registers-design")` · `standards(name="dcs-design")` (advanced two-pass composition — `standards(name="dcs-advanced-composition")`) · `standards(name="bsp-access-rights")` |
+| Data separation — separator, divided infobase, область данных, tenant boundary | `data-separation.md` |
+| Exchange plans and distributed infobases — план обмена, РИБ, регистрация изменений, message conflict. Conversion rules stay in the КД skills | `exchange-plans.md` |
+
+> **Profile delta (Pi).** The two rows above are inlined profile rules. Kept on the next `/review-airules`. Do not wholesale-replace this index from `comol/ai_rules_1c`.
 
 ## Code reuse
 

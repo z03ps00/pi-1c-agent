@@ -159,6 +159,33 @@ If you observe a deadlock under load, the question is never "how do we retry" �
 КонецПроцедуры
 ```
 
+Use this shape when the handler must read a balance **before** it builds movements, and a concurrent poster could consume that balance in between. The lock is taken first, then the read, then the write.
+
+### Pattern: balance control after the write
+
+> **Profile delta (Pi).** Kept on the next `/review-airules`. Do not wholesale-replace this file from `comol/ai_rules_1c`.
+
+ITS 661 is the other posting shape. Use it when the handler does not need the balance figure before the write and only has to refuse a negative result. Do not delete the pattern above to "match" this one.
+
+- Write registers that cannot go negative first, in a stable order (alphabetical is enough). Set `БлокироватьДляИзменения = Ложь` on those sets.
+- Write the controlled accumulation or accounting registers last. Set `БлокироватьДляИзменения = Истина` before `Записать()`. Totals separation stays on for those registers.
+- Query negative balances **after** that write, for the dimension set that can actually go negative. An empty result commits; any row rolls the transaction back.
+- A receipt that only increases a balance, and a repost that cannot write off more than the first posting already did, skip the control query.
+- Do not put this query in `ПередЗаписью` of the record-set module. The platform's write order is not yours there, and the lock is held while every other register is written.
+- Explicit `Записать()` inside `ОбработкаПроведения` is the ITS 450 exception: the handler needs the written rows before it returns. Every other set is left for the platform to write on the way out (`Движения.X.Записывать = Истина`).
+- An explicit `ДЛЯ ИЗМЕНЕНИЯ` on top of this write is normally redundant: the write already locked what the control query reads.
+- Do not set `Проведение = Запретить` to model a draft or a lifecycle stage. An unposted document is the draft; stages are statuses on a posted document (ITS 603). Documents that only record a fact in time (a call, incoming mail) stay unposted — that is the exception in the same standard.
+
+```bsl
+Движения.Взаиморасчеты.БлокироватьДляИзменения = Ложь;
+Движения.Взаиморасчеты.Записать();
+
+Движения.ТоварыНаСкладах.БлокироватьДляИзменения = Истина;
+Движения.ТоварыНаСкладах.Записать();
+
+// Negative-balance query for the controlled dimensions. Refuse if any row comes back.
+```
+
 ### Pattern: mass operation across many documents
 
 Drive the transaction at the caller, not per-document, when atomicity across documents is required. Otherwise wrap each document in its own transaction and continue on failure (logging each failure) — choose based on the business requirement.
@@ -192,6 +219,17 @@ For information registers used as a status log (`СтатусыЗаказов`, 
 
 `НаборЗаписей.Заблокировать()` is the convenience form of a managed lock scoped to the set's filter — use it when the whole point is "I am about to rewrite these records".
 
+### Pattern: object edit conflict
+
+> **Profile delta (Pi).** Kept on the next `/review-airules`. Do not wholesale-replace this file from `comol/ai_rules_1c`.
+
+This is not a register lock. Two calls, and they do not substitute for each other:
+
+- `Заблокировать()` on the object reference is a pessimistic lock for the transaction. It is not tied to a form. Release it by ending the transaction.
+- `ЗаблокироватьДанныеДляРедактирования(Ссылка, , УникальныйИдентификаторФормы)` is the form lock. Pass the form id so closing the form releases it. Call `РазблокироватьДанныеДляРедактирования` on close.
+- «Запись была изменена или удалена другим пользователем» is the optimistic conflict: the version on disk moved. Re-read and re-apply the user's change, or show the conflict. Do not catch it and overwrite.
+- «Объект уже заблокирован» means a pessimistic or form lock is held. Do not clear it by writing in privileged mode.
+
 ## 6. Diagnosing lock conflicts and deadlocks
 
 ### Symptoms
@@ -207,13 +245,29 @@ For information registers used as a status log (`СтатусыЗаказов`, 
 - **MS SQL DMVs (server infobase only)** — `sys.dm_tran_locks`, `sys.dm_os_waiting_tasks` for live snapshots when the technological log is not enough.
 - **Posting replay** — re-post the failing document under the debugger to capture the exact lock call sequence.
 
+### Reading the event log and the technological log
+
+> **Profile delta (Pi).** Kept on the next `/review-airules`. Do not wholesale-replace this file from `comol/ai_rules_1c`.
+
+The event log answers who did what in the application. The technological log answers what the platform waited on. Turn the technological log on for the failing infobase and the events you need, then turn it off.
+
+- **Event log** — filter by interval, user, metadata, and event. The comment and the data field should name the object. If they do not, the writer is the gap (`logging-strategy.md`), not this section.
+- **`TLOCK` / `TDEADLOCK`** — who holds the lock and who waits. This remains the source for a deadlock.
+- **`EXCP`** — exception text and stack, including module and line.
+- **`DBMSSQL` / `DBPOSTGRS` / `SDBL`** — the SQL or the query and its duration. Use it for a slow posting or report, not as a standing trace.
+- **`CALL`** — a long server call. Match its duration to the event-log row of the same session.
+
+Tie a record to code by the module and line on `EXCP` or `CALL`, then by the metadata name in the event log. The document name alone does not identify the handler.
+
 See `systematic-debugging.md` for the surrounding methodology — locks must be diagnosed in the Reproduce → Hypothesize → Experiment → Fix order, not by guess-and-retry.
 
 ## 7. Companion rules
 
 | Concern | File |
 |---|---|
-| Worked posting example | `platform-solutions.md §9 → "Managed locks and deadlock prevention"` |
+| Worked posting example | `platform-solutions.md §9 → "Managed locks and deadlock prevention"` — short template of the read-before-write pattern; both patterns are defined in §5 of this file |
+| Object version conflict | §5 → "Pattern: object edit conflict" |
+| Event log / technological log | §6 → "Reading the event log and the technological log" |
 | Transaction nesting in event handlers | `platform-solutions.md §4 → "Transactions in event handlers"` |
 | Authoritative query rules under locks | `dev-standards-architecture.md §3 → "Queries"` |
 | Logging lock-conflict events | `logging-strategy.md` |

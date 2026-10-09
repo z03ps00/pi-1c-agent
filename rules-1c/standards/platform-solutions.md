@@ -244,15 +244,23 @@ For form attributes with reference or composite types — first copy the value t
 КонецПроцедуры
 ```
 
-Headlines of the rules to follow: lock **before** reading; use `Исключительный` for writes and `Разделяемый` only for consistent reads; pass `ИсточникДанных` instead of iterating; lock the register, not the document; never call user dialogs / long-running operations under a transaction; set configuration lock mode to `Управляемый`.
+Headlines of the rules to follow for **this** template: lock **before** reading; use `Исключительный` for writes and `Разделяемый` only for consistent reads; pass `ИсточникДанных` instead of iterating; lock the register, not the document; never call user dialogs / long-running operations under a transaction; set configuration lock mode to `Управляемый`.
 
-**Authoritative deep-dive — `locks-and-transactions.md`.** That file covers the full theory: transaction boundaries, implicit vs explicit transactions, lock-ordering contract for the whole project, mass-operation patterns, status-log pattern, and the technological-log diagnostics (`TLOCK` / `TDEADLOCK`). When designing a new posting path or debugging a deadlock — read it first.
+> **Profile delta (Pi).** Kept on the next `/review-airules`. Do not wholesale-replace this file from `comol/ai_rules_1c`.
+
+**When this template applies.** The handler must read a balance before it builds movements, and a concurrent poster could consume that balance.
+
+**When it does not.** Checking that the write itself did not drive a balance negative is the other pattern in `locks-and-transactions.md` §5 → "Pattern: balance control after the write" (ITS 661): controlled registers are written last with `БлокироватьДляИзменения = Истина`, and the negative-balance query runs after that write. Do not replace the template above with that pattern. An unposted document is the draft; do not turn posting off to model a status (ITS 603).
+
+**Authoritative deep-dive — `locks-and-transactions.md`.** That file owns both posting patterns, transaction boundaries, the lock-ordering contract, the object-edit conflict, and event-log / technological-log reading (§6). When designing a posting path or debugging a deadlock — read it first.
 
 **Standard.** ITS: "Управление блокировкой данных в транзакции", "Особенности проведения документов".
 
 ---
 
 ## 10. Background jobs from an external data processor (БСП)
+
+A scheduled job and a user-visible wait that is not the File → Open case below are `dev-standards-architecture.md` §1 → "Background Jobs". This section stays the external-processor template only.
 
 **Problem.** `ДлительныеОперации` runs server-side. If a data processor is opened via "File → Open" (i.e. as an external `*.epf`, not from the `ДополнительныеОтчетыИОбработки` catalog), БСП cannot find the processor on the server and `ВыполнитьВФоне` fails.
 

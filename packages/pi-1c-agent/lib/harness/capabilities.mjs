@@ -107,3 +107,13 @@ export function isStructuralToolName(toolName) {
   const structural = CAPABILITY_NAMES.filter((name) => /^(metadata|code|graph)\./.test(name));
   return structural.some((name) => (MATCHERS[name] || []).some((re) => re.test(text)));
 }
+
+export function isStructuralCall(toolName, input) {
+  if (isStructuralToolName(toolName)) return true;
+  if (!input || typeof input !== 'object') return false;
+  const nested = ['tool', 'name', 'method']
+    .map((key) => input[key])
+    .filter((value) => typeof value === 'string' && value.trim())
+    .join(' ');
+  return nested ? isStructuralToolName(nested) : false;
+}

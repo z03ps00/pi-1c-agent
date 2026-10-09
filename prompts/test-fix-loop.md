@@ -1,5 +1,5 @@
 ---
-description: [maintainer] Closed deploy → test → fix → redeploy loop against the test infobase, until the scenarios pass or the iteration budget is exhausted
+description: "[maintainer] Цикл загрузить, проверить и исправить на тестовой базе, пока сценарии не пройдут или не кончится бюджет"
 ---
 
 # /test-fix-loop — deploy → test → fix → redeploy until green

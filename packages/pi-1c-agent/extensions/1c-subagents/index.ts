@@ -9,6 +9,7 @@ import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
 import { childModeGuardText, childToolAllowlist, evaluateSubagentRequest, isWriterAgent, parallelSafety, parseResources, parseSideEffects, resolveDiscoveredAgentName, selectExecutionStrategy, writerNames, WRITER_SUBAGENTS } from "../../lib/agent-policy.mjs";
+import { childAnonLaunch, readParentAnonLevel } from "../../lib/child-anon.mjs";
 import { childProcessEnv } from "../../lib/child-env.mjs";
 import { assistantTextFromEvent, activityItemFromEvent, appendActivityItems, buildChildResult, createChildOutputBuffer } from "../../lib/child-transport.mjs";
 import { terminateProcessTree } from "../../lib/process-supervisor.mjs";
@@ -247,7 +248,8 @@ async function runAgent(
   const instruction = handoffInstruction(agent.name);
   fs.writeFileSync(promptFile, `${instruction}\n\n${agent.prompt}${modeGuard}\n${instruction}`, { mode: 0o600 });
 
-  const args = ["--mode", "json", "-p", "--no-session", "--1c-mode", mode];
+  const anonLaunch = childAnonLaunch(readParentAnonLevel());
+  const args = ["--mode", "json", "-p", "--no-session", "--1c-mode", mode, ...anonLaunch.args];
   const resolvedModel = resolveAgentModel(agent, cwd);
   if (resolvedModel) args.push("--model", resolvedModel);
 
@@ -281,6 +283,7 @@ async function runAgent(
         PI_1C_PARENT_RUN_ID: parentRunId || runId,
         PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR || profileDir,
         PI_SKIP_VERSION_CHECK: process.env.PI_SKIP_VERSION_CHECK || "1",
+        ...anonLaunch.env,
       }),
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
@@ -734,7 +737,7 @@ export default function oneCSubagents(pi: ExtensionAPI) {
   registerAction("agents-stop", (id: string) => tracker.stop(id));
 
   pi.registerCommand("agents", {
-    description: "Show trusted/active 1C subagents and their source",
+    description: "Субагенты 1С: кто доступен и откуда загружен",
     handler: async (_args, ctx) => {
       const agents = await publishDiscovered(ctx);
       if (uiAvailable(ctx)) {

@@ -17,7 +17,7 @@ import {
 } from "../../lib/approve-policy.mjs";
 import { dockerBlockReason } from "../../lib/docker-policy.mjs";
 import { anonMutatorFallbackRegex } from "../../lib/memory-mutators.mjs";
-import { evaluatePlanMcpToolCall, evaluatePlanToolCall, getPlanVisibleTools } from "../../lib/plan-policy.mjs";
+import { evaluatePlanMcpToolCall, evaluatePlanToolCall, getPlanVisibleTools, secretToolBlock } from "../../lib/plan-policy.mjs";
 import { acceptPlan, enterBuild, enterPlan, executePlan, extractPlanArtifact, initialModeState } from "../../lib/plan-state.mjs";
 import * as planStateLib from "../../lib/plan-state.mjs";
 import * as planPolicyLib from "../../lib/plan-policy.mjs";
@@ -310,12 +310,15 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   function updateStatus(_ctx: ExtensionContext): void {
+    const level = anonLevel();
+    (globalThis as { __PI_1C_ANON__?: number }).__PI_1C_ANON__ = level;
+    process.env.PI_1C_ANON = String(level);
     publish("mode", {
       mode: state.mode,
       phase: state.phase,
       planId: state.plan?.id,
       taskmode: normalizeTaskmode(state.taskmode),
-      anonLevel: anonLevel(),
+      anonLevel: level,
       approve: approveLevelName(approveLevel()),
     });
   }
@@ -414,7 +417,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("mode", {
-    description: "Switch 1C mode: /mode plan | /mode build | /mode ask",
+    description: "Режим сессии: /mode plan, /mode build или /mode ask",
     handler: async (args, ctx) => {
       const requested = args?.trim().toLowerCase();
       if (requested === "plan") return switchToPlan(ctx);
@@ -472,7 +475,7 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("taskmode", {
-    description: "Work path: /taskmode docs-fix | spec-authoring | analytics | quick-fix | full-cycle | auto | status",
+    description: "Путь задачи: правка текста, спецификация, разбор, быстрый фикс, полный цикл или auto",
     handler: handleTaskmode,
   });
   registerAction("command:taskmode", (args: any, ctx: any) => handleTaskmode(args, ctx));
@@ -513,13 +516,13 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("anon", {
-    description: "Anonymous session: /anon 1 (no writes) | 2 (no reads) | 3 (no local traces) | off | status",
+    description: "Анонимная сессия: /anon 1 без записи, 2 без чтения, 3 без локальных следов, off",
     handler: handleAnon,
   });
   registerAction("command:anon", (args: any, ctx: any) => handleAnon(args, ctx));
 
   pi.registerShortcut(Key.ctrlAlt("a"), {
-    description: "Cycle anonymous session level: off → 1 → 2 → 3",
+    description: "Переключить анонимность: off, 1, 2, 3",
     handler: async (ctx) => {
       const current = anonLevel();
       setAnonLevel(current >= 3 ? 0 : current + 1, ctx);
@@ -549,20 +552,20 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("approve", {
-    description: "Approval mode: /approve off | safe | strict | status",
+    description: "Подтверждение действий: /approve off, safe или strict",
     handler: handleApprove,
   });
   registerAction("command:approve", (args: any, ctx: any) => handleApprove(args, ctx));
 
   pi.registerShortcut(Key.ctrlAlt("s"), {
-    description: "Cycle approval mode: off → safe → strict",
+    description: "Переключить подтверждение: off, safe, strict",
     handler: async (ctx) => {
       setApproveLevel(cycleApproveLevel(approveLevel()), ctx);
     },
   });
 
   pi.registerShortcut(Key.ctrlAlt("p"), {
-    description: "Cycle 1C BUILD/PLAN/ASK mode",
+    description: "Переключить режим BUILD, PLAN, ASK",
     handler: async (ctx) => {
       if (state.mode === "build") return switchToPlan(ctx);
       if (state.mode === "plan") return switchToAsk(ctx);
@@ -588,6 +591,8 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
   });
 
   pi.on("tool_call", async (event, ctx) => {
+    const secretReason = secretToolBlock(event.toolName, event.input ?? {});
+    if (secretReason) return { block: true, reason: secretReason };
     const anon = anonLevel();
     if (anon > 0) {
       const verdict = anonVerdict(anon, event.toolName, event.input ?? {}, cwd);

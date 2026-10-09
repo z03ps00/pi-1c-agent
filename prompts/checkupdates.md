@@ -1,5 +1,5 @@
 ---
-description: [settings] Read-only check of MCP images and of 1c-rules in a 1C project (not this profile — use /review-airules)
+description: "[settings] Только проверка образов MCP и правил 1С в проекте. Этот профиль обновляет /review-airules"
 ---
 
 # /checkupdates — есть ли обновления MCP и правил в проекте 1С

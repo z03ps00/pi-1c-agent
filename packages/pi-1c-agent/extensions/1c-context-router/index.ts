@@ -6,7 +6,7 @@ import { overlayLearningSelect, overlaySelect, overlayText } from "../1c-ui/over
 import { getSnapshot, uiAvailable } from "../../lib/ui/index.mjs";
 import {
   formatCapabilityBlock,
-  isStructuralToolName,
+  isStructuralCall,
   snapshotCapabilities,
 } from "../../lib/harness/capabilities.mjs";
 import { classifyDanger } from "../../lib/approve-policy.mjs";
@@ -100,7 +100,7 @@ function admitFile(session: ReturnType<typeof getSession>, id: string, bucket: "
 
 export default function oneCContextRouter(pi: ExtensionAPI): void {
   pi.registerCommand("capabilities", {
-    description: "Show the 1C capability snapshot",
+    description: "Снимок возможностей 1С в этой сессии",
     handler: async (_args, ctx) => {
       const body = formatCapabilityBlock(snapshotCapabilities(getSession().tools));
       await show(pi, ctx, "1C Capabilities", body);
@@ -108,7 +108,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("context", {
-    description: "Show context budget, loaded skills, rules, knowledge, and source strategy",
+    description: "Бюджет контекста, навыки, правила и откуда взят ответ",
     handler: async (_args, ctx) => {
       const session = getSession();
       const body = renderContextView({
@@ -122,7 +122,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("session-stats", {
-    description: "Print session routing and context counters",
+    description: "Счётчики маршрута и контекста этой сессии",
     handler: async () => {
       pi.sendMessage({
         customType: "pi-1c-session-stats",
@@ -133,7 +133,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("evolve", {
-    description: "Draft a skill, rule, workflow, or prompt. Empty opens the picker. approve <id> marks a draft.",
+    description: "Черновик навыка, правила, сценария или промпта. Пустой вызов открывает выбор",
     handler: async (args, ctx) => {
       const raw = String(args ?? "").trim();
       let kind = raw.split(/\s+/)[0] || "";
@@ -179,7 +179,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("learning", {
-    description: "Learning mode: /learning off | safe | auto | status. Empty opens the picker.",
+    description: "Обучение: /learning off, safe или auto. Пустой вызов открывает выбор",
     handler: async (args, ctx) => {
       const raw = String(args ?? "").trim().toLowerCase();
       if (raw === "status") {
@@ -270,7 +270,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
 
   pi.on("tool_call", async (event) => {
     const session = getSession();
-    const structural = isStructuralToolName(event.toolName);
+    const structural = isStructuralCall(event.toolName, event.input);
     const block = shouldBlockTool({
       decision: session.decision,
       toolName: event.toolName,

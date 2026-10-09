@@ -1,5 +1,5 @@
 ---
-description: Install rtk (third-party shell-output compression proxy) and wire it into the active AI client; uninstall on request
+description: "Поставить rtk для сжатия вывода команд и подключить к клиенту. Снятие по запросу"
 userOnly: true
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: [settings] Plant `.pi/1c` project knowledge dirs into an existing 1C repo — do not copy the agent
+description: "[settings] Создать каталоги знаний .pi/1c в существующем репозитории 1С. Агента не копирует"
 ---
 
 # /init-knowledge — plant project knowledge layout

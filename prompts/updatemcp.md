@@ -1,5 +1,5 @@
 ---
-description: [settings] Re-download the 1C MCP server distribution from vibecoding1c.ru, pull new images, refresh keys, restart installed servers, and switch the image channel between stable and beta
+description: "[settings] Обновить дистрибутив MCP 1С, образы, ключи и канал stable или beta"
 ---
 
 # /updatemcp — update MCP servers from a fresh vibecoding1c.ru distribution

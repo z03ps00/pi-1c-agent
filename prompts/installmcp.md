@@ -1,5 +1,5 @@
 ---
-description: [settings] Download the 1C MCP server distribution from vibecoding1c.ru and install all servers from it, in the stable or the beta image channel
+description: "[settings] Скачать дистрибутив MCP 1С и поставить серверы, канал stable или beta"
 ---
 
 # /installmcp — install MCP servers from the vibecoding1c.ru distribution

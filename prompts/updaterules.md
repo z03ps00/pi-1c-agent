@@ -1,5 +1,5 @@
 ---
-description: [settings] Update the 1c-rules ruleset from GitHub (https://github.com/comol/ai_rules_1c)
+description: "[settings] Обновить правила 1С в проекте из GitHub comol/ai_rules_1c"
 ---
 
 # /updaterules — update 1c-rules in a 1C project

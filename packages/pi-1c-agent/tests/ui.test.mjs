@@ -7,6 +7,7 @@ import {
   uiAvailable,
   hasDialogUi,
   composeFooter,
+  composeWorkFooter,
   footerSegments,
   FOOTER_DROP_ORDER,
   mcpCountsFromAdapterSnapshot,
@@ -469,4 +470,54 @@ test('theme args and shipped VS Code palettes', () => {
       assert.ok(json.colors[token] !== undefined && json.colors[token] !== null, `${shipped.name} missing ${token}`);
     }
   }
+});
+
+test('work footer shows depth, economy, ui, changes, and a short base name', () => {
+  const view = composeWorkFooter({
+    mode: 'build',
+    taskmode: 'full-cycle',
+    depth: 'full',
+    economy: 'economy',
+    ui: 'manual',
+    changes: 2,
+    ibKind: 'file',
+    ibName: 'nutricia',
+    mcpConnected: 2,
+    mcpEnabled: 7,
+    model: 'openai/gpt',
+    contextPercent: 12,
+    gitBranch: 'main',
+    gitDirty: true,
+    learning: 'safe',
+    thinkingLevel: 'high',
+    projectName: 'pavel',
+    capabilityFooter: 'graph✗ code✗ ib✗',
+    captureEnabled: true,
+    captureMode: 'stack',
+  }, 420);
+  const text = view.lines.map((line) => line.text).join('\n');
+  assert.match(text, /Сессия/);
+  assert.match(text, /Среда/);
+  const primaryAt = view.lines.findIndex((line) => line.kind === 'primary');
+  assert.equal(view.lines[primaryAt + 1].text, '\t');
+  assert.equal(view.lines[primaryAt + 2].text, 'Среда');
+  assert.match(text, /─{8,}/);
+  assert.match(view.primary, /Режим Реализация/);
+  assert.match(view.primary, /Путь полный цикл/);
+  assert.match(view.primary, /Глубина полно/);
+  assert.match(view.primary, /Экономия экономия/);
+  assert.match(view.primary, /Интерфейс вручную/);
+  assert.match(view.primary, /Обучение осторожно/);
+  assert.match(view.secondary, /━/);
+  assert.match(view.secondary, /Мышление высоко/);
+  assert.match(view.secondary, /Изменения 2/);
+  assert.match(view.secondary, /База файл nutricia/);
+  assert.match(view.secondary, /Проект pavel/);
+  assert.match(view.secondary, /Граф ✗/);
+  assert.match(view.secondary, /MCP Сервера 2\/7/);
+  assert.match(view.secondary, /Ветка main\*/);
+  assert.doesNotMatch(text, /p@ss|password|file file|depth full|learning:safe/);
+  const emptyBase = composeWorkFooter({ mode: 'ask', ibKind: 'file', ibName: '' }, 200);
+  assert.doesNotMatch(emptyBase.secondary, /file file|База /);
+  assert.match(emptyBase.primary, /Режим Вопрос/);
 });

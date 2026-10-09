@@ -59,6 +59,15 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/getconfigfiles` | Partial object dump |
 | `/check-uuid` | Duplicate UUID check in a dump |
 | `/doctor-explain` | LLM 1c-rules diagnostic (not `/doctor`) |
+| `/groups` | Section browser (`Ctrl+Shift+G`). Inserts a command and does not run it |
+| `/layout-view` | Static HTML sketch of a managed form or spreadsheet template |
+| `/reglog` | Recent registration-log rows. Fixed read query; limit, window, and level only |
+| `/ext-plan` | Dry plan for a vendor update through an extension |
+| `/config` | Configuration knowledge: init, status, analyze, update, apply |
+| `/learn` | Draft a fact or rule. Empty call opens the overlay. Approve only in BUILD |
+| `/rule` | List, show, audit, or disable a knowledge rule |
+| `/status` | Mode, project, memory, and agents |
+| `/agents` | Subagent hub |
 
 ## Maintainer
 

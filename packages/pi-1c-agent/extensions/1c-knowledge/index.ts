@@ -20,6 +20,7 @@ import {
   queryKnowledge,
 } from "../../lib/knowledge.mjs";
 import { current1cMode, requireBuild as assertBuild } from "../../lib/mode-state.mjs";
+import { pickOverlay } from "../1c-ui/overlays.ts";
 import { registerAction } from "../../lib/ui/index.mjs";
 
 type Pending = {
@@ -189,14 +190,14 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   }
 
   async function pickLearnAction(ctx: any): Promise<void> {
-    const selected = await ctx.ui.select("Learn", [
-      "new fact/rule",
-      "approve a draft",
-      "reject a draft",
-    ]);
-    if (selected === "approve a draft") return approveDraftById(ctx, "");
-    if (selected === "reject a draft") return rejectDraftById(ctx, "");
-    if (selected !== "new fact/rule") return;
+    const selected = await pickOverlay(ctx, "Знания", [
+      { value: "new", label: "Новый факт или правило", description: "Черновик из формулировки. Сам не становится активным." },
+      { value: "approve", label: "Утвердить черновик", description: "В BUILD активирует выбранный черновик." },
+      { value: "reject", label: "Отклонить черновик", description: "Снимает черновик без записи в активные знания." },
+    ], "Черновик не меняет активные знания, пока его не утвердят.");
+    if (selected === "approve") return approveDraftById(ctx, "");
+    if (selected === "reject") return rejectDraftById(ctx, "");
+    if (selected !== "new") return;
     const value = await ctx.ui.input("New fact or rule", "What should be learned?");
     if (value == null) return;
     const trimmed = value.trim();
@@ -293,13 +294,13 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
       ctx.ui.notify("Usage: /config init|status|analyze|update|apply", "info");
   };
   pi.registerCommand("config", {
-    description: "Configuration knowledge lifecycle: init|status|analyze|update|apply",
+    description: "Знания конфигурации: init, status, analyze, update, apply",
     handler: handleConfig,
   });
   registerAction("command:config", (args: any, ctx: any) => handleConfig(args, ctx));
 
   pi.registerCommand("learn", {
-    description: "Learn: new fact/rule | approve a draft | reject a draft (no arg opens picker)",
+    description: "Черновик факта или правила. Пустой вызов открывает выбор",
     handler: async (args, ctx) => {
       if (!requireTrusted(ctx)) return;
       const raw = args?.trim() ?? "";
@@ -311,7 +312,7 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("rule", {
-    description: "Rule management: add|list|show|audit|conflicts|disable",
+    description: "Правила знаний: add, list, show, audit, conflicts, disable",
     handler: async (args, ctx) => {
       if (!requireTrusted(ctx)) return;
       const raw = args?.trim() ?? "";
@@ -373,6 +374,8 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
     const parsed = parseKnowledgeProposals(text);
     if (!parsed.ok) {
       ctx.ui.notify(`Knowledge draft not created: ${parsed.errors.join("; ")}`, "warning");
+      pending = null;
+      persistPending();
       return;
     }
     const proposals = [...(pending.automaticProposals ?? []), ...parsed.proposals];

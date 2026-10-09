@@ -1,20 +1,20 @@
 export const PALETTE_SHORTCUT = 'ctrl+shift+k';
 
 export const PALETTE_ACTIONS = Object.freeze([
-  { id: 'mode', label: 'Change mode', keywords: 'mode build plan ask', command: '/mode' },
-  { id: 'taskmode', label: 'Change work path', keywords: 'taskmode docs-fix spec-authoring analytics quick-fix full-cycle', command: '/taskmode' },
-  { id: 'agents', label: 'Agents', keywords: 'hub subagent roster', command: '/agents' },
-  { id: 'status', label: 'Project status', keywords: 'status health', command: '/status' },
-  { id: 'config', label: 'Configuration knowledge', keywords: 'config knowledge fingerprint', command: '/config status' },
-  { id: 'init', label: 'Init project', keywords: 'init wizard setup', command: '/init' },
-  { id: 'memory', label: 'Memory', keywords: 'wrap capture cognee', command: '/wrap auto status' },
-  { id: 'session', label: 'Session rotation', keywords: 'session rotate context', command: '/session-rotate status' },
-  { id: 'approve', label: 'Approval mode', keywords: 'approve safe strict', command: '/approve' },
-  { id: 'anon', label: 'Anonymous mode', keywords: 'anon privacy', command: '/anon' },
-  { id: 'sdlc', label: 'SDLC QA profile', keywords: 'sdlc lite standard full verification', command: '/sdlc' },
-  { id: 'theme', label: 'Theme', keywords: 'theme color dracula dark light standard vscode', command: '/theme' },
-  { id: 'doctor', label: 'Doctor', keywords: 'doctor health check', command: '/doctor' },
-  { id: 'settings', label: 'Settings', keywords: 'settings approve anon capture', command: '/approve' },
+  { id: 'mode', label: 'Режим', keywords: 'mode build plan ask', command: '/mode' },
+  { id: 'taskmode', label: 'Путь задачи', keywords: 'taskmode docs-fix spec-authoring analytics quick-fix full-cycle', command: '/taskmode' },
+  { id: 'agents', label: 'Субагенты', keywords: 'hub subagent roster', command: '/agents' },
+  { id: 'status', label: 'Статус проекта', keywords: 'status health', command: '/status' },
+  { id: 'config', label: 'Знания конфигурации', keywords: 'config knowledge fingerprint', command: '/config status' },
+  { id: 'init', label: 'Мастер проекта', keywords: 'init wizard setup', command: '/init' },
+  { id: 'memory', label: 'Память', keywords: 'wrap capture cognee', command: '/wrap auto status' },
+  { id: 'session', label: 'Ротация сессии', keywords: 'session rotate context', command: '/session-rotate status' },
+  { id: 'approve', label: 'Подтверждение действий', keywords: 'approve safe strict', command: '/approve' },
+  { id: 'anon', label: 'Анонимная сессия', keywords: 'anon privacy', command: '/anon' },
+  { id: 'sdlc', label: 'Глубина проверок', keywords: 'sdlc lite standard full verification', command: '/sdlc' },
+  { id: 'theme', label: 'Тема', keywords: 'theme color dracula dark light standard vscode', command: '/theme' },
+  { id: 'doctor', label: 'Диагностика', keywords: 'doctor health check', command: '/doctor' },
+  { id: 'settings', label: 'Статус сессии', keywords: 'status health session', command: '/status' },
 ]);
 
 function score(action, query) {

@@ -1,5 +1,5 @@
 ---
-description: Create an infobase-to-MCP XML export script and install it in Windows Task Scheduler
+description: "Скрипт выгрузки XML из базы в MCP и задание планировщика Windows"
 userOnly: true
 ---
 

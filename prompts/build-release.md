@@ -1,5 +1,5 @@
 ---
-description: Build release artifacts from committed sources — .cf for the main configuration and .cfe per extension, with optional version bump, changelog and git tag
+description: "Собрать .cf и .cfe из зафиксированных исходников, по желанию версия, changelog и тег"
 ---
 
 # /build-release — release artifacts from the git snapshot

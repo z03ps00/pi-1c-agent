@@ -36,6 +36,9 @@ export const PACKAGE_OWNED_COMMANDS = [
   'evolve',
   'learning',
   'session-stats',
+  'groups',
+  'layout-view',
+  'reglog',
 ];
 export const DESTRUCTIVE_PROMPT_NAMES = [
   'update1cbase',

@@ -1,5 +1,5 @@
 ---
-description: Load current repository files into the infobase defined in .dev.env and update the DB structure
+description: "Загрузить файлы репозитория в базу из .dev.env и обновить структуру"
 ---
 
 # /update1cbase — load repository into an infobase

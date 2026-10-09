@@ -1,5 +1,5 @@
 ---
-description: [settings] Install DitriX EDT-MCP into a local 1C:EDT installation and connect the active AI client
+description: "[settings] Поставить EDT-MCP в локальный 1C:EDT и подключить клиент"
 ---
 
 # /install-edt-mcp — install EDT-MCP

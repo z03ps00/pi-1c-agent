@@ -1,5 +1,5 @@
 ---
-description: Load the configuration into the test infobase from .dev.env and run UI tests in the web client
+description: "Загрузить конфигурацию в тестовую базу из .dev.env и прогнать UI-тесты веб-клиента"
 ---
 
 # /deploy-and-test — deploy to test infobase + UI tests

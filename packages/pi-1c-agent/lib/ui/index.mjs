@@ -8,6 +8,8 @@ export {
 export { ICONS, statusIcon } from './icons.mjs';
 export {
   composeFooter,
+  composeWorkFooter,
+  countOpenChanges,
   footerSegments,
   FOOTER_DROP_ORDER,
   MCP_STATUS_EVENT,

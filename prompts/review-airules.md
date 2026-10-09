@@ -1,5 +1,5 @@
 ---
-description: "[maintainer] Read-only review of comol/ai_rules_1c against this profile pin; never install in the same turn"
+description: "[maintainer] Только чтение: сверить comol/ai_rules_1c с этим профилем. В том же ходе ничего не ставить"
 ---
 
 # /review-airules — review Comol ai_rules_1c for this Pi profile

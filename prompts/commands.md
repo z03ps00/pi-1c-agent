@@ -1,5 +1,5 @@
 ---
-description: Print the 1C command catalog — everyday first, then settings, then maintainer
+description: "Каталог команд: сначала повседневные, потом настройки, потом сопровождение"
 ---
 
 # /commands — product catalog

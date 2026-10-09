@@ -167,7 +167,31 @@ export function evaluatePlanMcpProxyCall(input = {}, forcedServer) {
   return { allowed: false, reason: `MCP mutation or unknown tool '${tool}'` };
 }
 
+const SECRET_FILE = /(?:^|[\\/\s'"`=])(?:\.dev\.env|auth\.json|trust\.json|id_rsa|id_ed25519|[^\s'"`\\/]+\.(?:pem|key))(?=$|[\s'"`])/i;
+
+function secretChunks(input) {
+  const chunks = [];
+  const visit = (value, key) => {
+    if (typeof value === 'string' && (!key || /path|file|target|command|pattern/i.test(key))) chunks.push(value);
+    else if (Array.isArray(value)) value.forEach((item) => visit(item, key));
+    else if (value && typeof value === 'object') {
+      for (const [childKey, child] of Object.entries(value)) visit(child, childKey);
+    }
+  };
+  visit(input, '');
+  return chunks;
+}
+
+export function secretToolBlock(toolName, input = {}) {
+  const name = String(toolName || '').toLowerCase();
+  if (!['read', 'grep', 'bash', 'edit', 'write', 'find'].includes(name)) return null;
+  const hit = secretChunks(input).some((chunk) => SECRET_FILE.test(` ${chunk}`));
+  return hit ? 'secret files are blocked for read, search, and shell' : null;
+}
+
 export function evaluatePlanToolCall(cwd, toolName, input = {}) {
+  const secret = secretToolBlock(toolName, input);
+  if (secret) return { allowed: false, reason: secret };
   if (toolName === 'bash') {
     return { allowed: false, reason: 'shell execution is disabled in PLAN mode' };
   }

@@ -1,5 +1,5 @@
 ---
-description: Dump the configuration from the infobase defined in .dev.env into the current repository files
+description: "Выгрузить конфигурацию из базы .dev.env в файлы репозитория"
 ---
 
 # /loadfrom1cbase — dump from infobase to repository

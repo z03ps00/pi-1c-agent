@@ -9,6 +9,7 @@ const SKIP_COPY_TOP = new Set([
   'tests',
   'node_modules',
   'pi-1c-agent-upstream',
+  'external-agent-sources',
   'node',
   'npm',
   'bin',

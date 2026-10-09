@@ -1,5 +1,5 @@
 ---
-description: Connect already installed MCP servers and available memory providers to the current repository by asking for their endpoints and project scope
+description: "Подключить уже установленные MCP и память к текущему репозиторию"
 userOnly: true
 ---
 

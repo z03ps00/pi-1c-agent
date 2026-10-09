@@ -1,5 +1,5 @@
 ---
-description: Check availability of opted-in MCP servers (status-only; repair is explicit)
+description: "[settings] Проверить доступность подключённых MCP. Только статус, починка отдельно"
 ---
 
 # /checkmcp — MCP status (repair is explicit)

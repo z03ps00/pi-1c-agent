@@ -28,6 +28,7 @@ import {
   SESSION_ROTATE_INTRO,
 } from "../../lib/ui/option-choices.mjs";
 import { composePickerLines, pickerSpanAt } from "../../lib/ui/picker-layout.mjs";
+import { buildCommandSections } from "../../lib/ui/command-groups.mjs";
 import { TASKMODE_INTRO, taskmodeChoices } from "../../lib/taskmode-state.mjs";
 import {
   INIT_MODE_CHOICES, INIT_MODE_INTRO, INIT_SOURCE_CHOICES, INIT_SOURCE_INTRO,
@@ -43,17 +44,17 @@ function selectTheme(theme: any) {
   };
 }
 
-function frame(theme: any, title: string, body: string[], width: number, footer = "Enter select    Esc cancel") {
+function frame(theme: any, title: string, body: string[], width: number, footer = "Enter select    Esc cancel", borderToken = "borderMuted") {
   const inner = Math.max(24, width - 2);
   const titleText = ` ${title} `;
   const dash = Math.max(0, inner - titleText.length - 2);
-  const top = colorize(theme, "borderMuted", `╭─${titleText}${"─".repeat(dash)}╮`);
+  const top = colorize(theme, borderToken, `╭─${titleText}${"─".repeat(dash)}╮`);
   const lines = body.map((line) => {
     const clipped = truncateToWidth(line, inner);
     const pad = Math.max(0, inner - visibleWidth(clipped));
-    return `${colorize(theme, "borderMuted", "│")}${clipped}${" ".repeat(pad)}${colorize(theme, "borderMuted", "│")}`;
+    return `${colorize(theme, borderToken, "│")}${clipped}${" ".repeat(pad)}${colorize(theme, borderToken, "│")}`;
   });
-  const bottom = colorize(theme, "borderMuted", `╰${"─".repeat(inner)}╯`);
+  const bottom = colorize(theme, borderToken, `╰${"─".repeat(inner)}╯`);
   return [top, ...lines, colorize(theme, "dim", `  ${footer}`), bottom];
 }
 
@@ -244,7 +245,7 @@ export async function overlayHub(ctx: any): Promise<void> {
         label: `${statusIcon(r.status)} ${r.name}`,
         description: `${r.status.padEnd(10)} ${r.activity || r.kind}`,
       }));
-      list = new SelectList(items.length ? items : [{ value: "", label: "No 1C agents discovered", description: "Run /bootstrap" }], 14, selectTheme(theme));
+      list = new SelectList(items.length ? items : [{ value: "", label: "Субагенты не найдены", description: "Запустите /bootstrap" }], 14, selectTheme(theme));
       list.onSelect = (item: { value: string }) => {
         if (!item.value) return;
         detail = rows().find((r) => r.agent === item.value) || null;
@@ -375,6 +376,86 @@ export async function overlayChild(ctx: any, agentName?: string): Promise<void> 
       },
     };
   }, { overlay: true, overlayOptions: { width: "82%", minWidth: 48, maxHeight: "90%", anchor: "center" } });
+}
+
+/** Two-level command browser. Returns a command name to insert, or undefined on cancel. */
+export async function overlayCommandGroups(ctx: any, commands: any[] = []): Promise<string | undefined> {
+  const sections = buildCommandSections(commands);
+  if (!ctx?.ui?.custom) {
+    const text = sections.map((section) => `${section.label} ${section.commands.length}`).join("\n");
+    ctx?.ui?.notify?.(text, "info");
+    return undefined;
+  }
+  return ctx.ui.custom<string | null>((tui: any, theme: any, _kb: unknown, done: (v: string | null) => void) => {
+    let level: "sections" | "commands" = "sections";
+    let sectionIndex = 0;
+    let row = 0;
+    const sectionItems = () => sections.map((section) => ({
+      value: section.id,
+      label: section.label,
+      description: String(section.commands.length),
+    }));
+    const commandItems = () => {
+      const section = sections[sectionIndex];
+      return (section?.commands || []).map((command) => ({
+        value: command.name,
+        label: `/${command.name}`,
+        description: command.description || "",
+      }));
+    };
+    const items = () => (level === "sections" ? sectionItems() : commandItems());
+    let view = composePickerLines({ intro: "", items: items(), selectedIndex: 0, width: 60 });
+    const move = (next: number) => {
+      const list = items();
+      if (!list.length) return;
+      row = (next + list.length) % list.length;
+      tui.requestRender();
+    };
+    return {
+      invalidate() {},
+      handleInput(data: string) {
+        const list = items();
+        if (matchesKey(data, "up")) { move(row - 1); return; }
+        if (matchesKey(data, "down")) { move(row + 1); return; }
+        if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {
+          if (level === "commands") {
+            level = "sections";
+            row = sectionIndex;
+            tui.requestRender();
+            return;
+          }
+          done(null);
+          return;
+        }
+        if (matchesKey(data, "enter")) {
+          if (level === "sections") {
+            if (!list.length) return;
+            sectionIndex = row;
+            level = "commands";
+            row = 0;
+            tui.requestRender();
+            return;
+          }
+          done(list[row]?.value ?? null);
+        }
+      },
+      render(width: number) {
+        const list = items();
+        if (row >= list.length) row = 0;
+        const inner = Math.max(24, width - 2);
+        const title = level === "sections" ? "Разделы" : (sections[sectionIndex]?.label || "Разделы");
+        const hint = level === "sections" ? "Esc — закрыть" : "Esc — назад";
+        view = composePickerLines({ intro: "", items: list, selectedIndex: row, width: inner });
+        const body = view.lines.map((line, index) => {
+          const span = pickerSpanAt(view.spans, index);
+          if (span?.index === row) return colorize(theme, "accent", line);
+          if (!span) return colorize(theme, "dim", line);
+          return line;
+        });
+        return frame(theme, title, body, width, hint, "borderAccent");
+      },
+    };
+  }, { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "80%", anchor: "center" } });
 }
 
 export async function overlayText(ctx: any, title: string, body: string): Promise<void> {

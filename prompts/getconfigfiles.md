@@ -1,5 +1,5 @@
 ---
-description: [settings] Extract configuration objects from infobase to files for editing
+description: "[settings] Выгрузить отдельные объекты конфигурации из базы в файлы"
 ---
 
 # /getconfigfiles — extract configuration objects from an infobase

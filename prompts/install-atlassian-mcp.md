@@ -1,5 +1,5 @@
 ---
-description: Install and configure mcp-atlassian for Jira and Confluence in the active AI client
+description: "Подключить mcp-atlassian для Jira и Confluence"
 userOnly: true
 ---
 

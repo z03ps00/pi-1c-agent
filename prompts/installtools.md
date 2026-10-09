@@ -1,5 +1,5 @@
 ---
-description: Detect and optionally install 1C tools; asks before any MCP install; recommended does not preselect memory
+description: "Найти и по желанию поставить инструменты 1С. Перед установкой MCP спрашивает"
 ---
 
 # /installtools — guided tool installation

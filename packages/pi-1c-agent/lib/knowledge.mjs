@@ -166,11 +166,26 @@ export function releaseKnowledgeLock(cwd, token) {
   return true;
 }
 
+export function touchKnowledgeLock(cwd, token) {
+  const ownerFile = path.join(knowledgeLockPath(cwd), 'owner.json');
+  let owner = null;
+  try { owner = JSON.parse(fs.readFileSync(ownerFile, 'utf8')); } catch { return false; }
+  if (!owner || (token && owner.token !== token)) return false;
+  owner.heartbeatAt = Date.now();
+  fs.writeFileSync(ownerFile, `${JSON.stringify(owner)}\n`);
+  return true;
+}
+
 export function withKnowledgeLock(cwd, fn) {
   const lock = acquireKnowledgeLock(cwd);
+  const timer = setInterval(() => {
+    try { touchKnowledgeLock(cwd, lock.token); } catch { /* lock may already be gone */ }
+  }, 10_000);
+  if (typeof timer.unref === 'function') timer.unref();
   try {
     return fn(lock);
   } finally {
+    clearInterval(timer);
     releaseKnowledgeLock(cwd, lock.token);
   }
 }
@@ -623,6 +638,7 @@ function applyDraftLocked(cwd, draftId, { expectedRevision, crashBeforeCommit = 
       newFingerprint: candidate.fingerprint,
       changedPaths: draft.meta?.diff?.changed ?? [],
       candidateVersion: candidate.version,
+      items,
     });
     configuration = { ...configuration, ...candidate };
     if (carried.length) results.push({ action: 'carry-forward', ids: carried });
@@ -646,9 +662,29 @@ function applyDraftLocked(cwd, draftId, { expectedRevision, crashBeforeCommit = 
 }
 
 export function disableItem(cwd, id, reason = 'disabled by user') {
-  const existing = findItem(cwd, id);
-  if (!existing) throw new Error(`knowledge item not found: ${id}`);
-  return updateExistingItem(cwd, existing, { status: 'disabled', disabledReason: reason });
+  return withKnowledgeLock(cwd, () => {
+    const items = workingItems(cwd);
+    const existing = items.find((item) => item.id === id);
+    if (!existing) throw new Error(`knowledge item not found: ${id}`);
+    const next = { ...existing, status: 'disabled', disabledReason: reason, updatedAt: now() };
+    delete next._file;
+    const index = items.findIndex((item) => item.id === id);
+    items[index] = cloneItem(next);
+    const committed = readCommittedSnapshot(cwd);
+    if (committed && Array.isArray(committed.items)) {
+      const snapshot = {
+        schema: 1,
+        revision: Number(committed.revision) || knowledgeRevision(cwd),
+        updatedAt: now(),
+        configuration: committed.configuration || loadConfiguration(cwd),
+        items: items.map(cloneItem),
+      };
+      commitKnowledgePointer(cwd, snapshot);
+      materializeCommittedTree(cwd, snapshot);
+      return next;
+    }
+    return updateExistingItem(cwd, existing, { status: 'disabled', disabledReason: reason });
+  });
 }
 
 function normStatement(value) { return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' '); }
@@ -735,16 +771,29 @@ export function automaticInvalidations(cwd, changedPaths, { candidateVersion } =
   return proposals;
 }
 
-function carryForwardVerifiedItems(cwd, { oldFingerprint, newFingerprint, changedPaths = [], candidateVersion }) {
+function carryForwardVerifiedItems(cwd, { oldFingerprint, newFingerprint, changedPaths = [], candidateVersion, items }) {
   if (!oldFingerprint || !newFingerprint || oldFingerprint === newFingerprint) return [];
+  const list = Array.isArray(items) ? items : loadAllItems(cwd);
   const carried = [];
-  for (const item of loadAllItems(cwd).filter((x) => x.status === 'active' && x.scope === 'configuration' && x.confidence === 'verified')) {
+  for (const item of list) {
+    if (item.status !== 'active' || item.scope !== 'configuration' || item.confidence !== 'verified') continue;
     if (item.fingerprintAtVerification !== oldFingerprint) continue;
     if (item.appliesTo?.versionRange && candidateVersion && !versionMatches(item.appliesTo.versionRange, candidateVersion)) continue;
     const evidencePaths = (item.provenance?.evidence ?? []).map((e) => e.path).filter(Boolean);
     const appliesPaths = item.appliesTo?.paths ?? [];
     if ([...evidencePaths, ...appliesPaths].some((p) => changedPaths.some((c) => pathOverlap(p, c)))) continue;
-    updateExistingItem(cwd, item, { fingerprintAtVerification: newFingerprint, carriedForwardAt: now(), carriedForwardFromFingerprint: oldFingerprint });
+    const patch = {
+      fingerprintAtVerification: newFingerprint,
+      carriedForwardAt: now(),
+      carriedForwardFromFingerprint: oldFingerprint,
+      updatedAt: now(),
+    };
+    if (Array.isArray(items)) {
+      const index = items.findIndex((entry) => entry.id === item.id);
+      if (index >= 0) items[index] = cloneItem({ ...item, ...patch });
+    } else {
+      updateExistingItem(cwd, item, patch);
+    }
     carried.push(item.id);
   }
   return carried;

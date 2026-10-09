@@ -40,6 +40,9 @@ models.db-wal
 # git clone https://github.com/comol/ai_rules_1c.git pi-1c-agent-upstream
 pi-1c-agent-upstream/
 
+# --- Closed third-party 1C agent bundles (local reference only; never publish) ---
+external-agent-sources/
+
 # --- Pi session/bootstrap state ---
 .pi/**
 

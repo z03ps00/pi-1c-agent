@@ -1,5 +1,5 @@
 ---
-description: [settings] Check a 1C XML configuration dump for duplicate UUIDs, and optionally regenerate them
+description: "[settings] Проверить XML-выгрузку на повторы UUID и при необходимости пересоздать их"
 ---
 
 # /check-uuid — duplicate UUID check in a configuration dump

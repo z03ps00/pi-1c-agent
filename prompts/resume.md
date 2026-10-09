@@ -1,5 +1,5 @@
 ---
-description: Continue an active task from its handoff after checking current workspace state, remaining work and evidence freshness
+description: "Продолжить задачу по handoff, сверив состояние каталога, остаток работы и свежесть доказательств"
 ---
 
 # /resume — continue from a handoff

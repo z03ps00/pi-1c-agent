@@ -1,5 +1,5 @@
 ---
-description: [maintainer] Send a problem report about a 1C MCP server or about the 1c-rules ruleset to the support service (Yandex Cloud Function -> Yandex Database)
+description: "[maintainer] Отчёт о проблеме MCP или правил 1С в поддержку"
 ---
 
 # /support — сообщить о проблеме в MCP или в правилах

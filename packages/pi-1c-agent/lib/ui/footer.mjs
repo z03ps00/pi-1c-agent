@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { visibleWidth } from './theme.mjs';
 import { taskmodeFooterLabel } from '../taskmode-state.mjs';
 
@@ -148,4 +150,148 @@ export function composeFooter(snapshot = {}, width = 80) {
   if (visibleWidth(text) > max) text = text.slice(0, max);
   const dropped = all.filter((s) => !kept.some((k) => k.id === s.id && k.text === s.text));
   return { text, segments: kept, dropped };
+}
+
+export function countOpenChanges(cwd) {
+  const dir = path.join(String(cwd || ''), 'openspec', 'changes');
+  if (!cwd || !fs.existsSync(dir)) return 0;
+  return fs.readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== 'archive')
+    .length;
+}
+
+function clipLine(text, width) {
+  const max = Math.max(1, Number(width) || 80);
+  if (visibleWidth(text) <= max) return text;
+  return text.slice(0, max);
+}
+
+function named(label, value) {
+  return `${label} ${value}`;
+}
+
+function aliasOf(map, value) {
+  const key = String(value ?? '').trim().toLowerCase();
+  if (!key) return '';
+  return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : String(value);
+}
+
+const MODE_ALIAS = Object.freeze({ ask: 'Вопрос', plan: 'Планирование', build: 'Реализация' });
+const PATH_ALIAS = Object.freeze({
+  auto: 'авто',
+  'docs-fix': 'текст',
+  'spec-authoring': 'спецификация',
+  analytics: 'разбор',
+  'quick-fix': 'быстрый фикс',
+  'full-cycle': 'полный цикл',
+});
+const SCALE_ALIAS = Object.freeze({
+  lite: 'кратко',
+  standard: 'обычно',
+  full: 'полно',
+  on: 'вкл',
+  off: 'выкл',
+  economy: 'экономия',
+});
+const UI_ALIAS = Object.freeze({
+  essential: 'важное',
+  auto: 'само',
+  manual: 'вручную',
+  off: 'выкл',
+  visible: 'видимо',
+  hidden: 'скрыто',
+});
+const LEARN_ALIAS = Object.freeze({ off: 'выкл', safe: 'осторожно', auto: 'само' });
+const THINK_ALIAS = Object.freeze({ off: 'выкл', low: 'низко', medium: 'средне', high: 'высоко' });
+const CAPTURE_ALIAS = Object.freeze({ stack: 'стек', chat: 'чат', off: 'выкл', on: 'вкл' });
+const APPROVE_ALIAS = Object.freeze({ safe: 'осторожно', strict: 'строго' });
+
+function capabilityParts(text) {
+  const raw = String(text || '');
+  const graph = raw.match(/graph([✓✗])/);
+  const code = raw.match(/code([✓✗])/);
+  const ib = raw.match(/ib([✓✗])/);
+  if (!graph && !code && !ib) return raw ? [{ id: 'caps', text: raw }] : [];
+  const parts = [];
+  if (graph) parts.push({ id: 'graph', text: `Граф ${graph[1]}` });
+  if (code) parts.push({ id: 'code', text: `Код ${code[1]}` });
+  if (ib) parts.push({ id: 'ibcap', text: `ИБ ${ib[1]}` });
+  return parts;
+}
+
+export function composeWorkFooter(snapshot = {}, width = 80) {
+  const mode = String(snapshot.mode || 'ask').trim().toLowerCase();
+  const anon = Math.trunc(Number(snapshot.anonLevel) || 0);
+  const approve = String(snapshot.approve || 'off').trim().toLowerCase();
+  const primary = [
+    { id: 'mode', text: named('Режим', aliasOf(MODE_ALIAS, mode)), keep: true },
+    { id: 'taskmode', text: named('Путь', aliasOf(PATH_ALIAS, snapshot.taskmode || 'auto')) },
+  ];
+  if (anon > 0) primary.push({ id: 'anon', text: named('Доступ', `анонимность ${anon}`) });
+  else if (mode === 'plan' || mode === 'ask') primary.push({ id: 'readonly', text: named('Доступ', 'чтение') });
+  else if (APPROVE_ALIAS[approve]) primary.push({ id: 'approve', text: named('Доступ', APPROVE_ALIAS[approve]) });
+  primary.push(
+    { id: 'depth', text: named('Глубина', aliasOf(SCALE_ALIAS, snapshot.depth || 'standard')) },
+    { id: 'economy', text: named('Экономия', aliasOf(SCALE_ALIAS, snapshot.economy || 'standard')) },
+    { id: 'ui', text: named('Интерфейс', aliasOf(UI_ALIAS, snapshot.ui || 'essential')) },
+    { id: 'learning', text: named('Обучение', aliasOf(LEARN_ALIAS, snapshot.learning || 'safe')) },
+  );
+
+  const secondary = [];
+  if (snapshot.projectName) secondary.push({ id: 'project', text: named('Проект', snapshot.projectName) });
+  secondary.push(...capabilityParts(snapshot.capabilityFooter));
+  const pct = roundPct(snapshot.contextPercent);
+  if (pct != null) {
+    secondary.push({ id: 'ctx', text: `${named('Контекст', `${pct}%`)} ${contextBar(pct)}`, keep: true });
+  }
+  if (snapshot.model) secondary.push({ id: 'model', text: named('Модель', shortModel(snapshot.model)) });
+  secondary.push({ id: 'mcp', text: `MCP Сервера ${nonNegInt(snapshot.mcpConnected, 0)}/${nonNegInt(snapshot.mcpEnabled, snapshot.mcpConnected)}` });
+  secondary.push({ id: 'thinking', text: named('Мышление', aliasOf(THINK_ALIAS, snapshot.thinkingLevel || 'off')) });
+  const rotateOn = snapshot.rotateEnabled === true;
+  const rotatePct = roundPct(snapshot.rotateThreshold);
+  secondary.push({
+    id: 'rotate',
+    text: named('Ротация', `${rotateOn ? 'вкл' : 'выкл'} ${rotatePct == null ? '85%' : `${rotatePct}%`}`),
+  });
+  if (snapshot.captureEnabled) {
+    const cap = snapshot.captureMode ? aliasOf(CAPTURE_ALIAS, snapshot.captureMode) : 'вкл';
+    secondary.push({ id: 'capture', text: named('Захват', cap) });
+  }
+  secondary.push({ id: 'changes', text: named('Изменения', nonNegInt(snapshot.changes, 0)) });
+  if (snapshot.ibName) {
+    const kind = snapshot.ibKind === 'server' ? 'сервер' : 'файл';
+    secondary.push({ id: 'ib', text: named('База', `${kind} ${snapshot.ibName}`) });
+  }
+  if (snapshot.gitBranch) secondary.push({ id: 'git', text: named('Ветка', `${snapshot.gitBranch}${snapshot.gitDirty ? '*' : ''}`) });
+
+  const dropSecondary = ['capture', 'rotate', 'git', 'changes', 'ib', 'thinking', 'mcp', 'model', 'project', 'graph', 'code', 'ibcap', 'caps'];
+  const dropPrimary = ['learning', 'ui', 'economy', 'depth', 'taskmode', 'approve', 'readonly', 'anon'];
+  const fit = (items, order) => {
+    const kept = [...items];
+    for (const id of order) {
+      if (visibleWidth(kept.map((item) => item.text).join(SEP)) <= width) break;
+      const index = kept.findIndex((item) => item.id === id && !item.keep);
+      if (index >= 0) kept.splice(index, 1);
+    }
+    return clipLine(kept.map((item) => item.text).join(SEP), width);
+  };
+  const primaryText = fit(primary, dropPrimary);
+  const secondaryText = fit(secondary, dropSecondary);
+  const rule = '─'.repeat(Math.max(8, Number(width) || 80));
+  const groupGap = '\t';
+  return {
+    primary: primaryText,
+    secondary: secondaryText,
+    primaryParts: primary,
+    secondaryParts: secondary,
+    lines: [
+      { kind: 'title', text: 'Сессия' },
+      { kind: 'rule', text: rule },
+      { kind: 'primary', text: primaryText },
+      { kind: 'gap', text: groupGap },
+      { kind: 'title', text: 'Среда' },
+      { kind: 'rule', text: rule },
+      { kind: 'secondary', text: secondaryText },
+    ],
+  };
 }

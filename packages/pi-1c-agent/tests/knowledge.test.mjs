@@ -6,8 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   applyDraft, auditDraft, auditKnowledge, automaticInvalidations, computeConfigurationCandidate, createDraft,
-  diffFingerprint, findItem, formatDraftChoice, initConfiguration, knowledgeRevision, listDrafts, loadAllItems, loadConfiguration, normalizeProposal, precedenceOf, queryKnowledge, versionMatches, writeCanonicalItem,
-  acquireKnowledgeLock, releaseKnowledgeLock,
+  diffFingerprint, disableItem, findItem, formatDraftChoice, initConfiguration, knowledgeRevision, listDrafts, loadAllItems, loadConfiguration, normalizeProposal, precedenceOf, queryKnowledge, versionMatches, writeCanonicalItem,
+  acquireKnowledgeLock, releaseKnowledgeLock, touchKnowledgeLock,
 } from '../lib/knowledge.mjs';
 
 function tempProject() {
@@ -242,5 +242,56 @@ test('stale owner cannot drop a taken-over knowledge lock', () => {
   fs.writeFileSync(ownerFile, `${JSON.stringify(stolen)}\n`);
   assert.throws(() => releaseKnowledgeLock(cwd, first.token), /ownership lost/);
   releaseKnowledgeLock(cwd, 'new-owner');
+});
+
+test('carry-forward writes the new fingerprint into the committed snapshot', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5.1', sourceRoot: 'src' });
+  const added = createDraft(cwd, { proposals: [
+    { action: 'add', kind: 'fact', scope: 'configuration', topic: 'other', statement: 'Other module stays', confidence: 'verified', evidence: [{ type: 'source', path: 'Other.bsl' }], appliesTo: { versionRange: '2.5.*' } },
+  ] });
+  applyDraft(cwd, added.id);
+  const before = findItem(cwd, added.proposals[0].item.id);
+  fs.appendFileSync(path.join(cwd, 'src', 'Module.bsl'), '// touched\n');
+  const candidate = computeConfigurationCandidate(cwd, { version: '2.5.2' });
+  const update = createDraft(cwd, {
+    proposals: [],
+    meta: {
+      configurationCandidate: candidate.candidate,
+      fingerprintIndex: candidate.index,
+      diff: candidate.diff,
+    },
+  });
+  applyDraft(cwd, update.id);
+  const after = findItem(cwd, before.id);
+  assert.equal(after.fingerprintAtVerification, candidate.candidate.fingerprint);
+  assert.notEqual(after.fingerprintAtVerification, before.fingerprintAtVerification);
+});
+
+test('disableItem removes the rule from active queries', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5', sourceRoot: 'src' });
+  const draft = createDraft(cwd, { proposals: [
+    { action: 'add', kind: 'rule', scope: 'project', topic: 'quiet', statement: 'Do not shout', confidence: 'high' },
+  ] });
+  applyDraft(cwd, draft.id);
+  const id = draft.proposals[0].item.id;
+  disableItem(cwd, id, 'explicit user disable command');
+  assert.equal(queryKnowledge(cwd, 'shout').some((item) => item.id === id), false);
+  assert.equal(findItem(cwd, id).status, 'disabled');
+});
+
+test('touchKnowledgeLock refreshes heartbeatAt', () => {
+  const cwd = tempProject();
+  initConfiguration(cwd, { name: 'ERP', version: '2.5', sourceRoot: 'src' });
+  const lock = acquireKnowledgeLock(cwd);
+  const ownerFile = path.join(lock.dir, 'owner.json');
+  const before = JSON.parse(fs.readFileSync(ownerFile, 'utf8')).heartbeatAt;
+  const waited = Date.now() + 5;
+  while (Date.now() < waited) { /* clock */ }
+  assert.equal(touchKnowledgeLock(cwd, lock.token), true);
+  const after = JSON.parse(fs.readFileSync(ownerFile, 'utf8')).heartbeatAt;
+  assert.ok(after >= before);
+  releaseKnowledgeLock(cwd, lock.token);
 });
 

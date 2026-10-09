@@ -1,5 +1,5 @@
 ---
-description: "[settings] Install the paired OpenViking + Cognee memory MCP stack (Router AI default, Ollama alternative)"
+description: "[settings] Поставить пару OpenViking и Cognee. По умолчанию Router AI, можно Ollama"
 ---
 
 # /install-memory-mcp — portable OpenViking + Cognee

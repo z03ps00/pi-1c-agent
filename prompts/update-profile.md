@@ -1,5 +1,5 @@
 ---
-description: "[settings] Refresh this Pi 1C profile from its git remote (not /updaterules)"
+description: "[settings] Обновить этот профиль Pi 1С из git. Не /updaterules"
 ---
 
 # /update-profile — refresh this Pi profile from the clone’s git remote

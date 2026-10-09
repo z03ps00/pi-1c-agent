@@ -1,0 +1,17 @@
+id: reglog
+version: 1.0.0
+description: "Recent registration-log rows through /reglog. Fixed read query. No technical log."
+triggers:
+  - "журнал регистрации"
+  - "reglog"
+requires:
+  any: []
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

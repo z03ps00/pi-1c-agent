@@ -1,5 +1,5 @@
 ---
-description: [settings] Diagnose whether 1c-rules is installed, connected, configured, and usable by the current agent
+description: "[settings] Объяснить, установлены ли правила 1С и видит ли их текущий агент"
 ---
 
 # /doctor-explain — 1c-rules readiness diagnostic (LLM)

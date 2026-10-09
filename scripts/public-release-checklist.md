@@ -79,7 +79,7 @@ Re-run on 2026-09-16 over tracked files and full history.
 | `.cursor/commands/opsx-*`, `.cursor/skills/openspec-*` | **exclude** | Cursor OpenSpec workflow. `.gitignore`. |
 | `.cursor/plans/` | **exclude** | Planner scratch. `.gitignore`. |
 | `.pi/prompts/opsx-*`, `.pi/skills/openspec-*` | **exclude** | Pi OpenSpec workflow. Keep `.pi/**` ignored. |
-| `pi-1c-agent-upstream/`, `node/`, `npm/`, `bin/`, `1c/` | **exclude** | Already ignored. |
+| `pi-1c-agent-upstream/`, `external-agent-sources/`, `node/`, `npm/`, `bin/`, `1c/` | **exclude** | Already ignored. |
 | `.git/` | **exclude from export copy of history** | Export runs `git init` anew. |
 
 ## Sign-off

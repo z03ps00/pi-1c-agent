@@ -28,18 +28,19 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
     const scope = requested === "project" || requested === "global" ? requested : defaultScope(ctx.cwd);
     const result = runNode("doctor.mjs", [scope === "project" ? "--project" : "--global"], ctx.cwd);
     const text = `${result.stdout || ""}${result.stderr ? `\n${result.stderr}` : ""}`.trim() || `doctor exited ${result.status}`;
+    if (result.status !== 0) ctx.ui.notify(`doctor failed (exit ${result.status})`, "error");
     try { noteTools(pi.getActiveTools()); } catch { /* doctor still prints an empty snapshot */ }
     const capabilities = formatCapabilityBlock(snapshotCapabilities(getSession().tools));
     pi.sendMessage({ customType: "pi-1c-doctor", content: `${text}\n\n${capabilities}`, display: true }, { triggerTurn: false });
   }
 
   pi.registerCommand("doctor", {
-    description: "Run deterministic Pi 1C doctor (no LLM guessing): /doctor [project|global]",
+    description: "Проверка профиля и пакета без модели: /doctor project или global",
     handler: async (args, ctx) => handleDoctor(args, ctx),
   });
   registerAction("command:doctor", (args: string | undefined, ctx: any) => handleDoctor(args, ctx));
   pi.registerCommand("bootstrap", {
-    description: "Materialize the pinned ai_rules_1c snapshot into project/global Pi scope",
+    description: "Разложить снимок правил 1С в область проекта или профиля",
     handler: async (args, ctx) => {
       const requested = args?.trim().toLowerCase();
       const scope = requested === "global" ? "global" : "project";
@@ -55,7 +56,7 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("openspec-setup", {
-    description: "Initialize the tested OpenSpec baseline for vanilla Pi in the current project",
+    description: "Поставить проверенный каркас OpenSpec в текущий проект",
     handler: async (_args, ctx) => {
       if (typeof ctx.isProjectTrusted === "function" && !ctx.isProjectTrusted()) {
         ctx.ui.notify("OpenSpec setup writes project planning artifacts and requires a trusted project.", "error");
@@ -68,7 +69,7 @@ export default function oneCAdmin(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("agent-scope", {
-    description: "Opt project-local .pi/agents into 1C delegation: /agent-scope on|off",
+    description: "Проектные агенты .pi/agents: /agent-scope on или off",
     handler: async (args, ctx) => {
       if (typeof ctx.isProjectTrusted === "function" && !ctx.isProjectTrusted()) {
         ctx.ui.notify("Project agent scope can only be changed in a trusted project.", "error");

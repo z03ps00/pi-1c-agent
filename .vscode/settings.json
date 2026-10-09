@@ -1,0 +1,8 @@
+{
+  "files.watcherExclude": {
+    "**/external-agent-sources/**": true
+  },
+  "search.exclude": {
+    "**/external-agent-sources": true
+  }
+}

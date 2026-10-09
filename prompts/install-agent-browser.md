@@ -1,5 +1,5 @@
 ---
-description: [settings] Install agent-browser (token-efficient headless browser CLI + MCP) for 1C web UI testing
+description: "[settings] Поставить agent-browser для UI-тестов веб-клиента 1С"
 ---
 
 # /install-agent-browser — install token-efficient browser automation

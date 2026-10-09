@@ -1,5 +1,5 @@
 ---
-description: Development standards — architecture patterns, extensions, platform standards, code smells
+description: Development standards — architecture patterns, extensions, platform standards, code smells, background and scheduled jobs. Load when placing code, designing an extension, or moving work off the user wait into a background or scheduled job.
 alwaysApply: false
 ---
 

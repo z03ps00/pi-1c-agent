@@ -681,7 +681,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("init", {
-    description: "Initialize a 1C project — empty source scaffold or dump from an existing infobase / .cf / .cfe / .dt: /init [empty|from-ib|from-cf|from-cfe|from-dt|standard|advanced|quick|status|knowledge]",
+    description: "Мастер проекта: пустой каркас или выгрузка из базы, .cf, .cfe, .dt",
     handler: async (args, ctx) => handleInit(args, ctx),
   });
   registerAction("init-open", (ctx: any) => handleInit(undefined, ctx));

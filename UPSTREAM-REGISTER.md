@@ -48,3 +48,19 @@ Review is `/review-airules` (read-only). Apply is a later `/opsx-apply` or `/exe
 - Skill trees not named in the apply tasks: `v8unpack-cf`, `md-to-docx`, `transcribe`, `handoff`, `caveman`, `prompt-enhancer`, `mermaid-diagrams`, `powershell-windows`, `img-grid-analysis`.
 - Pi overlay `rules-1c/core/*`, the lab-extra skill trees (tracked separately via `LAB-EXTRAS.md`, not `ai_rules_1c`), `install.ps1`, and upstream adapters.
 - Our memory installer `install-memory-mcp` (not the upstream Cognee on port 8010).
+
+## profile-delta-rules-2026-10-09
+
+- **Date:** 2026-10-09
+- **Source:** profile edit. Not an `/review-airules` apply. `upstream.lock.json` is not moved. No to-SHA.
+- **Action:** keep these hunks on the next `/review-airules`. Do not wholesale-replace the files from `comol/ai_rules_1c`.
+
+### profile-original (no to-SHA)
+
+- `rules-1c/standards/locks-and-transactions.md` and its router `rules-1c/rules/locks-and-transactions.md` — second posting pattern (ITS 661, beside the existing `БлокировкаДанных` pattern), object edit conflict, event-log / technological-log reading. Headings and the router `description` / scope sentence match the body.
+- `rules-1c/standards/platform-solutions.md` §9 — labels for both posting patterns; §10 keeps the external-processor template and points at Background Jobs.
+- `rules-1c/standards/registers-design.md` §8 — pointer at both posting patterns, no second listing.
+- `rules-1c/standards/dev-standards-architecture.md` §1 → "Background Jobs" checklist, and the router `description` in `rules-1c/rules/dev-standards-architecture.md`.
+- `rules-1c/rules/systematic-debugging.md` and `rules-1c/standards/systematic-debugging.md` — pointer to locks §6.
+- `rules-1c/rules/data-separation.md`, `rules-1c/rules/exchange-plans.md`, and the matching rows in `rules-1c/rules/coding-standards.md`. Inlined rules, not routed standards.
+

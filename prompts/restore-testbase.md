@@ -1,5 +1,5 @@
 ---
-description: [settings] Rebuild the test infobase to the effective snapshot — optional DT data baseline, then the current cf + cfe sources from git
+description: "[settings] Собрать тестовую базу заново: при необходимости снимок .dt, затем текущие cf и cfe"
 ---
 
 # /restore-testbase — actualize the test infobase from the snapshot

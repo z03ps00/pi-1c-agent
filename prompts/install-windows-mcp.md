@@ -1,5 +1,5 @@
 ---
-description: [settings] Install Windows-MCP (desktop UI automation MCP) as a last-resort alternative to home-grown screenshot/OCR
+description: "[settings] Поставить Windows-MCP для окон Windows, только если нет другого способа"
 ---
 
 # /install-windows-mcp — install Windows desktop UI MCP

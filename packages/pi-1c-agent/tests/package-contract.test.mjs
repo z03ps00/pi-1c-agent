@@ -9,7 +9,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
 test('package registers stabilized extensions', () => {
   assert.equal(pkg.version, '0.9.0');
-  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-context-router/index.ts','extensions/1c-ui/index.ts']) {
+  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-context-router/index.ts','extensions/1c-surface/index.ts','extensions/1c-ui/index.ts']) {
     assert.ok(pkg.pi.extensions.includes(p));
     assert.ok(fs.existsSync(path.join(root, p)));
   }
@@ -117,10 +117,10 @@ test('session-rotate command and compaction hooks are registered', () => {
 test('knowledge commands pick pending drafts without /1c- names', () => {
   const src = fs.readFileSync(path.join(root, 'extensions', '1c-knowledge', 'index.ts'), 'utf8');
   assert.match(src, /registerCommand\("learn"/);
-  assert.match(src, /ctx\.ui\.select\("Learn"/);
-  assert.match(src, /"new fact\/rule"/);
-  assert.match(src, /"approve a draft"/);
-  assert.match(src, /"reject a draft"/);
+  assert.match(src, /pickOverlay\(ctx, "Знания"/);
+  assert.match(src, /Новый факт или правило/);
+  assert.match(src, /Утвердить черновик/);
+  assert.match(src, /Отклонить черновик/);
   assert.match(src, /ctx\.ui\.input/);
   assert.match(src, /function pendingDrafts/);
   assert.doesNotMatch(src, /listDrafts/);
@@ -213,4 +213,18 @@ test('1c-settings registers option-picker commands without 1c- aliases', () => {
     assert.doesNotMatch(src, new RegExp(`registerCommand\\("1c-${name}"`));
   }
   assert.match(src, /pickOverlay/);
+});
+
+test('failed knowledge parse clears the pending draft', () => {
+  const src = fs.readFileSync(path.join(root, 'extensions', '1c-knowledge', 'index.ts'), 'utf8');
+  const at = src.indexOf('if (!parsed.ok)');
+  assert.ok(at > 0);
+  assert.match(src.slice(at, at + 280), /pending = null/);
+  assert.match(src.slice(at, at + 280), /persistPending\(\)/);
+});
+
+test('palette settings entry does not open approval', () => {
+  const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');
+  assert.match(ui, /id === "settings"\) return showStatus/);
+  assert.doesNotMatch(ui, /id === "settings"\) return invokeAction\("approve-select"/);
 });

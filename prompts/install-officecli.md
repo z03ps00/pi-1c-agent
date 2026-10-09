@@ -1,5 +1,5 @@
 ---
-description: Install OfficeCLI for creating, reading and editing Word, Excel and PowerPoint files without Microsoft Office
+description: "Поставить OfficeCLI для Word, Excel и PowerPoint без Microsoft Office"
 userOnly: true
 ---
 

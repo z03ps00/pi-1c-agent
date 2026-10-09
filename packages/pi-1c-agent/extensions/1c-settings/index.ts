@@ -329,31 +329,31 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("sdlc", {
-    description: "SDLC QA profile: /sdlc lite | standard | full | status",
+    description: "Глубина проверок SDLC: /sdlc lite, standard или full",
     handler: handleSdlc,
   });
   pi.registerCommand("litemode", {
-    description: "Verification depth: /litemode lite | standard | full | status",
+    description: "Глубина проверки: /litemode lite, standard или full",
     handler: handleLitemode,
   });
   pi.registerCommand("uitests", {
-    description: "UI testing policy: /uitests essential|auto|manual|off|visible|hidden|status",
+    description: "UI-тесты: /uitests essential, auto, manual, off, visible или hidden",
     handler: handleUitests,
   });
   pi.registerCommand("previewmode", {
-    description: "Metadata preview: /previewmode on|auto|off|once|status",
+    description: "Предпросмотр метаданных: /previewmode on, auto, off или once",
     handler: handlePreview,
   });
   pi.registerCommand("caveman", {
-    description: "Caveman style: /caveman on|auto|off|lite|full|ultra|status",
+    description: "Короткий стиль: /caveman on, auto, off, lite, full или ultra",
     handler: handleCaveman,
   });
   pi.registerCommand("economymode", {
-    description: "Orchestrator economy: /economymode on|off|models|rtk|status",
+    description: "Экономия оркестратора: /economymode on, off, models или rtk",
     handler: handleEconomy,
   });
   pi.registerCommand("rulesmodel", {
-    description: "Parent-agent model profile: /rulesmodel opus5|sonnet5|fable5|gpt56|gpt6|off|status",
+    description: "Профиль модели: /rulesmodel opus5, sonnet5, fable5, gpt56, gpt6 или off",
     handler: handleRulesmodel,
   });
 

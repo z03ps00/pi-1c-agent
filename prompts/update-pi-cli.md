@@ -1,5 +1,5 @@
 ---
-description: "[settings] Update the Pi CLI shell (@earendil-works/pi-coding-agent) in its npm prefix"
+description: "[settings] Обновить оболочку Pi CLI в её npm-префиксе"
 ---
 
 # /update-pi-cli — update the Pi CLI shell to the current version

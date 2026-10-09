@@ -1,5 +1,5 @@
 ---
-description: "[settings] Opt-in Vanessa Automation MCP after asking for a URL; not everyday"
+description: "[settings] По желанию подключить Vanessa Automation MCP. Не повседневная команда"
 ---
 
 # /install-vanessa-mcp — optional Vanessa Automation MCP

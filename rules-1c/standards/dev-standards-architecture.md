@@ -60,7 +60,16 @@ Determined by `{NEW_OBJECTS_IN}` parameter from `.dev.env`:
 Default: `main_configuration`.
 
 ### Background Jobs
-Operations taking > 10 seconds — move to background jobs with progress indication. Do not block UI.
+
+> **Profile delta (Pi).** Kept on the next `/review-airules`. Do not wholesale-replace this file from `comol/ai_rules_1c`.
+
+Operations taking more than 10 seconds move to a background job with progress. Do not block the UI.
+
+- A user-visible wait uses a background job with progress. When the configuration has БСП, that is `ДлительныеОперации`. Opening an external processor via File → Open is the separate case in `platform-solutions.md §10` — do not restate that template here.
+- A scheduled job (`РегламентноеЗадание`) is work that must run with no user at the form. Name the schedule, the user the job runs as, and what happens when the previous run is still active: skip, wait, or queue. Pick one and record it.
+- Retry only a transient failure you can name. A deadlock or a broken lock order is fixed in the transaction (`locks-and-transactions.md`), not retried.
+- A hung job is read from the event log and, when the wait is a lock, from the technological log (`locks-and-transactions.md` §6 → "Reading the event log and the technological log"). Record start, finish, and the document or key the job was processing.
+- Do not hold an interactive transaction open across the background call. Client `Асинх` / `Ждать` is `async-methods.md`, not a scheduled job.
 
 ### Defensive Type Checking
 BSL has no strict typing. Check type at function entry when critical:

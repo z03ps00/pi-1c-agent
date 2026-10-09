@@ -68,7 +68,9 @@ When a register has balances, the platform exposes virtual tables:
 
 ## 8. Posting / reposting
 
-- **`ОбработкаПроведения`** lives in the document's object module. Inside it: lock first, read second, write third (see `locks-and-transactions.md`). Do not call user dialogs, long-running operations, or external services inside the procedure.
+> **Profile delta (Pi).** The first bullet points at both posting patterns in `locks-and-transactions.md`. Kept on the next `/review-airules`. Do not wholesale-replace this file from `comol/ai_rules_1c`.
+
+- **`ОбработкаПроведения`** lives in the document's object module. Which lock shape to use is owned by `locks-and-transactions.md` §5: explicit `БлокировкаДанных` before a balance read, or control after the write when the handler only has to refuse a negative result. Do not call user dialogs, long-running operations, or external services inside the procedure.
 - **`Движения.X.Записывать = Истина`** controls whether the platform writes the in-memory tabular section to the register on commit. Set it once; do not toggle inside loops.
 - **Do not modify movements outside `ОбработкаПроведения` / `ОбработкаУдаленияПроведения`.** Direct manipulation of `Движения.X` from external code (e.g. a data processor) bypasses sequencing logic and creates inconsistent data.
 - **Re-posting (`ОбработкаЗаполнения` is not it).** For mass re-post operations, use `Документы.X.Выбрать()` + `Записать(РежимЗаписиДокумента.Проведение)` in a transaction-per-document loop with explicit cancellation on errors.

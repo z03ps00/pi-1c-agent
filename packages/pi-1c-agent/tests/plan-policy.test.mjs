@@ -16,6 +16,7 @@ import {
   getPlanVisibleTools,
   getReadOnlyVisibleTools,
   resolvePlanningWrite,
+  secretToolBlock,
   resolveAnonPendingRoot,
   resolveAnonHandoffRoots,
   libCall,
@@ -181,4 +182,13 @@ test('libCall fail-closed fallback still blocks anon writes when a lib export is
   const viaMissing = libCall(missingExport, [1, 'memory_remember']);
   const verdict = viaMissing ?? fallbackAnonVerdict(1, { tool: 'memory_remember' });
   assert.equal(verdict.allowed, false);
+});
+
+test('secret files are blocked for read, grep, and bash', () => {
+  assert.match(secretToolBlock('read', { path: '/work/.dev.env' }), /secret/);
+  assert.match(secretToolBlock('grep', { path: 'auth.json' }), /secret/);
+  assert.match(secretToolBlock('bash', { command: 'cat id_rsa' }), /secret/);
+  assert.equal(secretToolBlock('read', { path: 'src/Module.bsl' }), null);
+  assert.equal(evaluateReadOnlyToolCall('ask', '/work', 'read', { path: '.dev.env' }).allowed, false);
+  assert.equal(evaluatePlanToolCall('/work', 'bash', { command: 'cat .dev.env' }).allowed, false);
 });
