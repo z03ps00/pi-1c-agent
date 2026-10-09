@@ -32,6 +32,17 @@ import {
   settingsNote,
 } from "../../lib/project-settings.mjs";
 import { readDevEnvKey, setDevEnvKey, setDevEnvKeys } from "../../lib/dev-env-key.mjs";
+import {
+  addMcpServer,
+  parseMcpconfigArgs,
+  readMcpConfig,
+  removeMcpServer,
+  resolveMcpConfigPath,
+  serverChoices,
+  serverNameFromChoice,
+  writeMcpConfig,
+} from "../../lib/mcp-config.mjs";
+import { MCPCONFIG_CHOICES, MCPCONFIG_INTRO } from "../../lib/ui/option-choices.mjs";
 import { pickOverlay } from "../1c-ui/overlays.ts";
 import { registerAction } from "../../lib/ui/index.mjs";
 
@@ -328,6 +339,68 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
     ctx.ui.notify(`AGENT_MODEL=${slug} · ${scopeLine(persisted)} · гейты и syntaxcheck не ослабляются`, "info");
   }
 
+  async function askLine(ctx: ExtensionContext, title: string) {
+    if (typeof ctx.ui?.input !== "function") return null;
+    const value = await ctx.ui.input(title);
+    if (value == null) return null;
+    const text = String(value).trim();
+    return text || null;
+  }
+
+  async function askConfirm(ctx: ExtensionContext, title: string, detail: string) {
+    if (typeof ctx.ui?.confirm !== "function") return false;
+    return Boolean(await ctx.ui.confirm(title, detail));
+  }
+
+  async function editMcpFile(ctx: ExtensionContext, file: string) {
+    let loaded;
+    try {
+      loaded = readMcpConfig(file);
+    } catch (error: any) {
+      ctx.ui.notify(error?.message || String(error), "error");
+      return;
+    }
+    const picked = await pickOverlay(ctx, "MCP servers", serverChoices(loaded.servers), file);
+    if (!picked) return;
+    if (picked === "add") {
+      const name = await askLine(ctx, "Имя сервера");
+      if (!name) return;
+      const url = await askLine(ctx, "URL");
+      if (!url) return;
+      if (loaded.servers[name]) {
+        const ok = await askConfirm(ctx, "Заменить url?", `${name} уже есть. Остальные поля записи сохранятся.`);
+        if (!ok) return;
+      }
+      writeMcpConfig(file, addMcpServer(loaded.raw, name, url));
+      ctx.ui.notify(`${name} записан в ${file}. Нужен /reload.`, "info");
+      return;
+    }
+    const name = serverNameFromChoice(picked);
+    if (!name) return;
+    const ok = await askConfirm(ctx, "Удалить сервер?", name);
+    if (!ok) return;
+    writeMcpConfig(file, removeMcpServer(loaded.raw, name));
+    ctx.ui.notify(`${name} удалён из ${file}. Нужен /reload.`, "info");
+  }
+
+  async function handleMcpconfig(args: string | undefined, ctx: ExtensionContext) {
+    const parsed = parseMcpconfigArgs(args);
+    if (parsed.kind === "invalid") {
+      ctx.ui.notify("mcpconfig: local или global", "error");
+      return;
+    }
+    const scope = parsed.kind === "pick"
+      ? await pickOverlay(ctx, "MCP config", MCPCONFIG_CHOICES, MCPCONFIG_INTRO)
+      : parsed.scope;
+    if (!scope) return;
+    const target = resolveMcpConfigPath(scope, { cwd: ctx.cwd || cwd });
+    if (!target || target.missing) {
+      ctx.ui.notify(target?.file ? `mcp.json не найден: ${target.file}` : "PI_CODING_AGENT_DIR не задан", "error");
+      return;
+    }
+    await editMcpFile(ctx, target.file);
+  }
+
   pi.registerCommand("sdlc", {
     description: "Глубина проверок SDLC: /sdlc lite, standard или full",
     handler: handleSdlc,
@@ -356,6 +429,10 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
     description: "Профиль модели: /rulesmodel opus5, sonnet5, fable5, gpt56, gpt6 или off",
     handler: handleRulesmodel,
   });
+  pi.registerCommand("mcpconfig", {
+    description: "MCP этого проекта или профиля: добавить или удалить сервер. Пустой вызов открывает выбор",
+    handler: handleMcpconfig,
+  });
 
   registerAction("command:sdlc", (args: any, ctx: any) => handleSdlc(args, ctx));
   registerAction("command:litemode", (args: any, ctx: any) => handleLitemode(args, ctx));
@@ -364,6 +441,7 @@ export default function projectSettingsExtension(pi: ExtensionAPI): void {
   registerAction("command:caveman", (args: any, ctx: any) => handleCaveman(args, ctx));
   registerAction("command:economymode", (args: any, ctx: any) => handleEconomy(args, ctx));
   registerAction("command:rulesmodel", (args: any, ctx: any) => handleRulesmodel(args, ctx));
+  registerAction("command:mcpconfig", (args: any, ctx: any) => handleMcpconfig(args, ctx));
 
   pi.on("session_start", async (_event, ctx) => {
     cwd = ctx.cwd;

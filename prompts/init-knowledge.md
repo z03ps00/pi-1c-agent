@@ -22,9 +22,11 @@ Plant **only** the project knowledge tree. Do **not** copy the agent (`rules-1c/
 ├── configuration.json        # only if name+version known and file missing
 ├── project.yaml              # only if missing
 └── init-state.json           # only if missing
+
+.pi/mcp.json                  # project MCP; created if missing, never overwritten
 ```
 
-Existing `knowledge/items`, `knowledge-drafts`, and `rules/**` JSON files must not be deleted or overwritten.
+Existing `knowledge/items`, `knowledge-drafts`, `rules/**`, and an existing `.pi/mcp.json` must not be deleted or overwritten. Do not put tokens in `.pi/mcp.json`.
 
 ## Steps
 
@@ -56,9 +58,10 @@ console.log(JSON.stringify({
   existing: result.existing,
   fingerprintInitialized: result.fingerprintInitialized,
   manifestsCreated: result.manifestsCreated,
+  projectMcpCreated: result.projectMcp.created,
 }, null, 2));
 EOF
 ```
 
-4. If the helper cannot be imported, create only the missing directories listed above. Do not invent OpenSpec or agent files.
+4. If the helper cannot be imported, create only the missing directories listed above and `.pi/mcp.json` with `{ "mcpServers": {} }` when that file is missing. Do not overwrite an existing `.pi/mcp.json`. Do not invent OpenSpec or agent files.
 5. Report what was created vs already present. State that the agent was not copied. Suggest `/learn` for facts and full `/init` when `.dev.env` is still needed.

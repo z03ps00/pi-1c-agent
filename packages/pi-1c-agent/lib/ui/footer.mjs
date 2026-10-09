@@ -273,25 +273,59 @@ export function composeWorkFooter(snapshot = {}, width = 80) {
       const index = kept.findIndex((item) => item.id === id && !item.keep);
       if (index >= 0) kept.splice(index, 1);
     }
-    return clipLine(kept.map((item) => item.text).join(SEP), width);
+    return { text: clipLine(kept.map((item) => item.text).join(SEP), width), parts: kept };
   };
-  const primaryText = fit(primary, dropPrimary);
-  const secondaryText = fit(secondary, dropSecondary);
+  const primaryFit = fit(primary, dropPrimary);
+  const secondaryFit = fit(secondary, dropSecondary);
   const rule = '─'.repeat(Math.max(8, Number(width) || 80));
   const groupGap = '\t';
   return {
-    primary: primaryText,
-    secondary: secondaryText,
+    primary: primaryFit.text,
+    secondary: secondaryFit.text,
     primaryParts: primary,
     secondaryParts: secondary,
     lines: [
       { kind: 'title', text: 'Сессия' },
       { kind: 'rule', text: rule },
-      { kind: 'primary', text: primaryText },
+      { kind: 'primary', text: primaryFit.text, parts: primaryFit.parts },
       { kind: 'gap', text: groupGap },
       { kind: 'title', text: 'Среда' },
       { kind: 'rule', text: rule },
-      { kind: 'secondary', text: secondaryText },
+      { kind: 'secondary', text: secondaryFit.text, parts: secondaryFit.parts },
     ],
   };
 }
+
+/** Screen column on a rendered footer line → segment id. Separator and clipped tails miss. */
+export function segmentAt(line, parts, column) {
+  const x = Math.trunc(Number(column));
+  if (!Number.isFinite(x) || x < 0) return '';
+  let cursor = 0;
+  let rest = String(line ?? '');
+  for (const part of parts || []) {
+    const label = String(part?.text ?? '');
+    if (!label || !rest.startsWith(label)) continue;
+    const end = cursor + visibleWidth(label);
+    if (x >= cursor && x < end) return String(part.id || '');
+    cursor = end;
+    rest = rest.slice(label.length);
+    if (!rest.startsWith(SEP)) break;
+    cursor += visibleWidth(SEP);
+    rest = rest.slice(SEP.length);
+  }
+  return '';
+}
+
+export const FOOTER_SEGMENT_ACTIONS = Object.freeze({
+  mode: 'command:mode',
+  learning: 'command:learning',
+  taskmode: 'command:taskmode',
+  anon: 'command:anon',
+  approve: 'command:approve',
+  depth: 'command:sdlc',
+  economy: 'command:economymode',
+  ui: 'command:uitests',
+  rotate: 'command:session-rotate',
+  mcp: 'command:mcpconfig',
+  capture: 'command:capture-model',
+});

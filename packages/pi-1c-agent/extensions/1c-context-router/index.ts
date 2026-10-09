@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { overlayLearningSelect, overlaySelect, overlayText } from "../1c-ui/overlays.ts";
-import { getSnapshot, uiAvailable } from "../../lib/ui/index.mjs";
+import { getSnapshot, registerAction, uiAvailable } from "../../lib/ui/index.mjs";
 import {
   formatCapabilityBlock,
   isStructuralCall,
@@ -132,9 +132,7 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
     },
   });
 
-  pi.registerCommand("evolve", {
-    description: "Черновик навыка, правила, сценария или промпта. Пустой вызов открывает выбор",
-    handler: async (args, ctx) => {
+  async function handleEvolve(args: string | undefined, ctx: any) {
       const raw = String(args ?? "").trim();
       let kind = raw.split(/\s+/)[0] || "";
       if (!kind) {
@@ -175,31 +173,39 @@ export default function oneCContextRouter(pi: ExtensionAPI): void {
         content: `Draft ${created.draft.id} is not active.\n${memoryLine}\n${pending}${formatLearningReview(profileRoot)}`,
         display: true,
       }, { triggerTurn: false });
-    },
+  }
+
+  pi.registerCommand("evolve", {
+    description: "Черновик навыка, правила, сценария или промпта. Пустой вызов открывает выбор",
+    handler: handleEvolve,
   });
+  registerAction("command:evolve", (args: any, ctx: any) => handleEvolve(args, ctx));
+
+  async function handleLearning(args: string | undefined, ctx: any) {
+    const raw = String(args ?? "").trim().toLowerCase();
+    if (raw === "status") {
+      await show(pi, ctx, "Learning", learningStatus(profileRoot).text);
+      return;
+    }
+    let mode = raw;
+    if (!mode) {
+      const picked = await overlayLearningSelect(ctx);
+      mode = String(picked || "");
+    }
+    if (!mode) return;
+    const saved = writeLearningMode(profileRoot, mode);
+    if (!saved.ok) {
+      ctx.ui.notify(saved.reason || "learning failed", "error");
+      return;
+    }
+    ctx.ui.notify(`learning:${saved.mode}`, "info");
+  }
 
   pi.registerCommand("learning", {
     description: "Обучение: /learning off, safe или auto. Пустой вызов открывает выбор",
-    handler: async (args, ctx) => {
-      const raw = String(args ?? "").trim().toLowerCase();
-      if (raw === "status") {
-        await show(pi, ctx, "Learning", learningStatus(profileRoot).text);
-        return;
-      }
-      let mode = raw;
-      if (!mode) {
-        const picked = await overlayLearningSelect(ctx);
-        mode = String(picked || "");
-      }
-      if (!mode) return;
-      const saved = writeLearningMode(profileRoot, mode);
-      if (!saved.ok) {
-        ctx.ui.notify(saved.reason || "learning failed", "error");
-        return;
-      }
-      ctx.ui.notify(`learning:${saved.mode}`, "info");
-    },
+    handler: handleLearning,
   });
+  registerAction("command:learning", (args: any, ctx: any) => handleLearning(args, ctx));
 
   pi.on("session_start", async () => {
     try { noteTools(pi.getActiveTools()); } catch { noteTools([]); }

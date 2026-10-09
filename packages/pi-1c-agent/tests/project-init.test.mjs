@@ -30,6 +30,7 @@ import {
   summarizeEnv,
   ensureProjectKnowledgeLayout,
   inspectKnowledgeLayout,
+  PROJECT_MCP_TEMPLATE,
 } from '../lib/project-init.mjs';
 
 const schema = loadDevEnvSchema();
@@ -457,6 +458,53 @@ test('/init knowledge layout does not copy the agent or write .dev.env', () => {
   assert.equal(cfg.name, 'ERP');
   assert.equal(fs.existsSync(path.join(cwd, '.dev.env')), false);
   assertNoAgentCopy(cwd);
+});
+
+test('init writes an empty .pi/mcp.json and leaves an existing project MCP file untouched', () => {
+  const raw = template();
+  const values = Object.fromEntries(parseEnvTemplate(raw).variables.map((x) => [x.name, x.defaultValue]));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-mcp-'));
+  const first = applyProjectInitialization(cwd, {
+    templateRaw: raw,
+    values,
+    projectName: 'Mcp',
+    configurationName: 'ERP',
+    configurationVersion: '2.5',
+    sourceRoot: 'src',
+    knowledgeEnabled: false,
+  });
+  const mcpFile = path.join(cwd, '.pi', 'mcp.json');
+  assert.equal(first.projectMcp.created, true);
+  assert.equal(first.projectMcp.path, '.pi/mcp.json');
+  assert.equal(fs.readFileSync(mcpFile, 'utf8'), PROJECT_MCP_TEMPLATE);
+  const custom = `${JSON.stringify({ mcpServers: { local: { url: 'http://127.0.0.1:9/mcp' } } }, null, 2)}\n`;
+  fs.writeFileSync(mcpFile, custom);
+  const second = applyProjectInitialization(cwd, {
+    templateRaw: raw,
+    values,
+    projectName: 'Mcp',
+    configurationName: 'ERP',
+    configurationVersion: '2.5',
+    sourceRoot: 'src',
+    knowledgeEnabled: false,
+  });
+  assert.equal(second.projectMcp.created, false);
+  assert.equal(fs.readFileSync(mcpFile, 'utf8'), custom);
+
+  const knowledgeCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pi1c-mcp-kn-'));
+  const planted = ensureProjectKnowledgeLayout(knowledgeCwd, {
+    projectName: 'Kn',
+    writeManifests: true,
+  });
+  assert.equal(planted.projectMcp.created, true);
+  assert.equal(fs.readFileSync(path.join(knowledgeCwd, '.pi', 'mcp.json'), 'utf8'), PROJECT_MCP_TEMPLATE);
+  fs.writeFileSync(path.join(knowledgeCwd, '.pi', 'mcp.json'), custom);
+  const plantedAgain = ensureProjectKnowledgeLayout(knowledgeCwd, {
+    projectName: 'Kn',
+    writeManifests: true,
+  });
+  assert.equal(plantedAgain.projectMcp.created, false);
+  assert.equal(fs.readFileSync(path.join(knowledgeCwd, '.pi', 'mcp.json'), 'utf8'), custom);
 });
 
 

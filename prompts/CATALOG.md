@@ -1,6 +1,6 @@
 # Command catalog
 
-Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, and `/rulesmodel` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Empty `/init` opens the source overlay (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`), then the mode overlay for the empty-scaffold path. Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate` open the same overlay. Anonymous session is `/anon`. Approval mode is `/approve`.
+Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` aliases. `/init`, `/doctor`, `/session-rotate`, `/memory-flush`, `/wrap`, `/capture-model`, `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, and `/mcpconfig` are registered by the Pi `pi-1c-agent` package (not prompt files). Do not add `/help`, `/plan`, `/build`, `/debug`, `/new`, `/login`, `/trust`, `/reload`, `/model`. Modes remain `/mode plan|build|ask`. Work path is `/taskmode` (empty opens the picker; footer shows the pin). Empty `/init` opens the source overlay (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`), then the mode overlay for the empty-scaffold path. Empty `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/anon`, `/approve`, `/capture-model`, `/session-rotate`, `/mcpconfig` open the same overlay. Anonymous session is `/anon`. Approval mode is `/approve`.
 
 ## Everyday (at most twelve)
 
@@ -50,6 +50,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/previewmode` | Pi package: picker for `METADATA_PREVIEW` (on\|auto\|off\|once) |
 | `/economymode` | Pi package: picker for orchestrator economy; `models` / `rtk` stay arguments |
 | `/rulesmodel` | Pi package: picker for `AGENT_MODEL` profile |
+| `/mcpconfig` | Pi package: picker local or global. Add or remove one server in `.pi/mcp.json` or profile `mcp.json`. Empty opens the overlay. `/reload` after a write |
 | `/setupmcp` | Wire already-installed MCP servers and memory providers into this repo |
 | `/install-atlassian-mcp` | Opt-in: `mcp-atlassian` (Jira / Confluence) |
 | `/install-officecli` | Opt-in: OfficeCLI (Word / Excel / PowerPoint without MS Office) |
@@ -59,7 +60,7 @@ Canonical names have **no** `1c-` prefix. One command per verb — no `/1c-*` al
 | `/getconfigfiles` | Partial object dump |
 | `/check-uuid` | Duplicate UUID check in a dump |
 | `/doctor-explain` | LLM 1c-rules diagnostic (not `/doctor`) |
-| `/groups` | Section browser (`Ctrl+Shift+G`). Inserts a command and does not run it |
+| `/groups` | Section browser (`Ctrl+Alt+G`). Inserts a command and does not run it |
 | `/layout-view` | Static HTML sketch of a managed form or spreadsheet template |
 | `/reglog` | Recent registration-log rows. Fixed read query; limit, window, and level only |
 | `/ext-plan` | Dry plan for a vendor update through an extension |

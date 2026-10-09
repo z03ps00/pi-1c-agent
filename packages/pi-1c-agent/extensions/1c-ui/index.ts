@@ -20,8 +20,11 @@ import {
   countOpenChanges,
   composeStatus,
   composeWidgetLines,
+  FOOTER_SEGMENT_ACTIONS,
   getSnapshot,
   invokeAction,
+  listActions,
+  segmentAt,
   MCP_STATUS_EVENT,
   mcpCountsFromAdapterSnapshot,
   mcpCountsFromConfig,
@@ -41,6 +44,7 @@ import {
   uiAvailable,
 } from "../../lib/ui/index.mjs";
 import { overlayChild, overlayCommandGroups, overlayHub, overlayModeSelect, overlayPalette, overlaySelect, overlayStatus } from "./overlays.ts";
+import { groupSelectionResult, submitFocusedEditor } from "../../lib/ui/command-groups.mjs";
 
 let widgetMounted = false;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -135,9 +139,20 @@ function mountFooter(ctx: any, pi?: ExtensionAPI) {
   ctx.ui.setFooter((tui: any, theme: any, footerData: any) => {
     const unsubBranch = footerData?.onBranchChange?.(() => tui.requestRender()) || (() => {});
     const unsubBus = subscribe(() => tui.requestRender());
+    let view = composeWorkFooter({}, 80);
+    const known = () => new Set(listActions());
     return {
       dispose() { unsubBranch(); unsubBus(); },
       invalidate() {},
+      handleMouse(event: { x?: number; y?: number; type?: string }) {
+        if (event?.type !== "click" && event?.type !== "press") return undefined;
+        const line = view.lines[Math.trunc(Number(event.y))];
+        const id = segmentAt(line?.text, line?.parts, event.x);
+        const actionId = (FOOTER_SEGMENT_ACTIONS as Record<string, string>)[id];
+        if (!actionId || !known().has(actionId)) return undefined;
+        queueMicrotask(() => { void invokeAction(actionId, undefined, ctx); });
+        return { handled: true };
+      },
       render(width: number) {
         const paintFg = (token: string, text: string) => {
           try { return typeof theme?.fg === "function" ? theme.fg(token, text) : text; } catch { return text; }
@@ -151,7 +166,7 @@ function mountFooter(ctx: any, pi?: ExtensionAPI) {
         };
         if (alignChatTree(tui, paints, { visibleWidth, truncateToWidth })) tui.requestRender?.();
         const snap = collectSnapshot(ctx, footerData, pi);
-        const view = composeWorkFooter(snap, width);
+        view = composeWorkFooter(snap, width);
         const modeWord = ({ ask: "Вопрос", plan: "Планирование", build: "Реализация" } as Record<string, string>)[String(snap.mode || "ask")] || "";
         return view.lines.map((line: { kind: string; text: string }) => {
           if (line.kind === "title") return truncateToWidth(colorize(theme, "accent", line.text), Math.max(1, width));
@@ -381,21 +396,32 @@ export default function oneCUi(pi: ExtensionAPI): void {
 
   async function openCommandGroups(ctx: any) {
     const listed = typeof pi.getCommands === "function" ? pi.getCommands() : [];
-    const name = await overlayCommandGroups(ctx, listed);
-    if (!name) return;
-    const text = `/${name} `;
-    if (typeof ctx.ui?.setEditorText === "function") {
-      ctx.ui.setEditorText(text);
+    const picked = await overlayCommandGroups(ctx, listed);
+    if (!picked?.name) return;
+    const choice = groupSelectionResult(picked.name, new Set(listActions()));
+    if (choice.kind === "picker") {
+      await invokeAction(choice.actionId, undefined, ctx);
       return;
     }
-    ctx.ui.notify(text.trim(), "info");
+    if (choice.kind !== "run") return;
+    if (typeof submitFocusedEditor === "function" && submitFocusedEditor(picked.tui, choice.text)) return;
+    const registered = listed.some((command: { name?: string }) => command?.name === choice.command);
+    if (registered && typeof pi.sendUserMessage === "function") {
+      pi.sendUserMessage(choice.text, { expandPromptTemplates: true });
+      return;
+    }
+    if (typeof ctx.ui?.setEditorText === "function") {
+      ctx.ui.setEditorText(`${choice.text} `);
+      return;
+    }
+    ctx.ui.notify(choice.text, "info");
   }
 
   pi.registerCommand("groups", {
-    description: "Разделы команд. Выбранная команда попадает в поле и не запускается",
+    description: "Разделы команд (Ctrl+Alt+G). Режим, обучение и другие списки открываются сразу",
     handler: async (_args, ctx) => openCommandGroups(ctx),
   });
-  pi.registerShortcut(Key.ctrlShift("g"), {
+  pi.registerShortcut(Key.ctrlAlt("g"), {
     description: "Открыть разделы команд",
     handler: async (ctx) => openCommandGroups(ctx),
   });

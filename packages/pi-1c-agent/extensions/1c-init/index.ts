@@ -209,7 +209,7 @@ function previewText(project: any, templateRaw: string, values: Record<string, s
     lines.push("", `## ${group.title}`);
     for (const item of items) lines.push(`- ${item.name}: ${item.state}${item.secret ? (item.state.includes("configured") ? " [secret configured]" : " [secret not shown]") : item.value !== "(пусто)" ? ` = ${item.value}` : ""}`);
   }
-  lines.push("", "Будут созданы/обновлены:", "- .dev.env (mode 600 на POSIX)", "- .gitignore (.dev.env, build/)", "- .pi/1c/project.yaml", "- .pi/1c/init-state.json");
+  lines.push("", "Будут созданы/обновлены:", "- .dev.env (mode 600 на POSIX)", "- .gitignore (.dev.env, build/)", "- .pi/1c/project.yaml", "- .pi/1c/init-state.json", projectMcpPreviewLine(project.cwd));
   if (sourceScaffoldEnabled) lines.push(`- ${project.sourceLayoutRoot || "src"}/{cf,cfe,epf,erf} — только отсутствующие каталоги; существующие данные не изменяются`);
   if (buildScaffoldEnabled) lines.push(`- ${BUILD_SCAFFOLD_HINT} — готовые .cf/.cfe/.epf/.erf, имя + штамп даты`);
   if (docsScaffoldEnabled) lines.push(`- docs/ и ${DOCS_SCAFFOLD_HINT}/ — документация и сырые ТЗ агенту`);
@@ -328,6 +328,7 @@ async function runStandardInitWizard(pi: ExtensionAPI, ctx: any, templateRaw: st
         profile.buildScaffoldEnabled ? `Build scaffold: build/{cf,cfe,epf,erf}; created=${result.buildScaffold.created.length}, existing=${result.buildScaffold.existing.length}` : "Build scaffold: disabled",
         profile.docsScaffoldEnabled ? `Docs scaffold: docs/ + docs/techtask; created=${result.docsScaffold.created.length}, existing=${result.docsScaffold.existing.length}` : "Docs scaffold: disabled",
         knowledgeLine,
+        projectMcpResultLine(result.projectMcp),
         profile.openSpecEnabled && !fs.existsSync(path.join(ctx.cwd, "openspec")) ? "Next: run /openspec-setup to materialize native Pi OpenSpec artifacts." : "",
         "Next: run /doctor project.",
       ].filter(Boolean).join("\n");
@@ -337,6 +338,16 @@ async function runStandardInitWizard(pi: ExtensionAPI, ctx: any, templateRaw: st
     }
     return;
   }
+}
+
+function projectMcpPreviewLine(cwd: string) {
+  return fs.existsSync(path.join(cwd, ".pi", "mcp.json"))
+    ? "- .pi/mcp.json — уже есть, не перезаписывается"
+    : "- .pi/mcp.json — пустой шаблон проектных MCP";
+}
+
+function projectMcpResultLine(projectMcp: { created?: boolean } | undefined) {
+  return projectMcp?.created ? "Project MCP: .pi/mcp.json created" : "Project MCP: .pi/mcp.json already present";
 }
 
 function knowledgeResultLine(layout: any, knowledgeEnabled: boolean) {
@@ -408,6 +419,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
           "- .pi/1c/rules/project/",
           existing ? "- .pi/1c/configuration.json — already present, not overwritten" : (willFingerprint ? "- .pi/1c/configuration.json + knowledge/fingerprint.json" : "- configuration.json не создаётся без имени и версии"),
           "- .pi/1c/project.yaml и init-state.json — только если отсутствуют",
+          projectMcpPreviewLine(ctx.cwd),
         ].join("\n");
         pi.sendMessage({ customType: "pi-1c-init-knowledge-preview", content: preview, display: true }, { triggerTurn: false });
         const apply = await ctx.ui.confirm("Посадить каркас знаний?", "Существующие drafts/items/rules не удаляются. Агент, .pi/prompts, .pi/skills и .dev.env не записываются.");
@@ -425,6 +437,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
             "1C project knowledge layout complete.",
             knowledgeResultLine(result, willFingerprint),
             result.manifestsCreated.length ? `Manifests created: ${result.manifestsCreated.join(", ")}` : "Manifests: already present",
+            projectMcpResultLine(result.projectMcp),
             "Agent/OpenSpec were not copied.",
             "Next: /learn to add facts, or /init for the full .dev.env wizard.",
           ].join("\n");
@@ -671,6 +684,7 @@ export default function oneCInit(pi: ExtensionAPI): void {
           buildScaffoldEnabled ? `Build scaffold: build/{cf,cfe,epf,erf}; created=${result.buildScaffold.created.length}, existing=${result.buildScaffold.existing.length}` : "Build scaffold: disabled",
           docsScaffoldEnabled ? `Docs scaffold: docs/ + docs/techtask; created=${result.docsScaffold.created.length}, existing=${result.docsScaffold.existing.length}` : "Docs scaffold: disabled",
           knowledgeLine,
+          projectMcpResultLine(result.projectMcp),
           openSpecEnabled && !fs.existsSync(path.join(ctx.cwd, "openspec")) ? "Next: run /openspec-setup to materialize native Pi OpenSpec artifacts." : "",
           "Next: run /doctor project.",
         ].filter(Boolean).join("\n");

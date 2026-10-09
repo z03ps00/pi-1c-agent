@@ -19,6 +19,7 @@ Written state:
 - `.pi/1c/project.yaml` — non-secret project/configuration/capability summary;
 - `.pi/1c/init-state.json` — non-secret initialization state;
 - `.pi/1c/{knowledge,knowledge-drafts,rules}` — project knowledge dirs (always; the agent is not copied);
+- `.pi/mcp.json` — empty project MCP template when the file is missing; an existing file is left untouched. Tokens do not belong here. Pi reads this file; a server name here overrides the same name in the profile `mcp.json`;
 - optional standard source scaffold under the selected layout root: `cf/`, `cfe/`, `epf/`, `erf/`;
 - optional Configuration Knowledge fingerprint when explicitly enabled;
 - optional OpenSpec CLI + native Pi artifacts (`openspec/`, `.pi/skills/openspec-*`, `.pi/prompts/opsx-*.md`) when explicitly enabled;

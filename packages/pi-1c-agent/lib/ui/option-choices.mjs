@@ -39,3 +39,10 @@ export const SESSION_ROTATE_CHOICES = [
   { value: 'on', label: 'on', description: 'при заполнении контекста начать новую сессию.' },
   { value: 'off', label: 'off', description: 'не ротировать, контекст сжимается как обычно.' },
 ];
+
+export const MCPCONFIG_INTRO = 'Какой mcp.json открыть. После записи нужен /reload.';
+
+export const MCPCONFIG_CHOICES = [
+  { value: 'local', label: 'Локальный', description: '.pi/mcp.json этого проекта. Одно имя перекрывает профиль.' },
+  { value: 'global', label: 'Глобальный', description: 'mcp.json профиля. Общий для всех проектов.' },
+];

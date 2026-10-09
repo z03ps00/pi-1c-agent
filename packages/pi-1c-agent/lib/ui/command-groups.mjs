@@ -34,6 +34,29 @@ export const COMMAND_SECTIONS = Object.freeze([
 
 const BUILTIN_NAMES = new Set(PI_CORE_COMMANDS.map((item) => item.name));
 
+/** Third-party slash commands keep their names. The groups list shows these labels. */
+export const PROFILE_COMMAND_LABELS = Object.freeze({
+  'cursor-cloud': 'Список, архив или удаление облачных агентов Cursor этой ветки',
+  'cursor-fast': 'Быстрый режим Cursor для выбранной модели',
+  'cursor-http': 'Совместимость транспорта HTTP/1.1/SSE Cursor SDK',
+  'cursor-local-resume-cleanup': 'Просмотр или удаление устаревших локальных агентов Cursor SDK',
+  'cursor-mode': 'Режим разговора Cursor SDK: agent или plan',
+  'cursor-refresh-config': 'Обновить конфиг Cursor в текущем пуле SDK',
+  'cursor-refresh-models': 'Обновить каталог моделей Cursor без перезапуска Pi',
+  'cursor-runtime': 'Среда Cursor в этой сессии: local или cloud',
+  'cursor-tools': 'Живые поверхности инструментов Cursor (отладка)',
+  mcp: 'Статус серверов MCP',
+  'pi-mcp': 'Статус серверов MCP',
+  'mcp-auth': 'Вход на MCP-сервер (OAuth)',
+});
+
+function commandDescription(command, name) {
+  if (Object.prototype.hasOwnProperty.call(PROFILE_COMMAND_LABELS, name)) {
+    return PROFILE_COMMAND_LABELS[name];
+  }
+  return String(command.description || '').trim();
+}
+
 export function sectionForCommand(command) {
   const source = String(command?.source || '');
   const name = String(command?.name || '');
@@ -57,7 +80,7 @@ export function buildCommandSections(commands = [], builtins = PI_CORE_COMMANDS)
     const section = sectionForCommand(command);
     buckets[section].push({
       name,
-      description: String(command.description || '').trim(),
+      description: commandDescription(command, name),
       source: command.source || section,
     });
   }
@@ -76,4 +99,76 @@ export function sectionSummary(sections) {
     label: section.label,
     count: section.commands.length,
   }));
+}
+
+function commandScore(command, query) {
+  const name = String(command?.name || '').toLowerCase();
+  const description = String(command?.description || '').toLowerCase();
+  if (name.startsWith(query)) return 3;
+  if (name.includes(query)) return 2;
+  if (description.includes(query)) return 1;
+  return 0;
+}
+
+/** Flat command list. An empty query keeps every command; a typed query ranks matches. */
+export function filterCommandSections(sections, query) {
+  const needle = String(query || '').trim().toLowerCase().replace(/^\//, '');
+  const hits = [];
+  for (const section of sections || []) {
+    for (const command of section.commands || []) {
+      const score = needle ? commandScore(command, needle) : 1;
+      if (!score) continue;
+      hits.push({ command, score, section: section.label || '' });
+    }
+  }
+  if (needle) {
+    hits.sort((a, b) => b.score - a.score || a.command.name.localeCompare(b.command.name));
+  }
+  return hits.map((hit) => ({ ...hit.command, section: hit.section }));
+}
+
+/** Empty invocation opens an overlay. Choosing one in the groups list runs it. */
+export const PICKER_COMMAND_ACTIONS = Object.freeze({
+  mode: 'command:mode',
+  learning: 'command:learning',
+  learn: 'command:learn',
+  evolve: 'command:evolve',
+  taskmode: 'command:taskmode',
+  anon: 'command:anon',
+  approve: 'command:approve',
+  sdlc: 'command:sdlc',
+  litemode: 'command:litemode',
+  uitests: 'command:uitests',
+  previewmode: 'command:previewmode',
+  caveman: 'command:caveman',
+  economymode: 'command:economymode',
+  rulesmodel: 'command:rulesmodel',
+  mcpconfig: 'command:mcpconfig',
+  theme: 'command:theme',
+  init: 'command:init',
+  'session-rotate': 'command:session-rotate',
+  'capture-model': 'command:capture-model',
+});
+
+export function groupSelectionResult(name, knownActions) {
+  const command = String(name || '').trim();
+  if (!command) return { kind: 'cancel' };
+  const actionId = PICKER_COMMAND_ACTIONS[command] || '';
+  const known = knownActions == null
+    || (typeof knownActions.has === 'function' ? knownActions.has(actionId) : knownActions.includes?.(actionId));
+  if (actionId && known) return { kind: 'picker', actionId, command };
+  return { kind: 'run', command, text: `/${command}` };
+}
+
+/** Put the slash command in the focused editor and press Enter. */
+export function submitFocusedEditor(tui, text) {
+  const command = String(text || '').trim();
+  if (!command.startsWith('/')) return false;
+  const editor = typeof tui?.getFocusedComponent === 'function'
+    ? tui.getFocusedComponent()
+    : tui?.focusedComponent;
+  if (!editor || typeof editor.setText !== 'function' || typeof editor.handleInput !== 'function') return false;
+  editor.setText(command);
+  editor.handleInput('\r');
+  return true;
 }

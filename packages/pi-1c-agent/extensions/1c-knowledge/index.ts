@@ -299,17 +299,20 @@ export default function oneCKnowledge(pi: ExtensionAPI): void {
   });
   registerAction("command:config", (args: any, ctx: any) => handleConfig(args, ctx));
 
+  async function handleLearn(args: string | undefined, ctx: any) {
+    if (!requireTrusted(ctx)) return;
+    const raw = args?.trim() ?? "";
+    if (!raw) return pickLearnAction(ctx);
+    if (raw === "approve" || raw.startsWith("approve ")) return approveDraftById(ctx, raw.slice("approve".length));
+    if (raw === "reject" || raw.startsWith("reject ")) return rejectDraftById(ctx, raw.slice("reject".length));
+    startLearnAnalysis(ctx, raw);
+  }
+
   pi.registerCommand("learn", {
     description: "Черновик факта или правила. Пустой вызов открывает выбор",
-    handler: async (args, ctx) => {
-      if (!requireTrusted(ctx)) return;
-      const raw = args?.trim() ?? "";
-      if (!raw) return pickLearnAction(ctx);
-      if (raw === "approve" || raw.startsWith("approve ")) return approveDraftById(ctx, raw.slice("approve".length));
-      if (raw === "reject" || raw.startsWith("reject ")) return rejectDraftById(ctx, raw.slice("reject".length));
-      startLearnAnalysis(ctx, raw);
-    },
+    handler: handleLearn,
   });
+  registerAction("command:learn", (args: any, ctx: any) => handleLearn(args, ctx));
 
   pi.registerCommand("rule", {
     description: "Правила знаний: add, list, show, audit, conflicts, disable",

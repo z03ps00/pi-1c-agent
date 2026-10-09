@@ -8,6 +8,7 @@ import {
   hasDialogUi,
   composeFooter,
   composeWorkFooter,
+  segmentAt,
   footerSegments,
   FOOTER_DROP_ORDER,
   mcpCountsFromAdapterSnapshot,
@@ -520,4 +521,14 @@ test('work footer shows depth, economy, ui, changes, and a short base name', () 
   const emptyBase = composeWorkFooter({ mode: 'ask', ibKind: 'file', ibName: '' }, 200);
   assert.doesNotMatch(emptyBase.secondary, /file file|База /);
   assert.match(emptyBase.primary, /Режим Вопрос/);
+});
+
+test('footer click column resolves mode and learning', () => {
+  const view = composeWorkFooter({ mode: 'ask', learning: 'safe' }, 200);
+  const line = view.lines.find((item) => item.kind === 'primary');
+  assert.equal(segmentAt(line.text, line.parts, 0), 'mode');
+  const learningAt = line.text.indexOf('Обучение');
+  assert.equal(segmentAt(line.text, line.parts, learningAt), 'learning');
+  const sep = line.text.indexOf('│');
+  assert.equal(segmentAt(line.text, line.parts, sep), '');
 });

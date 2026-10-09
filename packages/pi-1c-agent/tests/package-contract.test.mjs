@@ -117,6 +117,7 @@ test('session-rotate command and compaction hooks are registered', () => {
 test('knowledge commands pick pending drafts without /1c- names', () => {
   const src = fs.readFileSync(path.join(root, 'extensions', '1c-knowledge', 'index.ts'), 'utf8');
   assert.match(src, /registerCommand\("learn"/);
+  assert.match(src, /registerAction\("command:learn"/);
   assert.match(src, /pickOverlay\(ctx, "Знания"/);
   assert.match(src, /Новый факт или правило/);
   assert.match(src, /Утвердить черновик/);
@@ -148,6 +149,7 @@ test('1c-mode scopes session approvals and 1c-subagents restrict child env', () 
 test('1c-mode registers ASK, ANON, and the three-way hotkey cycle', () => {
   const mode = fs.readFileSync(path.join(root, 'extensions', '1c-mode', 'index.ts'), 'utf8');
   assert.match(mode, /registerCommand\("mode"/);
+  assert.match(mode, /registerAction\("command:mode"/);
   assert.match(mode, /registerCommand\("taskmode"/);
   assert.match(mode, /overlayTaskmodeSelect/);
   assert.doesNotMatch(mode, /registerCommand\("1c-ask"/);
@@ -194,6 +196,12 @@ test('1c-ui palette shortcut is Ctrl+Shift+K not Ctrl+K', () => {
   assert.match(ui, /Key\.alt\("a"\)/);
 });
 
+test('1c-ui groups shortcut is Ctrl+Alt+G, not the transcript search chord', () => {
+  const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');
+  assert.match(ui, /Key\.ctrlAlt\("g"\)/);
+  assert.doesNotMatch(ui, /Key\.ctrlShift\("g"\)/);
+});
+
 test('1c-ui registers /theme and ships VS Code palettes', () => {
   const ui = fs.readFileSync(path.join(root, 'extensions', '1c-ui', 'index.ts'), 'utf8');
   assert.match(ui, /registerCommand\("theme"/);
@@ -208,7 +216,7 @@ test('1c-ui registers /theme and ships VS Code palettes', () => {
 
 test('1c-settings registers option-picker commands without 1c- aliases', () => {
   const src = fs.readFileSync(path.join(root, 'extensions', '1c-settings', 'index.ts'), 'utf8');
-  for (const name of ['sdlc', 'litemode', 'uitests', 'previewmode', 'caveman', 'economymode', 'rulesmodel']) {
+  for (const name of ['sdlc', 'litemode', 'uitests', 'previewmode', 'caveman', 'economymode', 'rulesmodel', 'mcpconfig']) {
     assert.match(src, new RegExp(`registerCommand\\("${name}"`));
     assert.doesNotMatch(src, new RegExp(`registerCommand\\("1c-${name}"`));
   }

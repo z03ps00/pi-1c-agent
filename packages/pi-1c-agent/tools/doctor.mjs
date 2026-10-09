@@ -90,9 +90,11 @@ add('1C memory lifecycle extension', exists(path.join(packageRoot, 'extensions',
 add('1C project-settings extension', exists(path.join(packageRoot, 'extensions', '1c-settings', 'index.ts')) && extList.includes('extensions/1c-settings/index.ts'));
 const settingsSrc = exists(path.join(packageRoot, 'extensions', '1c-settings', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-settings', 'index.ts')) : '';
 add('canonical /sdlc /litemode /uitests /previewmode /caveman /economymode /rulesmodel', /registerCommand\("sdlc"/.test(settingsSrc) && /registerCommand\("litemode"/.test(settingsSrc) && /registerCommand\("uitests"/.test(settingsSrc) && /registerCommand\("previewmode"/.test(settingsSrc) && /registerCommand\("caveman"/.test(settingsSrc) && /registerCommand\("economymode"/.test(settingsSrc) && /registerCommand\("rulesmodel"/.test(settingsSrc));
+add('canonical /mcpconfig overlay', /registerCommand\("mcpconfig"/.test(settingsSrc) && /pickOverlay\(ctx, "MCP config"/.test(settingsSrc) && /MCPCONFIG_CHOICES/.test(settingsSrc) && !/registerCommand\("1c-mcpconfig"/.test(settingsSrc));
 add('1C UI layer last', exists(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) && extList[extList.length - 1] === 'extensions/1c-ui/index.ts');
 const uiSrc = exists(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-ui', 'index.ts')) : '';
 add('palette shortcut Ctrl+Shift+K not Ctrl+K', /Key\.ctrlShift\("k"\)/.test(uiSrc) && !/Key\.ctrl\("k"\)/.test(uiSrc) && /Key\.alt\("a"\)/.test(uiSrc));
+add('groups shortcut Ctrl+Alt+G not Ctrl+Shift+G', /Key\.ctrlAlt\("g"\)/.test(uiSrc) && !/Key\.ctrlShift\("g"\)/.test(uiSrc));
 add('canonical /theme registration', /registerCommand\("theme"/.test(uiSrc) && !/registerCommand\("1c-theme"/.test(uiSrc));
 add('shipped VS Code themes', exists(path.join(packageRoot, 'themes', 'standard.json')) && exists(path.join(packageRoot, 'themes', 'dracula.json')) && Array.isArray(packageJson?.pi?.themes) && packageJson.pi.themes.includes('themes'));
 const memorySrc = exists(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) ? read(path.join(packageRoot, 'extensions', '1c-memory', 'index.ts')) : '';
@@ -116,6 +118,17 @@ add('PLAN write policy helper', exists(path.join(packageRoot, 'lib', 'plan-polic
 add('docker policy helper', exists(path.join(packageRoot, 'lib', 'docker-policy.mjs')));
 add('product health helper', exists(path.join(packageRoot, 'lib', 'product-health.mjs')));
 add('handoff validator', exists(path.join(packageRoot, 'lib', 'handoff.mjs')));
+{
+  const profileRoot = path.resolve(packageRoot, '..', '..');
+  add(
+    'ACP launcher',
+    exists(path.join(profileRoot, 'scripts', 'pi-1c-acp'))
+      && exists(path.join(profileRoot, 'scripts', 'pi-1c-acp.cmd'))
+      && exists(path.join(packageRoot, 'lib', 'acp-bridge.mjs'))
+      && exists(path.join(packageRoot, 'tools', 'acp-server.mjs'))
+      && exists(path.join(packageRoot, 'docs', 'acp.md')),
+  );
+}
 add('session-rotate helper', exists(path.join(packageRoot, 'lib', 'session-rotate.mjs')));
 add('writer concurrency policy', exists(path.join(packageRoot, 'lib', 'agent-policy.mjs')));
 add('runtime scheduler helper', exists(path.join(packageRoot, 'lib', 'runtime-scheduler.mjs')));

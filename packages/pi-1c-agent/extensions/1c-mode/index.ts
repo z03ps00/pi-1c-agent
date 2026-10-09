@@ -416,31 +416,27 @@ export default function oneCModeExtension(pi: ExtensionAPI): void {
     pi.sendMessage({ customType: "pi-1c-plan-execute", content, display: true }, { triggerTurn: true, deliverAs: "followUp" });
   }
 
-  pi.registerCommand("mode", {
-    description: "Режим сессии: /mode plan, /mode build или /mode ask",
-    handler: async (args, ctx) => {
-      const requested = args?.trim().toLowerCase();
-      if (requested === "plan") return switchToPlan(ctx);
-      if (requested === "build") return switchToBuild(ctx);
-      if (requested === "ask") return switchToAsk(ctx);
-      if (requested) return ctx.ui.notify(`Unknown 1C mode: ${requested}. Use plan, build, or ask.`, "error");
-      const selected = uiAvailable(ctx)
-        ? await overlayModeSelect(ctx)
-        : await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
-      if (selected === "plan") await switchToPlan(ctx);
-      if (selected === "build") await switchToBuild(ctx);
-      if (selected === "ask") await switchToAsk(ctx);
-    },
-  });
-
-  registerAction("mode-select", async (ctx: ExtensionContext) => {
+  async function handleMode(args: string | undefined, ctx: ExtensionContext) {
+    const requested = String(args ?? "").trim().toLowerCase();
+    if (requested === "plan") return switchToPlan(ctx);
+    if (requested === "build") return switchToBuild(ctx);
+    if (requested === "ask") return switchToAsk(ctx);
+    if (requested) return ctx.ui.notify(`Unknown 1C mode: ${requested}. Use plan, build, or ask.`, "error");
     const selected = uiAvailable(ctx)
       ? await overlayModeSelect(ctx)
       : await ctx.ui.select("1C mode", ["build", "plan", "ask"]);
     if (selected === "plan") await switchToPlan(ctx);
     if (selected === "build") await switchToBuild(ctx);
     if (selected === "ask") await switchToAsk(ctx);
+  }
+
+  pi.registerCommand("mode", {
+    description: "Режим сессии: /mode plan, /mode build или /mode ask",
+    handler: handleMode,
   });
+
+  registerAction("command:mode", (args: any, ctx: any) => handleMode(args, ctx));
+  registerAction("mode-select", (ctx: ExtensionContext) => handleMode(undefined, ctx));
 
   function setTaskmode(path: string, ctx: ExtensionContext, notify = true): void {
     const next = normalizeTaskmode(path);

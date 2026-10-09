@@ -800,6 +800,27 @@ function atomicWrite(file, content, mode) {
   if (mode && process.platform !== 'win32') try { fs.chmodSync(file, mode); } catch {}
 }
 
+export const PROJECT_MCP_REL = '.pi/mcp.json';
+
+export const PROJECT_MCP_TEMPLATE = `{
+  // Серверы только этого проекта. То же имя перекрывает сервер профиля.
+  // Токены сюда не писать.
+  "mcpServers": {}
+}
+`;
+
+export function projectMcpPath(cwd) {
+  return path.join(cwd, '.pi', 'mcp.json');
+}
+
+/** Empty project MCP file. An existing file is left untouched. */
+export function ensureProjectMcpConfig(cwd) {
+  const file = projectMcpPath(cwd);
+  if (fs.existsSync(file)) return { path: PROJECT_MCP_REL, absolute: file, created: false };
+  atomicWrite(file, PROJECT_MCP_TEMPLATE);
+  return { path: PROJECT_MCP_REL, absolute: file, created: true };
+}
+
 function knowledgeLayoutDirectories(cwd) {
   return [
     { rel: 'knowledge', absolute: path.dirname(fingerprintPath(cwd)) },
@@ -920,6 +941,8 @@ export function ensureProjectKnowledgeLayout(cwd, {
     manifestsCreated = manifests.created;
   }
 
+  const projectMcp = ensureProjectMcpConfig(cwd);
+
   return {
     root: '.pi/1c',
     directories: after.directories,
@@ -932,6 +955,7 @@ export function ensureProjectKnowledgeLayout(cwd, {
     manifestsCreated,
     projectYaml,
     initState,
+    projectMcp,
   };
 }
 
@@ -958,6 +982,7 @@ export function applyProjectInitialization(cwd, { templateRaw, values, decisions
   const scaffold = sourceScaffoldEnabled ? ensureSourceScaffold(cwd, layoutRoot) : inspectSourceScaffold(cwd, layoutRoot);
   const buildScaffold = buildScaffoldEnabled ? ensureBuildScaffold(cwd) : inspectBuildScaffold(cwd);
   const docsScaffold = docsScaffoldEnabled ? ensureDocsScaffold(cwd) : inspectDocsScaffold(cwd);
+  const projectMcp = ensureProjectMcpConfig(cwd);
   const knowledgeLayout = ensureProjectKnowledgeLayout(cwd, {
     projectName,
     configurationName,
@@ -1030,6 +1055,7 @@ export function applyProjectInitialization(cwd, { templateRaw, values, decisions
     buildScaffold,
     docsScaffold,
     knowledgeLayout,
+    projectMcp,
   };
 }
 

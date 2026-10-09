@@ -241,9 +241,7 @@ export default function memoryExtension(pi: ExtensionAPI): void {
   });
   registerAction("command:wrap", (args: any, ctx: any) => handleWrap(args, ctx));
 
-  pi.registerCommand("capture-model", {
-    description: "Модель сжатия сессии: /capture-model status, off, stack, ollama, routerai или chat",
-    handler: async (args, ctx) => {
+  async function handleCaptureModel(args: string | undefined, ctx: ExtensionContext) {
       let parsed = parseCaptureModelArgs(args);
       if (parsed.action === "pick") {
         const selected = await overlayCaptureModelSelect(ctx);
@@ -269,8 +267,13 @@ export default function memoryExtension(pi: ExtensionAPI): void {
       if (result.changed) persist();
       updateStatus(ctx);
       ctx.ui.notify(captureModelStatus(state), "info");
-    },
+  }
+
+  pi.registerCommand("capture-model", {
+    description: "Модель сжатия сессии: /capture-model status, off, stack, ollama, routerai или chat",
+    handler: handleCaptureModel,
   });
+  registerAction("command:capture-model", (args: any, ctx: any) => handleCaptureModel(args, ctx));
 
   pi.on("tool_call", async (event, ctx) => {
     const target = rememberQueueTarget(event.toolName, (event as { serverName?: string }).serverName);

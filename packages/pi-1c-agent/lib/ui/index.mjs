@@ -11,6 +11,8 @@ export {
   composeWorkFooter,
   countOpenChanges,
   footerSegments,
+  segmentAt,
+  FOOTER_SEGMENT_ACTIONS,
   FOOTER_DROP_ORDER,
   MCP_STATUS_EVENT,
   mcpCountsFromAdapterSnapshot,

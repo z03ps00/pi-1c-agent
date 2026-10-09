@@ -1,4 +1,4 @@
-import { matchesKey, SelectList, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { matchesKey, SelectList } from "@earendil-works/pi-tui";
 import {
   composeApprovalView,
   composeHubDetailLines,
@@ -28,11 +28,30 @@ import {
   SESSION_ROTATE_INTRO,
 } from "../../lib/ui/option-choices.mjs";
 import { composePickerLines, pickerSpanAt } from "../../lib/ui/picker-layout.mjs";
-import { buildCommandSections } from "../../lib/ui/command-groups.mjs";
+import { buildCommandSections, filterCommandSections } from "../../lib/ui/command-groups.mjs";
+import { composeFrame, frameMetrics } from "../../lib/ui/overlay-frame.mjs";
 import { TASKMODE_INTRO, taskmodeChoices } from "../../lib/taskmode-state.mjs";
 import {
   INIT_MODE_CHOICES, INIT_MODE_INTRO, INIT_SOURCE_CHOICES, INIT_SOURCE_INTRO,
 } from "../../lib/ui/init-copy.mjs";
+
+function pressed(data: string, kb: any, kind: "up" | "down" | "confirm" | "cancel") {
+  const id = {
+    up: "tui.select.up",
+    down: "tui.select.down",
+    confirm: "tui.select.confirm",
+    cancel: "tui.select.cancel",
+  }[kind];
+  const raw = { up: "up", down: "down", confirm: "enter", cancel: "escape" }[kind];
+  if (typeof kb?.matches === "function") {
+    if (kb.matches(data, id)) return true;
+    if (kind === "confirm" && kb.matches(data, "tui.input.submit")) return true;
+  }
+  if (matchesKey(data, raw)) return true;
+  if (kind === "confirm" && matchesKey(data, "return")) return true;
+  if (kind === "cancel" && matchesKey(data, "ctrl+c")) return true;
+  return false;
+}
 
 function selectTheme(theme: any) {
   return {
@@ -45,17 +64,13 @@ function selectTheme(theme: any) {
 }
 
 function frame(theme: any, title: string, body: string[], width: number, footer = "Enter select    Esc cancel", borderToken = "borderMuted") {
-  const inner = Math.max(24, width - 2);
-  const titleText = ` ${title} `;
-  const dash = Math.max(0, inner - titleText.length - 2);
-  const top = colorize(theme, borderToken, `╭─${titleText}${"─".repeat(dash)}╮`);
-  const lines = body.map((line) => {
-    const clipped = truncateToWidth(line, inner);
-    const pad = Math.max(0, inner - visibleWidth(clipped));
-    return `${colorize(theme, borderToken, "│")}${clipped}${" ".repeat(pad)}${colorize(theme, borderToken, "│")}`;
-  });
-  const bottom = colorize(theme, borderToken, `╰${"─".repeat(inner)}╯`);
-  return [top, ...lines, colorize(theme, "dim", `  ${footer}`), bottom];
+  const parts = composeFrame({ title, body, width, footer });
+  const bar = (text: string) => colorize(theme, borderToken, text);
+  const paintRow = (line: { kind: string; content: string }) => {
+    const content = line.kind === "footer" ? colorize(theme, "dim", line.content) : line.content;
+    return `${bar("│")}${content}${bar("│")}`;
+  };
+  return [bar(parts.top), ...parts.lines.map(paintRow), bar(parts.bottom)];
 }
 
 type PickerItem = { value: string; label: string; description?: string };
@@ -67,7 +82,7 @@ export async function overlaySelect(
   intro = "",
 ): Promise<string | undefined> {
   if (!ctx?.ui?.custom) return undefined;
-  return ctx.ui.custom<string | null>((tui: any, theme: any, _kb: unknown, done: (v: string | null) => void) => {
+  return ctx.ui.custom<string | null>((tui: any, theme: any, kb: any, done: (v: string | null) => void) => {
     let selected = 0;
     let view = composePickerLines({ intro, items, selectedIndex: selected, width: 60 });
     const move = (next: number) => {
@@ -78,10 +93,10 @@ export async function overlaySelect(
     return {
       invalidate() {},
       handleInput(data: string) {
-        if (matchesKey(data, "up")) { move(selected - 1); return; }
-        if (matchesKey(data, "down")) { move(selected + 1); return; }
-        if (matchesKey(data, "enter")) { done(items[selected]?.value ?? null); return; }
-        if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) { done(null); }
+        if (pressed(data, kb, "up")) { move(selected - 1); return; }
+        if (pressed(data, kb, "down")) { move(selected + 1); return; }
+        if (pressed(data, kb, "confirm")) { done(items[selected]?.value ?? null); return; }
+        if (pressed(data, kb, "cancel")) { done(null); }
       },
       handleMouse(event: { y: number; type?: string }) {
         const span = pickerSpanAt(view.spans, event.y - 1);
@@ -99,8 +114,8 @@ export async function overlaySelect(
         return undefined;
       },
       render(width: number) {
-        const inner = Math.max(24, width - 2);
-        view = composePickerLines({ intro, items, selectedIndex: selected, width: inner });
+        const contentWidth = Math.max(20, frameMetrics(width).contentWidth);
+        view = composePickerLines({ intro, items, selectedIndex: selected, width: contentWidth });
         const body = view.lines.map((line, index) => {
           const span = pickerSpanAt(view.spans, index);
           if (span?.index === selected) return colorize(theme, "accent", line);
@@ -172,18 +187,28 @@ export async function overlayApproval(ctx: any, input: { toolName: string; actio
   const view = composeApprovalView(input);
   const items = view.choices.map((c) => ({ value: c.value, label: c.label }));
   if (!ctx?.ui?.custom) return undefined;
-  return ctx.ui.custom<string | null>((tui: any, theme: any, _kb: unknown, done: (v: string | null) => void) => {
+  return ctx.ui.custom<string | null>((tui: any, theme: any, kb: any, done: (v: string | null) => void) => {
     const list = new SelectList(items, 6, selectTheme(theme));
     list.onSelect = (item: { value: string }) => done(item.value);
     list.onCancel = () => done(null);
     return {
       invalidate() { list.invalidate(); },
-      handleInput(data: string) { list.handleInput(data); tui.requestRender(); },
+      handleInput(data: string) {
+        if (pressed(data, kb, "confirm")) {
+          const item = list.getSelectedItem();
+          if (item?.value) done(item.value);
+          return;
+        }
+        if (pressed(data, kb, "cancel")) { done(null); return; }
+        list.handleInput(data);
+        tui.requestRender();
+      },
       render(width: number) {
+        const contentWidth = Math.max(20, frameMetrics(width).contentWidth);
         const body = [
           "",
           ...view.fields.flatMap((f) => [colorize(theme, "dim", f.label), f.value, ""]),
-          ...list.render(Math.max(20, width - 4)),
+          ...list.render(contentWidth),
         ];
         return frame(theme, view.title, body, width, "Enter confirm    Esc deny");
       },
@@ -192,10 +217,10 @@ export async function overlayApproval(ctx: any, input: { toolName: string; actio
 }
 
 export async function overlayStatus(ctx: any, text: string): Promise<void> {
-  await ctx.ui.custom<null>((tui: any, theme: any, _kb: unknown, done: (v: null) => void) => ({
+  await ctx.ui.custom<null>((tui: any, theme: any, kb: any, done: (v: null) => void) => ({
     invalidate() {},
     handleInput(data: string) {
-      if (matchesKey(data, "escape") || matchesKey(data, "enter") || matchesKey(data, "ctrl+c")) done(null);
+      if (pressed(data, kb, "confirm") || pressed(data, kb, "cancel")) done(null);
     },
     render(width: number) {
       return frame(theme, "PI 1C Agent", text.split("\n"), width, "Esc close");
@@ -204,7 +229,7 @@ export async function overlayStatus(ctx: any, text: string): Promise<void> {
 }
 
 export async function overlayPalette(ctx: any): Promise<string | undefined> {
-  return ctx.ui.custom<string | null>((tui: any, theme: any, _kb: unknown, done: (v: string | null) => void) => {
+  return ctx.ui.custom<string | null>((tui: any, theme: any, kb: any, done: (v: string | null) => void) => {
     let query = "";
     let list = new SelectList(PALETTE_ACTIONS.map((a) => ({ value: a.id, label: a.label, description: a.command })), 12, selectTheme(theme));
     const rebuild = () => {
@@ -217,14 +242,20 @@ export async function overlayPalette(ctx: any): Promise<string | undefined> {
     return {
       invalidate() { list.invalidate(); },
       handleInput(data: string) {
+        if (pressed(data, kb, "cancel")) { done(null); return; }
+        if (pressed(data, kb, "confirm")) {
+          const item = list.getSelectedItem();
+          if (item?.value) done(item.value);
+          return;
+        }
         if (matchesKey(data, "backspace")) { query = query.slice(0, -1); rebuild(); tui.requestRender(); return; }
-        if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) { done(null); return; }
         if (data.length === 1 && data >= " " && data !== "\x7f") { query += data; rebuild(); tui.requestRender(); return; }
         list.handleInput(data);
         tui.requestRender();
       },
       render(width: number) {
-        const body = [`> ${query}`, "", ...list.render(Math.max(20, width - 4))];
+        const contentWidth = Math.max(20, frameMetrics(width).contentWidth);
+        const body = [`> ${query}`, "", ...list.render(contentWidth)];
         return frame(theme, "PI 1C", body, width, "Type to filter    Enter run    Esc close");
       },
     };
@@ -232,7 +263,7 @@ export async function overlayPalette(ctx: any): Promise<string | undefined> {
 }
 
 export async function overlayHub(ctx: any): Promise<void> {
-  await ctx.ui.custom<null>((tui: any, theme: any, _kb: unknown, done: (v: null) => void) => {
+  await ctx.ui.custom<null>((tui: any, theme: any, kb: any, done: (v: null) => void) => {
     let detail: ReturnType<typeof composeHubRows>[0] | null = null;
     const rows = () => {
       const snap = getSnapshot("agents") || {};
@@ -297,7 +328,12 @@ export async function overlayHub(ctx: any): Promise<void> {
           tui.requestRender();
           return;
         }
-        if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) { finish(); return; }
+        if (pressed(data, kb, "cancel")) { finish(); return; }
+        if (pressed(data, kb, "confirm")) {
+          const item = list.getSelectedItem();
+          if (item?.value) list.onSelect?.(item);
+          return;
+        }
         list.handleInput(data);
         tui.requestRender();
       },
@@ -316,7 +352,7 @@ export async function overlayHub(ctx: any): Promise<void> {
           }, { expanded: true, isPartial: live.stoppable });
           return frame(theme, `AGENT ${live.name}`, [...log, "", ...composeHubDetailLines(live).slice(1)], width, "↑ parent    Esc back    x stop");
         }
-        const body = list.render(Math.max(20, width - 4));
+        const body = list.render(Math.max(20, frameMetrics(width).contentWidth));
         if (!body.length) body.push(...composeHubText(rows()).split("\n"));
         return frame(theme, "1C AGENTS", body, width, "Enter inspect    x stop    Esc close");
       },
@@ -378,18 +414,21 @@ export async function overlayChild(ctx: any, agentName?: string): Promise<void> 
   }, { overlay: true, overlayOptions: { width: "82%", minWidth: 48, maxHeight: "90%", anchor: "center" } });
 }
 
-/** Two-level command browser. Returns a command name to insert, or undefined on cancel. */
-export async function overlayCommandGroups(ctx: any, commands: any[] = []): Promise<string | undefined> {
+/** Two-level command browser. Returns the chosen command and the TUI that should run it. */
+export async function overlayCommandGroups(ctx: any, commands: any[] = []): Promise<{ name: string; tui: any } | undefined> {
   const sections = buildCommandSections(commands);
   if (!ctx?.ui?.custom) {
     const text = sections.map((section) => `${section.label} ${section.commands.length}`).join("\n");
     ctx?.ui?.notify?.(text, "info");
     return undefined;
   }
-  return ctx.ui.custom<string | null>((tui: any, theme: any, _kb: unknown, done: (v: string | null) => void) => {
+  let hostTui: any = null;
+  const picked = await ctx.ui.custom<string | null>((tui: any, theme: any, kb: any, done: (v: string | null) => void) => {
+    hostTui = tui;
     let level: "sections" | "commands" = "sections";
     let sectionIndex = 0;
     let row = 0;
+    let query = "";
     const sectionItems = () => sections.map((section) => ({
       value: section.id,
       label: section.label,
@@ -403,7 +442,19 @@ export async function overlayCommandGroups(ctx: any, commands: any[] = []): Prom
         description: command.description || "",
       }));
     };
-    const items = () => (level === "sections" ? sectionItems() : commandItems());
+    const searchItems = () => {
+      const filter = filterCommandSections;
+      const matched = typeof filter === "function"
+        ? filter(sections, query)
+        : sections.flatMap((section) => section.commands || []);
+      const found = matched.map((command: { name: string; description?: string }) => ({
+        value: command.name,
+        label: `/${command.name}`,
+        description: command.description || "",
+      }));
+      return found.length ? found : [{ value: "", label: "Нет совпадений", description: "" }];
+    };
+    const items = () => (query ? searchItems() : (level === "sections" ? sectionItems() : commandItems()));
     let view = composePickerLines({ intro: "", items: items(), selectedIndex: 0, width: 60 });
     const move = (next: number) => {
       const list = items();
@@ -411,13 +462,29 @@ export async function overlayCommandGroups(ctx: any, commands: any[] = []): Prom
       row = (next + list.length) % list.length;
       tui.requestRender();
     };
+    const choose = (index: number) => {
+      const list = items();
+      const picked = list[index];
+      if (!picked?.value) return;
+      if (!query && level === "sections") {
+        sectionIndex = index;
+        level = "commands";
+        row = 0;
+        tui.requestRender();
+        return;
+      }
+      done(picked.value);
+    };
     return {
       invalidate() {},
       handleInput(data: string) {
-        const list = items();
-        if (matchesKey(data, "up")) { move(row - 1); return; }
-        if (matchesKey(data, "down")) { move(row + 1); return; }
-        if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {
+        if (pressed(data, kb, "cancel")) {
+          if (query) {
+            query = "";
+            row = level === "commands" ? 0 : sectionIndex;
+            tui.requestRender();
+            return;
+          }
           if (level === "commands") {
             level = "sections";
             row = sectionIndex;
@@ -427,25 +494,50 @@ export async function overlayCommandGroups(ctx: any, commands: any[] = []): Prom
           done(null);
           return;
         }
-        if (matchesKey(data, "enter")) {
-          if (level === "sections") {
-            if (!list.length) return;
-            sectionIndex = row;
-            level = "commands";
+        if (matchesKey(data, "backspace")) {
+          if (query) {
+            query = query.slice(0, -1);
             row = 0;
             tui.requestRender();
-            return;
           }
-          done(list[row]?.value ?? null);
+          return;
         }
+        if (pressed(data, kb, "up")) { move(row - 1); return; }
+        if (pressed(data, kb, "down")) { move(row + 1); return; }
+        if (pressed(data, kb, "confirm")) {
+          choose(row);
+          return;
+        }
+        if (data.length === 1 && data >= " " && data !== "\x7f") {
+          query += data;
+          row = 0;
+          tui.requestRender();
+        }
+      },
+      handleMouse(event: { y: number; type?: string }) {
+        const span = pickerSpanAt(view.spans, event.y - 1);
+        if (!span) return undefined;
+        if (event.type === "press") {
+          row = span.index;
+          tui.requestRender();
+          return { handled: true, focus: true };
+        }
+        if (event.type === "click") {
+          row = span.index;
+          choose(span.index);
+          return { handled: true };
+        }
+        return undefined;
       },
       render(width: number) {
         const list = items();
         if (row >= list.length) row = 0;
-        const inner = Math.max(24, width - 2);
-        const title = level === "sections" ? "Разделы" : (sections[sectionIndex]?.label || "Разделы");
-        const hint = level === "sections" ? "Esc — закрыть" : "Esc — назад";
-        view = composePickerLines({ intro: "", items: list, selectedIndex: row, width: inner });
+        const contentWidth = Math.max(20, frameMetrics(width).contentWidth);
+        const title = query ? "Поиск" : (level === "sections" ? "Разделы" : (sections[sectionIndex]?.label || "Разделы"));
+        const hint = query
+          ? "Ввод — фильтр    Enter — открыть    Esc — сброс"
+          : (level === "sections" ? "Esc — закрыть" : "Esc — назад");
+        view = composePickerLines({ intro: query ? `> ${query}` : "", items: list, selectedIndex: row, width: contentWidth });
         const body = view.lines.map((line, index) => {
           const span = pickerSpanAt(view.spans, index);
           if (span?.index === row) return colorize(theme, "accent", line);
@@ -455,7 +547,9 @@ export async function overlayCommandGroups(ctx: any, commands: any[] = []): Prom
         return frame(theme, title, body, width, hint, "borderAccent");
       },
     };
-  }, { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "80%", anchor: "center" } });
+  }, { overlay: true, overlayOptions: { width: "70%", minWidth: 40, maxHeight: "80%", anchor: "center", margin: 2 } });
+  if (!picked) return undefined;
+  return { name: picked, tui: hostTui };
 }
 
 export async function overlayText(ctx: any, title: string, body: string): Promise<void> {
@@ -463,10 +557,10 @@ export async function overlayText(ctx: any, title: string, body: string): Promis
     ctx?.ui?.notify?.(body, "info");
     return;
   }
-  await ctx.ui.custom<null>((_tui: any, theme: any, _kb: unknown, done: (v: null) => void) => ({
+  await ctx.ui.custom<null>((_tui: any, theme: any, kb: any, done: (v: null) => void) => ({
     invalidate() {},
     handleInput(data: string) {
-      if (matchesKey(data, "escape") || matchesKey(data, "enter") || matchesKey(data, "ctrl+c")) done(null);
+      if (pressed(data, kb, "confirm") || pressed(data, kb, "cancel")) done(null);
     },
     render(width: number) {
       return frame(theme, title, String(body || "").split("\n"), width, "Esc close");

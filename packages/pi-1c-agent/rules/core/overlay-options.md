@@ -4,7 +4,7 @@ A Pi package command with a small closed option set must open the **same overlay
 
 ## When this applies
 
-- Empty `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/capture-model`, `/session-rotate`, `/theme`.
+- Empty `/mode`, `/taskmode`, `/anon`, `/approve`, `/sdlc`, `/litemode`, `/uitests`, `/previewmode`, `/caveman`, `/economymode`, `/rulesmodel`, `/capture-model`, `/session-rotate`, `/theme`, `/mcpconfig`.
 - Empty `/init`: source overlay (`empty` | `from-ib` | `from-cf` | `from-cfe` | `from-dt`), then mode overlay (`standard` | `quick` | `advanced`) for the empty-scaffold path.
 - Any **new** package command that takes one of a few named options.
 
