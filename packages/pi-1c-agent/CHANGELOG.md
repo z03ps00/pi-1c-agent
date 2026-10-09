@@ -18,7 +18,6 @@
 - Автозапуск workflow `auto`/`tier` выбирает tier 0–4 на существующих ролях. Именованные `feature`/`bugfix`/`architecture`/`performance`/`refactor` не изменены.
 - `/evolve` пишет только черновик. Активация — явное подтверждение, файлы skills и rules сами не меняются.
 - `/session-stats` показывает счётчики сессии и не пишет их в Cognee/OpenViking.
-- Не вошло в 0.9: DSH-адаптер, свой Web UI, полный каталог `evals/`, автоактивация evolution.
 
 ## 0.8.0 — 2026-10-03
 

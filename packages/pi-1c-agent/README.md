@@ -2,7 +2,7 @@
 
 Multi-agent пакет для **vanilla Pi** для разработки на 1С:Предприятие.
 
-v0.9.0 — 1C Harness Core: короткий system kernel, реестр возможностей, MCP-first маршрутизатор, бюджет контекста, manifest skills, tier 0–4 и черновики `/evolve`. На 1.0 остаются DSH, свой Web UI, полный `evals/` и автоматическая активация evolution.
+v0.9.0 — 1C Harness Core: короткий system kernel, реестр возможностей, MCP-first маршрутизатор, бюджет контекста, manifest skills, tier 0–4 и черновики `/evolve`.
 
 ## Базовая архитектура
 
