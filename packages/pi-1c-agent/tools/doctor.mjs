@@ -60,7 +60,7 @@ function commandVersion(cmd) {
 
 const packageJson = JSON.parse(read(path.join(packageRoot, 'package.json')));
 const extList = packageJson?.pi?.extensions ?? [];
-add('package version', packageJson.version === '0.9.0', true, packageJson.version);
+add('package version', packageJson.version === '0.9.1', true, packageJson.version);
 add('1C harness kernel', exists(path.join(packageRoot, 'system', 'core.md')) && exists(path.join(packageRoot, 'lib', 'harness', 'system-prompt.mjs')) && exists(path.join(packageRoot, 'lib', 'harness', 'router.mjs')));
 add('1C context router extension', extList.includes('extensions/1c-context-router/index.ts') && extList.indexOf('extensions/1c-mode/index.ts') < extList.indexOf('extensions/1c-context-router/index.ts') && extList.at(-1) === 'extensions/1c-ui/index.ts');
 {

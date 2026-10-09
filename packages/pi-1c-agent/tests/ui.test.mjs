@@ -491,7 +491,7 @@ test('work footer shows depth, economy, ui, changes, and a short base name', () 
     gitDirty: true,
     learning: 'safe',
     thinkingLevel: 'high',
-    projectName: 'pavel',
+    projectName: 'sample',
     capabilityFooter: 'graph✗ code✗ ib✗',
     captureEnabled: true,
     captureMode: 'stack',
@@ -513,7 +513,7 @@ test('work footer shows depth, economy, ui, changes, and a short base name', () 
   assert.match(view.secondary, /Мышление высоко/);
   assert.match(view.secondary, /Изменения 2/);
   assert.match(view.secondary, /База файл nutricia/);
-  assert.match(view.secondary, /Проект pavel/);
+  assert.match(view.secondary, /Проект sample/);
   assert.match(view.secondary, /Граф ✗/);
   assert.match(view.secondary, /MCP Сервера 2\/7/);
   assert.match(view.secondary, /Ветка main\*/);

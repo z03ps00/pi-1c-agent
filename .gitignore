@@ -76,3 +76,6 @@ desktop.ini
 tests/.tmp/
 tests/.artifacts/
 
+# --- Generated client profile archives (never commit) ---
+dist/
+

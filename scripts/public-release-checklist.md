@@ -1,16 +1,19 @@
 # Public release pre-flight checklist
 
-Gate for the first public push of this Pi 1C profile. Do not push until every
-item is decided and the scan (`node scripts/scan-public-tree.mjs`) plus
-`npm test` are green.
+Gate for what may be published from this Pi 1C profile. `origin` is already the
+public repository already configured as `origin`. Do not rewrite that
+history. The scan (`node scripts/scan-public-tree.mjs`) plus `npm test` stay
+green before a push.
 
-**Private clone (this working copy):** keep developing here. Current remote
-`origin` is the existing private history. Do not force-push that history to a
-public URL.
+**GitHub** is the full installable profile, including tests and CI.
 
-**Public repo:** created by `node scripts/export-public-repo.mjs <dest>` as a
-fresh git repository with one clean commit. Add the public remote only on that
-export. Never add the private remote there.
+**Client zip** is a separate artifact: `node scripts/package-client-bundle.mjs`.
+It is attached to a GitHub release and is not committed. Composition:
+`rules-1c/core/release-bundle.md`.
+
+`node scripts/export-public-repo.mjs <dest>` still builds a fresh single-commit
+tree when a sanitized copy is needed. Do not point that copy at this clone's
+`origin`.
 
 ## How to publish
 
@@ -69,7 +72,7 @@ Re-run on 2026-09-16 over tracked files and full history.
 | `agents/`, `skills/`, `prompts/`, `rules-1c/` | **ship** | Product. Keep third-party adapted material and credit it. |
 | `packages/pi-1c-agent/` | **ship** | Runtime. Sanitize identity in its tests. |
 | `scripts/setup.mjs`, `update-profile.mjs`, `update-pi-cli.mjs` | **ship** | Host helpers. |
-| `scripts/scan-public-tree.mjs`, `export-public-repo.mjs`, `public-release-checklist.md` | **ship** | Publication gate. |
+| `scripts/scan-public-tree.mjs`, `export-public-repo.mjs`, `public-release-checklist.md`, `package-client-bundle.mjs` | **ship** | Publication gate. The packager stays in git; its zip does not. |
 | `tests/` | **ship** | Genericize fixtures; keep scanner bad-path samples synthetic. |
 | `state/agent-memory/README.md`, `task-completion-template.md`, `done/.gitkeep` | **ship** | Empty-queue placeholders. |
 | `state/agent-memory/pending/**`, `state/agent-memory/done/*.md` | **exclude** | Local memory queue. `.gitignore`. |
@@ -88,4 +91,4 @@ Re-run on 2026-09-16 over tracked files and full history.
 - [x] `node scripts/scan-public-tree.mjs` exit 0
 - [x] Export `git ls-files` has no denylist paths (verified via `scripts/export-public-repo.mjs`; root `.cursor/commands/opsx-*` and `openspec/changes/` absent). The vendored `rules-1c/openspec-bundle-reference/**` snapshot is product reference, not this profile’s workflow.
 - [x] Export `git log` is a single clean commit, no remotes, no identity hits
-- [ ] Maintainer: create a **new empty** public remote, push from the export only; leave this clone’s `origin` untouched
+- [x] Public remote is already `origin`. Do not force-push or replace it with a fresh export. Client zip goes on the GitHub release only.

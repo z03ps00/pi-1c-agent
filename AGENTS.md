@@ -3,7 +3,7 @@
 
 Use the decomposed 1C multi-agent workflow supplied by `pi-1c-agent`.
 
-Before non-trivial work read the adapted upstream context/rules under `rules-1c/` and the Pi-native core rules `modes.md`, `orchestration.md`, `handoff.md`, `openspec.md`, `extension-targeting.md`, `delivery.md`, and `overlay-options.md`. Process documents: this overlay, then `rules-1c/AGENTS-UPSTREAM.md`, then `rules-1c/core/*`.
+Before non-trivial work read the adapted upstream context/rules under `rules-1c/` and the Pi-native core rules `modes.md`, `orchestration.md`, `handoff.md`, `openspec.md`, `extension-targeting.md`, `delivery.md`, `overlay-options.md`, and `release-bundle.md`. Process documents: this overlay, then `rules-1c/AGENTS-UPSTREAM.md`, then `rules-1c/core/*`.
 
 ## Configuration source policy
 
@@ -41,6 +41,8 @@ git merge --ff-only <sha>     # fast-forward; never touches settings.json / mcp.
 Fast-forward is clean while the installed profile sits on the dev clone's parent commit. If histories diverge (local config commits), merge the dev branch and keep local `settings.json` / `mcp.json` / `auth.json`, or run `scripts/update-profile.mjs` (it preserves those and restores the package path). New prompt commands appear only after `/reload` or a session restart — reload the running agent after a sync.
 
 If the user asks to install or update this agent, **run the matching steps**. Do not stop after describing them.
+
+**Client bundle.** GitHub stays the full profile: tests, CI, and `UPSTREAM-REGISTER.md` remain. `node scripts/package-client-bundle.mjs` writes a gitignored `dist/pi-1c-agent-<version>-client.zip` with the runnable profile only — no tests, no CI, no secrets, no bundled Node or Java. Rule: `rules-1c/core/release-bundle.md`.
 
 Install scope: rules, agents, skills, prompts, the in-repo `packages/pi-1c-agent` runtime, and the upstream snapshot belong to the **global** Pi profile (`PI_CODING_AGENT_DIR`). A project keeps only its own data: `.dev.env`, `.pi/1c/**` (manifest, settings, knowledge layers), `src/`, `build/`, `openspec/` and its OpenSpec prompts/skills. Do not install the agent into the project — project-local agent artifacts are a legacy layout that `tools/bootstrap.mjs --project` retires (`--with-agent` restores it only on explicit request).
 

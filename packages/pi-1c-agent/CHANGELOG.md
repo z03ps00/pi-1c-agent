@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.9.1 — 2026-10-10
 
+- `node scripts/package-client-bundle.mjs` собирает клиентский архив профиля в `dist/`: правила, skills, промпты, пакет и лаунчеры. Тесты, CI, секреты и вшитые Node/Java в архив не входят. Состав — `rules-1c/core/release-bundle.md`.
 - `scripts/pi-1c-acp` говорит ACP v1 по stdin/stdout и запускает этот профиль через `pi --mode rpc`. Другой агент отдаёт задачу и `/команды`, видит ход и может остановить его. Запись для OpenClaw: `docs/acp.md`.
 - В списке разделов у `/cursor-*`, `/mcp`, `/pi-mcp` и `/mcp-auth` русские подписи. Имена команд те же.
 - Разделы команд (`/groups`) открываются по `Ctrl+Alt+G`. `Ctrl+Shift+G` остаётся у Pi для предыдущего совпадения поиска в транскрипте.

@@ -291,6 +291,8 @@ Windows PowerShell:
 git clone https://github.com/z03ps00/pi-1c-agent.git "$HOME\pi-1c-agent"
 ~~~
 
+Архив релиза `pi-1c-agent-<version>-client.zip` — тот же профиль без тестов, CI и истории git. Node и Pi ставятся отдельно. Распакуйте его и переходите к setup, подставив каталог распаковки вместо клона.
+
 ### 2. Выполнить setup
 
 Переменную `PI_CODING_AGENT_DIR` задают только на время setup. Её нельзя записывать в `~/.bashrc`, `~/.profile`, `~/.zshrc` и в пользовательские переменные среды Windows. Иначе каждый запуск `pi` станет агентом 1С, а прежний профиль Pi пропадёт.

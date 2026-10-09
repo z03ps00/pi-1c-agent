@@ -1,4 +1,4 @@
-# INSTALL — Pi 1C Agent v0.9.0
+# INSTALL — Pi 1C Agent v0.9.1
 
 Использовать только с vanilla Pi. Нужен **Node >=22.19.0**.
 

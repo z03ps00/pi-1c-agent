@@ -1,4 +1,4 @@
-# Pi 1C Agent v0.9.0
+# Pi 1C Agent v0.9.1
 
 Multi-agent пакет для **vanilla Pi** для разработки на 1С:Предприятие.
 
