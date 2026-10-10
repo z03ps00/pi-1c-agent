@@ -23,6 +23,7 @@
       "extensions/1c-settings/index.ts",
       "extensions/1c-context-router/index.ts",
       "extensions/1c-surface/index.ts",
+      "extensions/1c-transcript-fold/index.ts",
       "extensions/1c-ui/index.ts"
     ],
     "skills": [

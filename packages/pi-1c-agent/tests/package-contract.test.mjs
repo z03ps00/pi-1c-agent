@@ -9,11 +9,12 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
 test('package registers stabilized extensions', () => {
   assert.equal(pkg.version, '0.9.1');
-  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-context-router/index.ts','extensions/1c-surface/index.ts','extensions/1c-ui/index.ts']) {
+  for (const p of ['extensions/1c-mode/index.ts','extensions/1c-subagents/index.ts','extensions/1c-admin/index.ts','extensions/1c-knowledge/index.ts','extensions/1c-init/index.ts','extensions/1c-session-rotate/index.ts','extensions/1c-memory/index.ts','extensions/1c-settings/index.ts','extensions/1c-context-router/index.ts','extensions/1c-surface/index.ts','extensions/1c-transcript-fold/index.ts','extensions/1c-ui/index.ts']) {
     assert.ok(pkg.pi.extensions.includes(p));
     assert.ok(fs.existsSync(path.join(root, p)));
   }
   assert.equal(pkg.pi.extensions.at(-1), 'extensions/1c-ui/index.ts');
+  assert.equal(pkg.pi.extensions.at(-2), 'extensions/1c-transcript-fold/index.ts');
   const modeAt = pkg.pi.extensions.indexOf('extensions/1c-mode/index.ts');
   const routerAt = pkg.pi.extensions.indexOf('extensions/1c-context-router/index.ts');
   assert.ok(modeAt >= 0 && routerAt > modeAt);
