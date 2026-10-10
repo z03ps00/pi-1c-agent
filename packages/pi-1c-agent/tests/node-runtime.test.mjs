@@ -26,4 +26,9 @@ test('peer dependencies are bounded ranges', () => {
     assert.notEqual(range, '*', name);
     assert.match(String(range), /[<>]|>=|~|\^/, name);
   }
+  assert.equal(pkg.peerDependencies['@earendil-works/pi-coding-agent'], '>=1.1.0 <1.2.0');
+  assert.equal(pkg.peerDependencies['@earendil-works/pi-ai'], '>=1.1.0 <1.2.0');
+  assert.equal(pkg.peerDependencies['@earendil-works/pi-agent-core'], '>=1.1.0 <1.2.0');
+  assert.equal(pkg.peerDependencies['@earendil-works/pi-tui'], '>=1.1.0 <1.2.0');
+  assert.equal(pkg.peerDependencies.typebox, '>=1.3.0 <2.0.0');
 });

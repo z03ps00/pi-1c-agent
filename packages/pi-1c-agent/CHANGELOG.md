@@ -2,6 +2,7 @@
 
 ## 0.9.1 — 2026-10-10
 
+- Peer-диапазоны пакета совпадают с Pi CLI 1.1: `@earendil-works/pi-coding-agent`, `pi-ai`, `pi-agent-core` и `pi-tui` — `>=1.1.0 <1.2.0`, `typebox` — `>=1.3.0 <2.0.0`.
 - `node scripts/package-client-bundle.mjs` собирает клиентский архив профиля в `dist/`: правила, skills, промпты, пакет и лаунчеры. Тесты, CI, секреты и вшитые Node/Java в архив не входят. Состав — `rules-1c/core/release-bundle.md`.
 - `scripts/pi-1c-acp` говорит ACP v1 по stdin/stdout и запускает этот профиль через `pi --mode rpc`. Другой агент отдаёт задачу и `/команды`, видит ход и может остановить его. Запись для OpenClaw: `docs/acp.md`.
 - В списке разделов у `/cursor-*`, `/mcp`, `/pi-mcp` и `/mcp-auth` русские подписи. Имена команд те же.
