@@ -20,6 +20,7 @@ Relevant project routing:
 - `skills/1c-platform-help/SKILL.md` — confirm platform / BSP behavior actually used by the test.
 - `skills/1c-live-ib/SKILL.md` — exact exposed live-IB calls and their limits; Gate 3a remains read-only and does not become a fixture writer.
 - `skills/1c-metadata-manage/SKILL.md` — any test module / metadata creation; installed test code is still subject to the ordinary metadata, repository and validation gates.
+- `skills/yaxunit/SKILL.md` — when the project already uses YAxUnit (`ЮТТесты`, `tests/cfe`, `tools/yaxunit.json`). Follow that skill; do not invent the engine API.
 
 ## Define the cases before implementing them
 

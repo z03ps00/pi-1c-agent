@@ -1,0 +1,19 @@
+id: vanessa-automation
+version: 1.0.0
+description: "Writes Vanessa Automation .feature files from steps already used in the project and runs them with vrunner when Vanessa MCP tools are not connected."
+triggers:
+  - "vanessa-automation"
+  - ".feature"
+  - "vrunner"
+requires:
+  any:
+    - test.ui
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

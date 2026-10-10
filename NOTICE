@@ -48,9 +48,19 @@ They are not `comol/ai_rules_1c`.
 knowledge/overlay. It is not the English humanizer skill and is not
 synced via `/review-airules`.
 
+`skills/yaxunit` and `skills/vanessa-automation` are adapted from yellow-hammer under the MIT License, copyright 2026 Ivan Karlo: https://github.com/yellow-hammer/skills-yaxunit and https://github.com/yellow-hammer/skills-vanessa-automation.
+
 Thanks
 ------
 
-Thanks to Comol (`comol/ai_rules_1c`, `comol/Humanizer_RU`), Desko77
-(`cursor-1c-skills`), Pr-Mex (Vanessa Automation), neurofish, and ROCTUP
-for the work this profile relies on.
+Спасибо тем, чья работа уже лежит в этом профиле. Без неё агенту не на что было бы опереться.
+
+Comol — правила 1С, которые мы адаптируем (`comol/ai_rules_1c`), и редактор Humanizer_RU.
+Desko77 — MIT-навыки для конвертации и toolkit (`Desko77/cursor-1c-skills`).
+Pr-Mex — Vanessa Automation.
+neurofish — MCP клиента тестирования.
+ROCTUP — обработка MCP Toolkit.
+
+Ivan Karlo (yellow-hammer) — навыки модульных тестов YAxUnit и сценариев Vanessa Automation. Берём текст по MIT, движки остаются у своих авторов:
+https://github.com/yellow-hammer/skills-yaxunit
+https://github.com/yellow-hammer/skills-vanessa-automation

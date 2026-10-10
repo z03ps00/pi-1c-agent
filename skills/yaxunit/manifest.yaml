@@ -1,0 +1,19 @@
+id: yaxunit
+version: 1.0.0
+description: "Writes YAxUnit unit tests in a test extension and configures tools/yaxunit.json. Use for ЮТест, ЮТТесты, ИсполняемыеСценарии, tests/cfe, and vrunner test yaxunit."
+triggers:
+  - "yaxunit"
+  - "ЮТТесты"
+  - "unit"
+requires:
+  any:
+    - test.unit
+optional: []
+modes:
+  - ask
+  - plan
+  - build
+cost:
+  context: low
+quality:
+  level: verified

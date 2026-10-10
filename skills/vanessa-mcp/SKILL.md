@@ -19,6 +19,8 @@ Companion docs — load on demand:
 
 Load it when the user asks to: write / edit / debug / run a Vanessa `.feature` scenario; do a UI test of the test client (клиент тестирования); work through Vanessa MCP / Vanessa Automation; search Gherkin (Turbo Gherkin) steps for a scenario. Narrow one-off questions the parent can answer with a single tool call do not require the full loop.
 
+File authoring and `vrunner` without Vanessa MCP tools belong to `skills/vanessa-automation/SKILL.md`. When the Vanessa MCP tools are exposed in this session, this skill leads.
+
 ## Preflight (before any scenario work)
 
 1. **MCP exposed?** Confirm the Vanessa MCP tools are in the current session schema. If they are **not** exposed, tell the user to keep «Управление MCP» running and reload MCP, and do **not** pretend a tool was called or claim a `run_scenario` result. Read the URL from the active MCP config (`vanessaAutomation` / `VanessaAutomation`) or the project `.dev.env` key `VANESSA_MCP_URL`. Do **not** hardcode a lab port or a machine-local path.
