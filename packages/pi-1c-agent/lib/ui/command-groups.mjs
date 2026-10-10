@@ -27,12 +27,99 @@ export const PI_CORE_COMMANDS = Object.freeze([
 
 export const COMMAND_SECTIONS = Object.freeze([
   { id: 'pi', label: 'Команды Pi' },
-  { id: 'profile', label: 'Команды профиля' },
+  { id: 'onec', label: 'Команды 1С' },
+  { id: 'cursor', label: 'Cursor' },
+  { id: 'mcp', label: 'MCP и интеграции' },
+  { id: 'settings', label: 'Настройки' },
+  { id: 'agents', label: 'Агенты' },
+  { id: 'knowledge', label: 'Знания' },
+  { id: 'sessions', label: 'Сессии и память' },
+  { id: 'profile', label: 'Профиль' },
   { id: 'skills', label: 'Навыки' },
-  { id: 'prompts', label: 'Готовые задания' },
 ]);
 
 const BUILTIN_NAMES = new Set(PI_CORE_COMMANDS.map((item) => item.name));
+
+/** Slash commands and prompt tasks. A Pi builtin name wins over this map. */
+const SECTION_BY_NAME = Object.freeze({
+  init: 'onec',
+  initproject: 'onec',
+  'layout-view': 'onec',
+  reglog: 'onec',
+  'build-release': 'onec',
+  'check-uuid': 'onec',
+  'deploy-and-test': 'onec',
+  'ext-plan': 'onec',
+  getconfigfiles: 'onec',
+  loadfrom1cbase: 'onec',
+  'restore-testbase': 'onec',
+  update1cbase: 'onec',
+  'test-fix-loop': 'onec',
+  installfilesupdatescript: 'onec',
+  mcp: 'mcp',
+  'pi-mcp': 'mcp',
+  'mcp-auth': 'mcp',
+  mcpconfig: 'mcp',
+  capabilities: 'mcp',
+  checkmcp: 'mcp',
+  setupmcp: 'mcp',
+  installmcp: 'mcp',
+  updatemcp: 'mcp',
+  installtools: 'mcp',
+  'install-agent-browser': 'mcp',
+  'install-atlassian-mcp': 'mcp',
+  'install-edt-mcp': 'mcp',
+  'install-memory-mcp': 'mcp',
+  'install-officecli': 'mcp',
+  'install-rtk': 'mcp',
+  'install-vanessa-mcp': 'mcp',
+  'install-windows-mcp': 'mcp',
+  anon: 'settings',
+  approve: 'settings',
+  sdlc: 'settings',
+  litemode: 'settings',
+  uitests: 'settings',
+  previewmode: 'settings',
+  caveman: 'settings',
+  economymode: 'settings',
+  rulesmodel: 'settings',
+  theme: 'settings',
+  'agent-scope': 'settings',
+  mode: 'agents',
+  taskmode: 'agents',
+  agents: 'agents',
+  status: 'agents',
+  implement: 'agents',
+  review: 'agents',
+  bugfix: 'agents',
+  config: 'knowledge',
+  learn: 'knowledge',
+  rule: 'knowledge',
+  evolve: 'knowledge',
+  learning: 'knowledge',
+  'openspec-setup': 'knowledge',
+  'init-knowledge': 'knowledge',
+  context: 'sessions',
+  'session-stats': 'sessions',
+  'memory-flush': 'sessions',
+  wrap: 'sessions',
+  'capture-model': 'sessions',
+  'session-rotate': 'sessions',
+  doctor: 'profile',
+  bootstrap: 'profile',
+  commands: 'profile',
+  palette: 'profile',
+  groups: 'profile',
+  checkupdates: 'profile',
+  'doctor-explain': 'profile',
+  'review-airules': 'profile',
+  support: 'profile',
+  supportstatus: 'profile',
+  'update-pi-cli': 'profile',
+  'update-profile': 'profile',
+  updaterules: 'profile',
+  'ponytail-review': 'profile',
+});
 
 /** Third-party slash commands keep their names. The groups list shows these labels. */
 export const PROFILE_COMMAND_LABELS = Object.freeze({
@@ -61,13 +148,13 @@ export function sectionForCommand(command) {
   const source = String(command?.source || '');
   const name = String(command?.name || '');
   if (source === 'skill' || name.startsWith('skill:')) return 'skills';
-  if (source === 'prompt') return 'prompts';
   if (source === 'builtin' || BUILTIN_NAMES.has(name)) return 'pi';
-  return 'profile';
+  if (name.startsWith('cursor-')) return 'cursor';
+  return SECTION_BY_NAME[name] || 'profile';
 }
 
 export function buildCommandSections(commands = [], builtins = PI_CORE_COMMANDS) {
-  const buckets = { pi: [], profile: [], skills: [], prompts: [] };
+  const buckets = Object.fromEntries(COMMAND_SECTIONS.map((section) => [section.id, []]));
   const seen = new Set();
   const incoming = [
     ...builtins.map((item) => ({ ...item, source: 'builtin' })),
@@ -77,7 +164,8 @@ export function buildCommandSections(commands = [], builtins = PI_CORE_COMMANDS)
     const name = String(command?.name || '').trim();
     if (!name || seen.has(name)) continue;
     seen.add(name);
-    const section = sectionForCommand(command);
+    const resolved = sectionForCommand(command);
+    const section = buckets[resolved] ? resolved : 'profile';
     buckets[section].push({
       name,
       description: commandDescription(command, name),
@@ -87,10 +175,12 @@ export function buildCommandSections(commands = [], builtins = PI_CORE_COMMANDS)
   for (const list of Object.values(buckets)) {
     list.sort((a, b) => a.name.localeCompare(b.name));
   }
-  return COMMAND_SECTIONS.map((section) => ({
-    ...section,
-    commands: buckets[section.id],
-  }));
+  return COMMAND_SECTIONS
+    .map((section) => ({
+      ...section,
+      commands: buckets[section.id],
+    }))
+    .filter((section) => section.commands.length > 0);
 }
 
 export function sectionSummary(sections) {

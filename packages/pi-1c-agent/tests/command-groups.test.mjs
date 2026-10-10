@@ -2,21 +2,61 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCommandSections, filterCommandSections, groupSelectionResult, sectionForCommand, submitFocusedEditor } from '../lib/ui/command-groups.mjs';
 
-test('commands land in four sections and builtins are not duplicated', () => {
+test('commands land in themed sections and builtins are not duplicated', () => {
+  const samples = [
+    ['layout-view', 'extension', 'onec'],
+    ['loadfrom1cbase', 'prompt', 'onec'],
+    ['cursor-cloud', 'extension', 'cursor'],
+    ['mcp', 'extension', 'mcp'],
+    ['installtools', 'prompt', 'mcp'],
+    ['anon', 'extension', 'settings'],
+    ['mode', 'extension', 'agents'],
+    ['bugfix', 'prompt', 'agents'],
+    ['learn', 'extension', 'knowledge'],
+    ['init-knowledge', 'prompt', 'knowledge'],
+    ['wrap', 'extension', 'sessions'],
+    ['doctor', 'extension', 'profile'],
+    ['update-profile', 'prompt', 'profile'],
+    ['mystery', 'extension', 'profile'],
+    ['skill:reglog', 'skill', 'skills'],
+    ['resume', 'prompt', 'pi'],
+    ['model', 'extension', 'pi'],
+  ];
+  for (const [name, source, section] of samples) {
+    assert.equal(sectionForCommand({ name, source }), section, name);
+  }
   const sections = buildCommandSections([
     { name: 'doctor', description: 'Health', source: 'extension' },
     { name: 'model', description: 'override', source: 'extension' },
     { name: 'ext-plan', description: 'Plan', source: 'prompt' },
+    { name: 'loadfrom1cbase', description: 'Dump', source: 'prompt' },
     { name: 'skill:reglog', description: 'Log', source: 'skill' },
+    { name: 'mystery', description: 'New', source: 'extension' },
+    { name: 'resume', description: 'Task resume', source: 'prompt' },
   ]);
   const byId = Object.fromEntries(sections.map((section) => [section.id, section]));
-  assert.deepEqual(sections.map((section) => section.label), ['Команды Pi', 'Команды профиля', 'Навыки', 'Готовые задания']);
+  assert.deepEqual(sections.map((section) => section.label), ['Команды Pi', 'Команды 1С', 'Профиль', 'Навыки']);
   assert.equal(byId.profile.commands.some((item) => item.name === 'doctor'), true);
+  assert.equal(byId.profile.commands.some((item) => item.name === 'mystery'), true);
   assert.equal(byId.profile.commands.some((item) => item.name === 'model'), false);
   assert.equal(byId.pi.commands.filter((item) => item.name === 'model').length, 1);
-  assert.equal(byId.prompts.commands[0].name, 'ext-plan');
+  assert.equal(byId.pi.commands.filter((item) => item.name === 'resume').length, 1);
+  assert.deepEqual(byId.onec.commands.map((item) => item.name), ['ext-plan', 'loadfrom1cbase']);
   assert.equal(byId.skills.commands[0].name, 'skill:reglog');
-  assert.equal(sectionForCommand({ name: 'layout-view', source: 'extension' }), 'profile');
+  assert.equal(sections.some((section) => section.id === 'cursor'), false);
+  const themed = buildCommandSections(samples.map(([name, source]) => ({ name, source, description: name })));
+  assert.deepEqual(themed.map((section) => section.label), [
+    'Команды Pi',
+    'Команды 1С',
+    'Cursor',
+    'MCP и интеграции',
+    'Настройки',
+    'Агенты',
+    'Знания',
+    'Сессии и память',
+    'Профиль',
+    'Навыки',
+  ]);
 });
 
 test('third-party command labels are Russian and profile wording stays', () => {
@@ -25,11 +65,11 @@ test('third-party command labels are Russian and profile wording stays', () => {
     { name: 'mcp', description: 'Show MCP server status', source: 'extension' },
     { name: 'doctor', description: 'Проверка профиля и пакета без модели', source: 'extension' },
   ]);
-  const profile = sections.find((section) => section.id === 'profile');
-  const byName = Object.fromEntries(profile.commands.map((item) => [item.name, item.description]));
-  assert.equal(byName['cursor-cloud'], 'Список, архив или удаление облачных агентов Cursor этой ветки');
-  assert.equal(byName.mcp, 'Статус серверов MCP');
-  assert.equal(byName.doctor, 'Проверка профиля и пакета без модели');
+  const description = (id, name) => sections.find((section) => section.id === id)
+    .commands.find((item) => item.name === name).description;
+  assert.equal(description('cursor', 'cursor-cloud'), 'Список, архив или удаление облачных агентов Cursor этой ветки');
+  assert.equal(description('mcp', 'mcp'), 'Статус серверов MCP');
+  assert.equal(description('profile', 'doctor'), 'Проверка профиля и пакета без модели');
 });
 
 test('mode and learning from the groups list open their pickers', () => {
