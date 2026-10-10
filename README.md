@@ -828,6 +828,7 @@ Pi CLI:
 - [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c) — правила разработки 1С;
 - [Desko77/cursor-1c-skills](https://github.com/Desko77/cursor-1c-skills) — база для части lab extras;
 - [comol/Humanizer_RU](https://github.com/comol/Humanizer_RU) — Humanizer RU;
+- [yellow-hammer/skills-yaxunit](https://github.com/yellow-hammer/skills-yaxunit) и [yellow-hammer/skills-vanessa-automation](https://github.com/yellow-hammer/skills-vanessa-automation) — навыки модульных тестов YAxUnit и сценариев Vanessa Automation, Ivan Karlo, MIT;
 - Vanessa Automation, client_mcp.cfe и MCP Toolkit — внешние инструменты дополнительных сценариев.
 
 Точные границы лицензирования перечислены в [NOTICE](NOTICE).
