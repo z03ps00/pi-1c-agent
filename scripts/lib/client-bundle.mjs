@@ -42,6 +42,8 @@ const SCRIPT_FILES = [
   'pi-1c-ctl.mjs',
   'pi-1c-acp',
   'pi-1c-acp.cmd',
+  'pi-1c-telegram',
+  'pi-1c-telegram.cmd',
   'Pi-1C-Agent.desktop.in',
   'setup.mjs',
   'update-profile.mjs',
@@ -245,6 +247,7 @@ export function collectClientEntries(root) {
     entries.push(...walkDir(root, dir));
   }
   entries.push(...walkDir(root, 'packages/pi-1c-agent', (_rel, name) => name === 'tests' || name === 'node_modules'));
+  entries.push(...walkDir(root, 'packages/pi-1c-telegram', (_rel, name) => name === 'test' || name === 'node_modules'));
   for (const rel of SCRIPT_FILES) entries.push(readFileEntry(root, `scripts/${rel}`));
   for (const rel of STATE_FILES) entries.push(readFileEntry(root, rel));
   entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));

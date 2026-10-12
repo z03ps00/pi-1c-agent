@@ -684,6 +684,8 @@ Humanizer RU нужен для русских инструкций, статей
 
 В OpenClaw встроенное имя `pi` запускает обычный Pi. Для этого профиля нужна отдельная запись с именем `pi-1c`. Пример и передача аргументов оверлея: [packages/pi-1c-agent/docs/acp.md](packages/pi-1c-agent/docs/acp.md). Пустой оверлей в ACP отменяется сразу: в тексте задачи пишут `/init from-cfe` или `/mode build`.
 
+Telegram-бот — отдельный пакет `packages/pi-1c-telegram`, не часть ядра. Запуск: `scripts/pi-1c-telegram`. Токен и список допуска лежат в `state/telegram/`. Подробности: [packages/pi-1c-telegram/README.md](packages/pi-1c-telegram/README.md).
+
 ## Типовые сценарии
 
 ### Разобраться, почему не работает код

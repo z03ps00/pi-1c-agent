@@ -1,0 +1,16 @@
+{
+  "name": "pi-1c-telegram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional Telegram plugin for the Pi 1C profile. Runs as its own process and does not patch the agent kernel.",
+  "bin": {
+    "pi-1c-telegram": "./bin/pi-1c-telegram.mjs"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "node --test ../../tests/unit/telegram-plugin.test.mjs"
+  }
+}

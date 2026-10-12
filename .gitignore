@@ -59,6 +59,8 @@ state/agent-memory/done/**
 !state/agent-memory/done/.gitkeep
 state/agent-memory/worker.lock
 state/agent-memory/worker.log
+state/telegram/**
+!state/telegram/.gitkeep
 .cursor/plans/
 .cursor/commands/opsx-*
 .cursor/skills/openspec-*/

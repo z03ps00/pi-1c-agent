@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Telegram plugin for this 1C profile. Does not change the Pi kernel or the default `pi` command.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PI_CODING_AGENT_DIR="$ROOT"
+exec node "$ROOT/packages/pi-1c-telegram/bin/pi-1c-telegram.mjs"
