@@ -5,7 +5,7 @@ export function updatesUrl(token) {
 export async function fetchUpdates({
   token,
   offset = 0,
-  timeoutSec = 50,
+  timeoutSec = 2,
   fetchImpl = globalThis.fetch,
   signal,
 } = {}) {
@@ -34,12 +34,13 @@ export async function pollLoop({
     try {
       const updates = await fetchUpdates({ token, offset, fetchImpl, signal });
       for (const update of updates) {
+        await onUpdates([update]);
         if (Number.isInteger(update?.update_id)) offset = update.update_id + 1;
       }
-      if (updates.length) await onUpdates(updates);
     } catch (error) {
       if (signal?.aborted) break;
-      log('telegram poll retry');
+      const message = String(error?.message || 'error').replaceAll(token, '[token]');
+      log(`telegram poll retry: ${message}`);
       await sleep(1000);
     }
   }

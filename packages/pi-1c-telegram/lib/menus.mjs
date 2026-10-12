@@ -1,5 +1,46 @@
+import { BOT_COMMANDS } from './choices.mjs';
 import { MODEL_PRESETS, UPDATE_ACTIONS } from './panel.mjs';
 import { pageSlice } from './format.mjs';
+
+export function modelCatalogView(entries, page = 0) {
+  const list = Array.isArray(entries) ? entries : [];
+  const sliced = pageSlice(list, page, 8);
+  const rows = sliced.items.map((entry, index) => [{
+    text: `${entry.provider} / ${entry.model}`.slice(0, 40),
+    data: `cat:${sliced.start + index}`,
+  }]);
+  const pager = [];
+  if (sliced.page > 0) pager.push({ text: 'Назад', data: `mpg:${sliced.page - 1}` });
+  if (sliced.page + 1 < sliced.pages) pager.push({ text: 'Дальше', data: `mpg:${sliced.page + 1}` });
+  if (pager.length) rows.push(pager);
+  rows.push([{ text: 'Меню', data: 'nav:menu' }]);
+  const text = list.length
+    ? `Модели подключённых провайдеров Pi. Страница ${sliced.page + 1} из ${sliced.pages}, всего ${list.length}.`
+    : 'Каталог моделей пуст.';
+  return { text, keyboard: rows };
+}
+
+export function telegramReplyMarkup(keyboard) {
+  if (!keyboard) return undefined;
+  return {
+    inline_keyboard: keyboard.map((row) => row.map((button) => ({
+      text: button.text,
+      callback_data: button.callback_data ?? button.data,
+    }))),
+  };
+}
+
+export function commandMenuKeyboard() {
+  const rows = [];
+  for (let index = 0; index < BOT_COMMANDS.length; index += 2) {
+    const row = [{ text: `/${BOT_COMMANDS[index].command}`, data: `cmd:${BOT_COMMANDS[index].command}` }];
+    const next = BOT_COMMANDS[index + 1];
+    if (next) row.push({ text: `/${next.command}`, data: `cmd:${next.command}` });
+    rows.push(row);
+  }
+  rows.push([{ text: 'Меню', data: 'nav:menu' }]);
+  return rows;
+}
 
 export function homeKeyboard() {
   return [
@@ -48,7 +89,7 @@ export function confirmKeyboard() {
 }
 
 export function projectKeyboard(projects) {
-  const rows = projects.slice(0, 8).map((project, index) => [{
+  const rows = projects.slice(0, 20).map((project, index) => [{
     text: String(project.label || project.path).slice(0, 40),
     data: `p:${index}`,
   }]);

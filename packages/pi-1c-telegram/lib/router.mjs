@@ -1,4 +1,6 @@
+import path from 'node:path';
 import { INIT_MODE, OVERLAYS, parseIncoming } from './choices.mjs';
+import { pinChoiceLabel } from './setup.mjs';
 import { REFUSAL } from './config.mjs';
 import { isPathText } from './projects.mjs';
 import { MODEL_PRESETS, UPDATE_ACTIONS } from './panel.mjs';
@@ -6,9 +8,9 @@ import {
   backupKeyboard,
   choiceView,
   confirmKeyboard,
+  commandMenuKeyboard,
   homeKeyboard,
   homeText,
-  modelKeyboard,
   projectKeyboard,
   sessionKeyboard,
   updateKeyboard,
@@ -166,7 +168,8 @@ function onCallback(state, data, effects, ctx) {
     return { state, effects };
   }
   if (key.startsWith('p:')) {
-    const chosen = state.projectChoices[Number(key.slice(2))];
+    const index = Number(key.slice(2));
+    const chosen = state.projectChoices[index] || (ctx.projects || [])[index];
     if (!chosen) return { state, effects };
     return takePath(state, chosen.path, effects, ctx);
   }
@@ -186,8 +189,9 @@ function onCallback(state, data, effects, ctx) {
     effects.push(reply(`Сессия: ${file.name}`));
     return { state, effects };
   }
-  if (key === 'nav:model') {
-    effects.push(reply('Модель и thinking.', modelKeyboard()));
+  if (key === 'nav:model' || key.startsWith('mpg:')) {
+    const page = key.startsWith('mpg:') ? Number(key.slice(4)) || 0 : 0;
+    effects.push({ type: 'panel', op: key === 'nav:model' ? 'catalog' : 'catalog-page', page });
     return { state, effects };
   }
   if (key.startsWith('model:')) return pickModel(state, key.slice(6), effects);
@@ -217,20 +221,32 @@ function onCallback(state, data, effects, ctx) {
     effects.push(reply(`Подтвердить обновление: ${action.label}?`, confirmKeyboard()));
     return { state, effects };
   }
+  if (key.startsWith('cmd:')) return onText(state, `/${key.slice(4)}`, effects, ctx);
   if (key === 'nav:safe') return sendAgent(state, '/approve safe', effects, ctx, { approve: 'safe' });
   if (key.startsWith('cat:')) {
     const index = Number(key.slice(4));
     const entry = state.catalog[index];
     if (!entry) return { state, effects };
-    state.awaitText = 'catalog-level';
-    state.manual = { provider: entry.provider, model: entry.model };
-    effects.push(reply(`Thinking для ${entry.provider} / ${entry.model}. Пустое сообщение оставит текущий.`));
+    state.awaitText = null;
+    state.manual = null;
+    effects.push({
+      type: 'panel',
+      op: 'apply-model',
+      provider: entry.provider,
+      model: entry.model,
+      level: entry.thinking === 'no' ? '__REMOVE__' : '__KEEP__',
+      thinking: entry.thinking,
+    });
     return { state, effects };
   }
   return { state, effects };
 }
 
 function onLocal(state, parsed, effects, ctx) {
+  if (parsed.name === 'commands') {
+    effects.push(reply('Команды. Пустая команда открывает кнопки.', commandMenuKeyboard()));
+    return { state, effects };
+  }
   if (parsed.name === 'start' || parsed.name === 'help' || parsed.name === 'menu') {
     effects.push(reply(homeText(state), homeKeyboard()));
     return { state, effects };
@@ -394,6 +410,7 @@ function bindProject(state, projectPath, effects) {
   effects.push({ type: 'remember', path: projectPath });
   effects.push({ type: 'close' });
   effects.push({ type: 'open', cwd: projectPath, resume: 'fresh' });
+  effects.push(reply(`Проект: ${projectPath}`));
   if (state.pendingText) {
     const pending = state.pendingText;
     state.pendingText = null;
@@ -402,6 +419,7 @@ function bindProject(state, projectPath, effects) {
     }
     state.busy = true;
     effects.push({ type: 'prompt', text: pending });
+    return { state, effects };
   }
   effects.push(reply(homeText(state), homeKeyboard()));
   return { state, effects };
@@ -447,10 +465,10 @@ function clone(state) {
 }
 
 export function projectList(config) {
-  const pins = (config?.pins || []).map((item) => ({ label: item, path: item }));
+  const pins = (config?.pins || []).map((item) => ({ label: pinChoiceLabel(item), path: item }));
   const recent = (config?.recent || [])
     .filter((item) => !(config?.pins || []).includes(item))
-    .map((item) => ({ label: item, path: item }));
+    .map((item) => ({ label: path.basename(item), path: item }));
   return [...pins, ...recent];
 }
 

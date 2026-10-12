@@ -1,6 +1,8 @@
-import { accessDecision } from './config.mjs';
-import { chunkText, redactOutgoing } from './format.mjs';
-import { choiceView, confirmKeyboard, sessionKeyboard, backupKeyboard } from './menus.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { accessDecision, configPath, loadConfig, telegramDir } from './config.mjs';
+import { chunkText, formatTurn, redactOutgoing } from './format.mjs';
+import { choiceView, confirmKeyboard, modelCatalogView, sessionKeyboard, backupKeyboard } from './menus.mjs';
 import {
   applyModel,
   backupEntries,
@@ -17,6 +19,7 @@ import { acceptProject } from './projects.mjs';
 import { createRpcSession } from './rpc-session.mjs';
 import { decide, initialChat, projectList } from './router.mjs';
 import { rememberRecent, saveConfig } from './config.mjs';
+import { clearPairing, loadPairing, tryPair } from './setup.mjs';
 
 export function eventFromUpdate(update) {
   const query = update?.callback_query;
@@ -25,7 +28,7 @@ export function eventFromUpdate(update) {
       type: 'callback',
       data: String(query.data ?? ''),
       userId: query.from?.id,
-      chatId: query.message?.chat?.id,
+      chatId: query.message?.chat?.id == null ? null : String(query.message.chat.id),
       callbackId: query.id,
     };
   }
@@ -35,7 +38,7 @@ export function eventFromUpdate(update) {
       type: 'text',
       text: message.text,
       userId: message.from?.id,
-      chatId: message.chat?.id,
+      chatId: message.chat?.id == null ? null : String(message.chat.id),
     };
   }
   return null;
@@ -56,8 +59,40 @@ export function createGateway({
   let opened = 0;
 
   function stateFor(chatId) {
-    if (!chats.has(chatId)) chats.set(chatId, initialChat());
-    return chats.get(chatId);
+    const key = String(chatId);
+    if (!chats.has(key)) {
+      const fresh = initialChat();
+      const saved = readChats()[key];
+      if (saved?.project) {
+        fresh.project = saved.project;
+        fresh.mode = saved.mode || 'ask';
+        fresh.approve = saved.approve || 'off';
+      }
+      chats.set(key, fresh);
+    }
+    return chats.get(key);
+  }
+
+  function readChats() {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(telegramDir(profileDir), 'chats.json'), 'utf8'));
+      return data && typeof data === 'object' ? data : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeChat(chatId, state) {
+    if (!state?.project) return;
+    const all = readChats();
+    all[String(chatId)] = {
+      project: state.project,
+      mode: state.mode || 'ask',
+      approve: state.approve || 'off',
+    };
+    const dir = telegramDir(profileDir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'chats.json'), `${JSON.stringify(all, null, 2)}\n`, { mode: 0o600 });
   }
 
   function context() {
@@ -72,10 +107,28 @@ export function createGateway({
   async function handleUpdate(update) {
     const event = eventFromUpdate(update);
     if (!event || event.chatId == null) return;
-    if (event.callbackId) await api.answerCallback(event.callbackId);
+    if (event.callbackId) {
+      try {
+        await api.answerCallback(event.callbackId);
+      } catch {
+        // A late button press is already expired. The action still runs.
+      }
+    }
+    if (fs.existsSync(configPath(profileDir))) liveConfig = loadConfig(profileDir);
     const access = accessDecision(liveConfig, event.userId);
+    if (!access.ok && event.type === 'text') {
+      const paired = tryPair(liveConfig, event.text, event.userId, loadPairing(profileDir));
+      if (paired.ok && paired.config) {
+        liveConfig = paired.config;
+        saveConfig(profileDir, liveConfig);
+        clearPairing(profileDir);
+        await api.sendMessage(event.chatId, 'Этот чат подключён. Нажмите /start.');
+        return;
+      }
+    }
     const result = decide(stateFor(event.chatId), { ...event, allowed: access.ok }, context());
-    chats.set(event.chatId, result.state);
+    chats.set(String(event.chatId), result.state);
+    try { writeChat(event.chatId, result.state); } catch { /* the choice still stays in memory */ }
     await runEffects(event.chatId, result.effects);
   }
 
@@ -86,7 +139,13 @@ export function createGateway({
       else if (effect.type === 'close') closeSession(chatId);
       else if (effect.type === 'open') open(chatId, effect);
       else if (effect.type === 'abort') await sessions.get(chatId)?.session.cancel?.();
-      else if (effect.type === 'prompt') await runPrompt(chatId, effect.text);
+      else if (effect.type === 'prompt') {
+        stateFor(chatId).busy = true;
+        void runPrompt(chatId, effect.text).catch((error) => {
+          console.error(`ход прерван: ${String(error?.message || error).slice(0, 300)}`);
+          stateFor(chatId).busy = false;
+        });
+      }
       else if (effect.type === 'resolve-pi') resolvePi(chatId, effect.answer);
       else if (effect.type === 'panel') await runPanel(chatId, effect);
     }
@@ -105,7 +164,7 @@ export function createGateway({
   function open(chatId, effect) {
     closeSession(chatId);
     const cwd = effect.cwd || profileDir;
-    const slot = { parts: [], streamed: false, session: null };
+    const slot = { parts: [], thoughts: [], streamed: false, thoughtStreamed: false, session: null };
     slot.session = openSession({
       cwd,
       profileDir,
@@ -113,6 +172,7 @@ export function createGateway({
       sessionFile: effect.sessionFile || '',
       onDialog: (request) => piDialog(chatId, request),
       onEvent: (message) => noteEvent(chatId, slot, message),
+      log: (line) => console.error(`pi: ${String(line).slice(0, 300)}`),
     });
     sessions.set(chatId, slot);
     opened += 1;
@@ -120,14 +180,27 @@ export function createGateway({
 
   function noteEvent(chatId, slot, message) {
     const delta = message?.assistantMessageEvent;
+    if (message?.type === 'message_update' && delta?.type === 'thinking_delta' && delta.delta) {
+      slot.thoughtStreamed = true;
+      slot.thoughts.push(String(delta.delta));
+      scheduleFlush(chatId, slot);
+      return;
+    }
     if (message?.type === 'message_update' && delta?.type === 'text_delta' && delta.delta) {
       slot.streamed = true;
       slot.parts.push(String(delta.delta));
+      scheduleFlush(chatId, slot);
       return;
     }
-    if (message?.type === 'message_end' && message.message?.role === 'assistant' && !slot.streamed) {
-      const text = textOf(message.message.content);
-      if (text) slot.parts.push(text);
+    if (message?.type === 'message_end' && message.message?.role === 'assistant') {
+      if (!slot.thoughtStreamed) {
+        const thought = thoughtOf(message.message.content);
+        if (thought) slot.thoughts.push(thought);
+      }
+      if (!slot.streamed) {
+        const text = textOf(message.message.content);
+        if (text) slot.parts.push(text);
+      }
       return;
     }
     if (message?.type === 'tool_execution_start') {
@@ -142,14 +215,25 @@ export function createGateway({
     if (!sessions.has(chatId)) open(chatId, { cwd: state.project || profileDir, resume: 'fresh' });
     const slot = sessions.get(chatId);
     slot.parts = [];
+    slot.thoughts = [];
     slot.streamed = false;
+    slot.thoughtStreamed = false;
+    slot.anchorId = await api.sendMessage(chatId, 'Pi думает…');
+    let timer;
     try {
-      await slot.session.prompt(text);
-      const full = slot.parts.join('');
-      if (full) await deliver(chatId, full, null, state.project);
+      await Promise.race([
+        slot.session.prompt(text),
+        new Promise((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('Pi не ответил за 90 секунд')), 90000);
+        }),
+      ]);
+      clearTimeout(slot.flushTimer);
+      slot.flushTimer = null;
+      await flushTurn(chatId, slot, true);
     } catch (error) {
       await deliver(chatId, `Ошибка сессии: ${error.message}`);
     } finally {
+      clearTimeout(timer);
       state.busy = false;
     }
   }
@@ -231,15 +315,42 @@ export function createGateway({
       await deliver(chatId, text, sessionKeyboard(state.sessionFiles));
       return;
     }
-    if (effect.op === 'catalog') {
-      state.catalog = listModels(paths);
-      const rows = state.catalog.slice(0, 20).map((entry, index) => [{
-        text: `${entry.provider} / ${entry.model}`.slice(0, 40),
-        data: `cat:${index}`,
-      }]);
-      rows.push([{ text: 'Меню', data: 'nav:menu' }]);
-      const text = state.catalog.length ? 'Каталог моделей' : 'Каталог моделей пуст.';
-      await deliver(chatId, text, rows);
+    if (effect.op === 'catalog' || effect.op === 'catalog-page') {
+      if (effect.op === 'catalog' || !state.catalog.length) state.catalog = listModels(paths);
+      const view = modelCatalogView(state.catalog, effect.page || 0);
+      await deliver(chatId, view.text, view.keyboard);
+    }
+  }
+
+  function scheduleFlush(chatId, slot) {
+    if (slot.flushTimer) return;
+    slot.flushTimer = setTimeout(() => {
+      slot.flushTimer = null;
+      void flushTurn(chatId, slot);
+    }, 700);
+  }
+
+  async function flushTurn(chatId, slot, final = false) {
+    const blocks = formatTurn({ answer: slot.parts.join(''), thought: slot.thoughts.join('') });
+    const text = blocks.join('\n\n');
+    if (!text) return;
+    const view = text.slice(0, 4000);
+    if (view !== slot.lastSent) {
+      try {
+        if (slot.anchorId && typeof api.editMessage === 'function') {
+          await api.editMessage(chatId, slot.anchorId, view);
+        } else {
+          slot.anchorId = await api.sendMessage(chatId, view);
+        }
+        slot.lastSent = view;
+      } catch {
+        await deliver(chatId, view);
+        slot.lastSent = view;
+      }
+    }
+    if (final && text.length > 4000 && !slot.tailSent) {
+      slot.tailSent = true;
+      await deliver(chatId, text.slice(4000));
     }
   }
 
@@ -272,6 +383,14 @@ function normalizeOptions(options) {
     }
     return { value: String(option), label: String(option), description: '' };
   });
+}
+
+function thoughtOf(content) {
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((part) => part?.thinking || part?.reasoning || '')
+    .filter(Boolean)
+    .join('\n');
 }
 
 function textOf(content) {

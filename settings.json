@@ -12,6 +12,7 @@
   },
   "packages": [
     "<path-to-pi-1c-agent>",
+    "packages/pi-1c-telegram",
     "npm:pi-mcp-adapter@2.32.1",
     "npm:pi-cursor-sdk",
     "npm:pi-tool-display"

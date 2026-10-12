@@ -73,12 +73,41 @@ export function formatDiagnostics(paths, { piAvailable = false } = {}) {
   return lines.join('\n');
 }
 
+export function parsePiModelList(stdout) {
+  return String(stdout ?? '')
+    .split(/\r?\n/)
+    .slice(1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split(/\s+/);
+      if (!parts[0] || !parts[1]) return null;
+      const thinking = parts.length >= 5 ? parts[parts.length - 2] : 'yes';
+      return {
+        provider: parts[0],
+        model: parts[1],
+        thinking: thinking === 'no' ? 'no' : 'yes',
+      };
+    })
+    .filter(Boolean);
+}
+
+export function coerceThinking(level, supportsThinking = true) {
+  const raw = String(level ?? '').trim().toLowerCase();
+  if (supportsThinking === false || raw === 'no' || raw === 'нет' || raw === 'off' || raw === '__remove__') {
+    return '__REMOVE__';
+  }
+  if (raw === 'yes' || raw === 'да' || raw === '' || raw === '__keep__') return '__KEEP__';
+  if (THINKING_LEVELS.has(raw)) return raw;
+  return '__KEEP__';
+}
+
 export function listModels(paths, { spawnImpl = spawnSyncCapture, piCmd = process.env.PI_CMD || 'pi' } = {}) {
   const result = spawnImpl(piCmd, ['--list-models'], {
     cwd: paths.profileDir,
     env: { ...process.env, PI_CODING_AGENT_DIR: paths.profileDir },
   });
-  return parseModelCatalog(result.stdout || '');
+  return parsePiModelList(result.stdout || '');
 }
 
 export function backupSettings(paths, reason = 'manual', { now = new Date(), fsImpl = fs } = {}) {
@@ -93,10 +122,8 @@ export function backupSettings(paths, reason = 'manual', { now = new Date(), fsI
   return { ok: true, path: dst, message: `Backup создан: ${dst}` };
 }
 
-export function applyModel(paths, { provider, model, level }, deps = {}) {
-  if (!THINKING_LEVELS.has(level)) {
-    return { ok: false, message: `Недопустимый thinking level: ${level}` };
-  }
+export function applyModel(paths, { provider, model, level, thinking }, deps = {}) {
+  level = coerceThinking(level, thinking !== 'no');
   if (!fs.existsSync(paths.settingsJson)) return { ok: false, message: 'Нет файла settings.json.' };
   if (!jsonValidate(paths.settingsJson)) {
     return { ok: false, message: 'Текущий settings.json невалиден. Изменение запрещено.' };

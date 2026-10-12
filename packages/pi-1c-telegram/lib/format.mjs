@@ -6,6 +6,15 @@ export function redactOutgoing(text, cwd) {
   return sanitizeForEgress(String(text ?? ''), { cwd });
 }
 
+export function formatTurn({ answer = '', thought = '' } = {}) {
+  const blocks = [];
+  const thinking = String(thought || '').trim();
+  const body = String(answer || '').trim();
+  if (thinking) blocks.push(`Рассуждение:\n${thinking}`);
+  if (body) blocks.push(body);
+  return blocks;
+}
+
 export function chunkText(text, limit = TELEGRAM_TEXT_LIMIT) {
   const value = String(text ?? '');
   if (!value) return [];

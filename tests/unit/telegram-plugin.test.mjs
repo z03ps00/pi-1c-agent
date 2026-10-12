@@ -5,15 +5,21 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { REFUSAL, accessDecision, saveConfig, tightenTokenFile } from '../../packages/pi-1c-telegram/lib/config.mjs';
-import { chunkText, redactOutgoing } from '../../packages/pi-1c-telegram/lib/format.mjs';
+import { chunkText, formatTurn, redactOutgoing } from '../../packages/pi-1c-telegram/lib/format.mjs';
+import { parseIncoming } from '../../packages/pi-1c-telegram/lib/choices.mjs';
 import { createGateway } from '../../packages/pi-1c-telegram/lib/gateway.mjs';
-import { applyModel, profilePaths } from '../../packages/pi-1c-telegram/lib/panel.mjs';
+import { applyModel, coerceThinking, parsePiModelList, profilePaths } from '../../packages/pi-1c-telegram/lib/panel.mjs';
+import { modelCatalogView } from '../../packages/pi-1c-telegram/lib/menus.mjs';
 import { pollLoop } from '../../packages/pi-1c-telegram/lib/poll.mjs';
 import { acceptProject } from '../../packages/pi-1c-telegram/lib/projects.mjs';
 import { createRpcSession } from '../../packages/pi-1c-telegram/lib/rpc-session.mjs';
 import { OVERLAYS } from '../../packages/pi-1c-telegram/lib/choices.mjs';
-import { choiceView } from '../../packages/pi-1c-telegram/lib/menus.mjs';
+import { choiceView, telegramReplyMarkup } from '../../packages/pi-1c-telegram/lib/menus.mjs';
 import { decide, initialChat } from '../../packages/pi-1c-telegram/lib/router.mjs';
+import { loadConfig } from '../../packages/pi-1c-telegram/lib/config.mjs';
+import { pidPath, startGateway } from '../../packages/pi-1c-telegram/lib/service.mjs';
+import { createPairing, pinPath, removePin, statusText, tryPair, useHere, writeToken } from '../../packages/pi-1c-telegram/lib/setup.mjs';
+import { projectList } from '../../packages/pi-1c-telegram/lib/router.mjs';
 import { profileRoot } from '../lib/profile-root.mjs';
 
 const root = profileRoot();
@@ -69,6 +75,116 @@ test('a busy turn does not start a second one', () => {
   assert.match(result.effects[0].text, /занята/);
   assert.equal(result.effects.some((effect) => effect.type === 'prompt'), false);
   assert.equal(result.state.busy, true);
+});
+
+test('an expired button still opens the menu', async () => {
+  const sent = [];
+  const gateway = createGateway({
+    profileDir: fs.mkdtempSync(path.join(os.tmpdir(), 'tg-stale-')),
+    config: { allowedUserIds: [1], allowedRoots: [], pins: [], recent: [] },
+    api: {
+      async sendMessage(_chatId, text) { sent.push(text); },
+      async answerCallback() { throw new Error('query is too old'); },
+    },
+    openSession() { throw new Error('session must not start'); },
+  });
+  await gateway.handleUpdate({
+    callback_query: {
+      id: 'old',
+      data: 'nav:menu',
+      from: { id: 1 },
+      message: { chat: { id: 1 } },
+    },
+  });
+  assert.equal(sent.some((text) => text.includes('Проект:')), true);
+});
+
+test('model list is one catalog and thinking yes/no is accepted', () => {
+  const entries = parsePiModelList([
+    'provider      model                            context  max-out  thinking  images',
+    'cursor        auto                             256K     16.4K    no        yes',
+    'openai-codex  gpt-5.6-luna                     1M       16.4K    yes       yes',
+  ].join('\n'));
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].thinking, 'no');
+  assert.equal(entries[1].thinking, 'yes');
+  assert.equal(coerceThinking('no', true), '__REMOVE__');
+  assert.equal(coerceThinking('yes', true), '__KEEP__');
+  assert.equal(coerceThinking('high', false), '__REMOVE__');
+  const view = modelCatalogView(entries, 0);
+  assert.match(view.text, /всего 2/);
+  const state = withProject({
+    catalog: entries,
+  });
+  const picked = decide(state, { type: 'callback', data: 'cat:0', allowed: true });
+  const effect = picked.effects.find((item) => item.op === 'apply-model');
+  assert.equal(effect.model, 'auto');
+  assert.equal(effect.level, '__REMOVE__');
+  assert.equal(picked.state.awaitText, null);
+});
+
+test('a project button works on a fresh chat and the next hello stays in it', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-keep-'));
+  const project = path.join(root, 'app');
+  fs.mkdirSync(project);
+  const sent = [];
+  const prompts = [];
+  function make() {
+    return createGateway({
+      profileDir: root,
+      config: { allowedUserIds: [1], allowedRoots: [root], pins: [project], recent: [] },
+      api: {
+        async sendMessage(_chatId, text) { sent.push(text); },
+        async answerCallback() {},
+      },
+      openSession() {
+        return {
+          async prompt(text) { prompts.push(text); },
+          async cancel() {},
+          stop() {},
+        };
+      },
+    });
+  }
+  const first = make();
+  await first.handleUpdate({
+    callback_query: { id: 'q', data: 'p:0', from: { id: 1 }, message: { chat: { id: 9 } } },
+  });
+  const second = make();
+  await second.handleUpdate({
+    message: { text: 'привет', from: { id: 1 }, chat: { id: 9 } },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(sent.some((text) => text.startsWith('Сначала выберите проект')), false);
+  assert.equal(prompts.includes('привет'), true);
+});
+
+test('choosing a project confirms before the waiting greeting', () => {
+  const asked = decide(initialChat(), { type: 'text', text: 'привет', allowed: true }, {
+    projects: [{ label: 'app', path: '/work/app' }],
+  });
+  const picked = decide(asked.state, { type: 'callback', data: 'p:0', allowed: true }, {
+    resolvePath: () => ({ ok: true, path: '/work/app' }),
+  });
+  const replyAt = picked.effects.findIndex((effect) => effect.type === 'reply' && String(effect.text).startsWith('Проект:'));
+  const promptAt = picked.effects.findIndex((effect) => effect.type === 'prompt');
+  assert.equal(replyAt >= 0 && replyAt < promptAt, true);
+  assert.equal(picked.effects.find((effect) => effect.type === 'prompt').text, 'привет');
+});
+
+test('slash opens the command menu and thinking is shown', () => {
+  assert.equal(parseIncoming('/').name, 'commands');
+  assert.equal(parseIncoming('/capture_model').kind, 'overlay');
+  assert.equal(parseIncoming('/capture_model').name, 'capture-model');
+  assert.deepEqual(formatTurn({ answer: 'ответ', thought: 'думал' }), ['Рассуждение:\nдумал', 'ответ']);
+  const opened = decide(withProject(), { type: 'text', text: '/', allowed: true });
+  const keyboard = opened.effects.find((effect) => effect.keyboard)?.keyboard?.flat() || [];
+  assert.equal(keyboard.some((button) => button.data === 'cmd:mode'), true);
+});
+
+test('telegram buttons use callback_data', () => {
+  const markup = telegramReplyMarkup([[{ text: 'Статус', data: 'nav:status' }]]);
+  assert.deepEqual(markup.inline_keyboard, [[{ text: 'Статус', callback_data: 'nav:status' }]]);
 });
 
 test('every closed command list is available as buttons', () => {
@@ -275,6 +391,91 @@ test('config save does not keep a bot token field', () => {
   const saved = JSON.parse(fs.readFileSync(path.join(dir, 'state', 'telegram', 'config.json'), 'utf8'));
   assert.equal(Object.hasOwn(saved, 'token'), false);
   assert.deepEqual(saved.allowedUserIds, [5]);
+});
+
+test('a pinned path is stored under its parent root and shown by name', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-pins-'));
+  const parent = path.join(dir, 'client');
+  const project = path.join(parent, 'app');
+  fs.mkdirSync(project, { recursive: true });
+  const pinned = pinPath({ allowedUserIds: [], allowedRoots: [], pins: [], recent: [] }, project);
+  assert.equal(pinned.ok, true);
+  assert.equal(pinned.config.pins.length, 1);
+  assert.equal(pinned.config.allowedRoots.length, 1);
+  const listed = projectList(pinned.config);
+  assert.equal(listed[0].label, 'client / app');
+  assert.equal(listed[0].path, fs.realpathSync(project));
+  const removed = removePin(pinned.config, 'client / app');
+  assert.equal(removed.ok, true);
+  assert.equal(removed.config.pins.length, 0);
+});
+
+test('agent setup stores a token without echoing it and pins the current directory', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-setup-'));
+  const project = path.join(dir, 'app');
+  fs.mkdirSync(project);
+  const saved = writeToken(dir, '123456:ABCDEF');
+  assert.equal(saved.ok, true);
+  assert.equal(saved.message.includes('123456:ABCDEF'), false);
+  assert.equal(writeToken(dir, 'bad token').ok, false);
+  const status = statusText({ config: { allowedUserIds: [], allowedRoots: [], pins: [] }, token: '123456:ABCDEF', running: false });
+  assert.equal(status.includes('123456:ABCDEF'), false);
+  assert.match(status, /…CDEF/);
+  const here = useHere({ allowedUserIds: [], allowedRoots: [], pins: [], recent: [] }, project);
+  assert.equal(here.ok, true);
+  assert.equal(here.config.pins[0], fs.realpathSync(project));
+  const missed = tryPair(here.config, '000000', 9, { code: '111111', expires: Date.now() + 1000 });
+  assert.equal(missed.ok, false);
+  const paired = tryPair(here.config, '111111', 9, { code: '111111', expires: Date.now() + 1000 });
+  assert.deepEqual(paired.config.allowedUserIds, [9]);
+});
+
+test('a pairing code from the phone is saved and a wrong code is refused', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-pair-'));
+  const pairing = createPairing(dir, Date.now(), {});
+  const sent = [];
+  const gateway = createGateway({
+    profileDir: dir,
+    config: { allowedUserIds: [], allowedRoots: [], pins: [], recent: [] },
+    api: {
+      async sendMessage(_chatId, text) { sent.push(text); },
+      async answerCallback() {},
+    },
+    openSession() { throw new Error('session must not start'); },
+  });
+  await gateway.handleUpdate({ message: { text: 'нет', from: { id: 42 }, chat: { id: 7 } } });
+  assert.equal(sent.at(-1), REFUSAL);
+  await gateway.handleUpdate({ message: { text: pairing.code, from: { id: 42 }, chat: { id: 7 } } });
+  assert.match(sent.at(-1), /подключён/);
+  assert.deepEqual(loadConfig(dir).allowedUserIds, [42]);
+  assert.equal(gateway.opened, 0);
+});
+
+test('the bot process is not spawned twice and does not start without a token', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-svc-'));
+  const missing = startGateway(dir, { spawnImpl() { throw new Error('no token'); } });
+  assert.equal(missing.ok, false);
+  writeToken(dir, '123456:ABCDEF');
+  let spawned = 0;
+  const exists = (file) => String(file).endsWith('launch.mjs') || fs.existsSync(file);
+  const started = startGateway(dir, {
+    exists,
+    spawnImpl() {
+      spawned += 1;
+      return { pid: 5151, unref() {} };
+    },
+    kill() {},
+  });
+  assert.equal(started.ok, true);
+  assert.equal(spawned, 1);
+  assert.match(fs.readFileSync(pidPath(dir), 'utf8'), /5151/);
+  const again = startGateway(dir, {
+    exists,
+    spawnImpl() { spawned += 1; return { pid: 9, unref() {} }; },
+    kill() {},
+  });
+  assert.equal(again.already, true);
+  assert.equal(spawned, 1);
 });
 
 test('the ACP bridge still auto-cancels overlays', () => {

@@ -64,22 +64,56 @@ export const INIT_MODE = Object.freeze({
   choices: INIT_MODE_CHOICES,
 });
 
-export const LOCAL_COMMANDS = new Set(['start', 'help', 'menu', 'project', 'cancel', 'status']);
+export const LOCAL_COMMANDS = new Set(['start', 'help', 'menu', 'project', 'cancel', 'status', 'commands']);
+
+const COMMAND_ALIASES = Object.freeze({
+  capture_model: 'capture-model',
+  session_rotate: 'session-rotate',
+});
+
+export const BOT_COMMANDS = Object.freeze([
+  { command: 'start', description: 'Меню бота' },
+  { command: 'project', description: 'Выбрать проект' },
+  { command: 'status', description: 'Статус' },
+  { command: 'cancel', description: 'Остановить ход' },
+  { command: 'commands', description: 'Список команд' },
+  { command: 'mode', description: 'Режим ask, plan, build' },
+  { command: 'taskmode', description: 'Рабочий путь' },
+  { command: 'approve', description: 'Когда спрашивать подтверждение' },
+  { command: 'anon', description: 'Анонимность памяти' },
+  { command: 'learning', description: 'Обучение из работы' },
+  { command: 'init', description: 'Инициализация проекта' },
+  { command: 'doctor', description: 'Диагностика' },
+  { command: 'sdlc', description: 'Глубина проверок' },
+  { command: 'litemode', description: 'Облегчённые проверки' },
+  { command: 'uitests', description: 'UI-тесты' },
+  { command: 'previewmode', description: 'Предпросмотр метаданных' },
+  { command: 'caveman', description: 'Короткий стиль' },
+  { command: 'economymode', description: 'Экономия токенов' },
+  { command: 'rulesmodel', description: 'Профиль правил модели' },
+  { command: 'theme', description: 'Тема' },
+  { command: 'mcpconfig', description: 'Какой mcp.json' },
+  { command: 'capture_model', description: 'Модель сжатия памяти' },
+  { command: 'session_rotate', description: 'Новая сессия вместо сжатия' },
+]);
 
 export function parseIncoming(text) {
   const raw = String(text ?? '').trim();
   if (!raw) return { kind: 'empty' };
+  if (raw === '/') return { kind: 'local', name: 'commands', arg: '', raw };
   if (isBarePath(raw)) return { kind: 'text', text: raw, path: true };
   if (!raw.startsWith('/')) return { kind: 'text', text: raw, path: false };
   const body = raw.slice(1);
   const space = body.search(/\s/);
   const head = space === -1 ? body : body.slice(0, space);
-  const name = head.split('@')[0].toLowerCase();
+  const typed = head.split('@')[0].toLowerCase();
+  const name = COMMAND_ALIASES[typed] || typed;
   const arg = space === -1 ? '' : body.slice(space + 1).trim();
+  const commandText = name === typed ? raw : `/${name}${arg ? ` ${arg}` : ''}`;
   if (!name) return { kind: 'text', text: raw, path: false };
-  if (LOCAL_COMMANDS.has(name)) return { kind: 'local', name, arg, raw };
-  if (Object.prototype.hasOwnProperty.call(OVERLAYS, name) && !arg) return { kind: 'overlay', name, raw };
-  return { kind: 'agent', raw };
+  if (LOCAL_COMMANDS.has(name)) return { kind: 'local', name, arg, raw: commandText };
+  if (Object.prototype.hasOwnProperty.call(OVERLAYS, name) && !arg) return { kind: 'overlay', name, raw: commandText };
+  return { kind: 'agent', raw: commandText };
 }
 
 function isBarePath(raw) {
