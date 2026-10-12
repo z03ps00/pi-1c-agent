@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Optional Telegram plugin for the Pi 1C profile. Runs as its own process and does not patch the agent kernel.",
   "bin": {
-    "pi-1c-telegram": "./bin/pi-1c-telegram.mjs"
+    "pi-1c-telegram": "./launch.mjs"
   },
   "engines": {
     "node": ">=22.19.0"

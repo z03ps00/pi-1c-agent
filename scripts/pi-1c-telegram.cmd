@@ -7,4 +7,4 @@ if errorlevel 1 (
   echo node не найден в PATH. 1>&2
   exit /b 1
 )
-node "%PI_CODING_AGENT_DIR%\packages\pi-1c-telegram\bin\pi-1c-telegram.mjs"
+node "%PI_CODING_AGENT_DIR%\packages\pi-1c-telegram\launch.mjs"
